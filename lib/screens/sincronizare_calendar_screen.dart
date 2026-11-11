@@ -26,10 +26,12 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
   final Set<String> _deAdaugat = {};
 
   static const _amintiri = [
+    (Duration(minutes: 15), '15 minute'),
     (Duration(minutes: 30), '30 de minute'),
-    (Duration(hours: 1), 'o oră'),
+    (Duration(hours: 1), '1 oră'),
     (Duration(hours: 2), '2 ore'),
-    (Duration(days: 1), 'o zi'),
+    (Duration(hours: 3), '3 ore'),
+    (Duration(days: 1), '1 zi'),
   ];
 
   @override
@@ -205,7 +207,7 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
             const SizedBox(height: 8),
             Row(
               children: [
-                const Expanded(child: Text('Amintire înainte de termen', style: TextStyle(fontSize: 14))),
+                const Expanded(child: Text('Notificare înainte de termen cu:', style: TextStyle(fontSize: 14))),
                 DropdownButton<Duration>(
                   value: _sync.amintire,
                   underline: const SizedBox(),
