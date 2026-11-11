@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/instante.dart';
 import '../utils/termene.dart';
+import 'partajare_solutie.dart';
 
 /// Chip-ul colorat pentru stadiul procesual (Figma: „Chip stadiu”).
 class StadiuChip extends StatelessWidget {
@@ -230,10 +231,15 @@ class ParteRand extends StatelessWidget {
 
 /// O ședință: caseta cu data în stânga, completul, soluția și sumarul
 /// (Figma: „Rând ședință”). Termenele viitoare sunt evidențiate cu auriu.
+///
+/// Apăsare lungă pe o ședință cu soluție: distribuie sau copiază soluția.
 class SedintaRand extends StatelessWidget {
   final Sedinta sedinta;
 
-  const SedintaRand({super.key, required this.sedinta});
+  /// Dosarul ședinței, pentru textul distribuit (număr, instanță).
+  final Dosar? dosar;
+
+  const SedintaRand({super.key, required this.sedinta, this.dosar});
 
   @override
   Widget build(BuildContext context) {
@@ -263,91 +269,95 @@ class SedintaRand extends StatelessWidget {
       if (s.ora.isNotEmpty) 'ora ${s.ora}',
     ].join(' · ');
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 52,
-            height: 56,
-            decoration: BoxDecoration(
-              color: viitor ? AppColors.accent : AppColors.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      onLongPress: s.arePronuntare ? () => optiuniSolutie(context, s, dosar: dosar) : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 52,
+              height: 56,
+              decoration: BoxDecoration(
+                color: viitor ? AppColors.accent : AppColors.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: s.data == null
+                  ? const Text('—', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          s.data!.day.toString().padLeft(2, '0'),
+                          style: TextStyle(
+                            fontSize: 20,
+                            height: 1.1,
+                            fontWeight: FontWeight.bold,
+                            color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
+                          ),
+                        ),
+                        Text(
+                          lunaScurta(s.data!),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            alignment: Alignment.center,
-            child: s.data == null
-                ? const Text('—', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        s.data!.day.toString().padLeft(2, '0'),
-                        style: TextStyle(
-                          fontSize: 20,
-                          height: 1.1,
-                          fontWeight: FontWeight.bold,
-                          color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
-                        ),
-                      ),
-                      Text(
-                        lunaScurta(s.data!),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (antet.isNotEmpty)
-                  Text(
-                    antet,
-                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-                  ),
-                const SizedBox(height: 3),
-                Text(
-                  titlu,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: culoareTitlu,
-                  ),
-                ),
-                if (detaliu.isNotEmpty) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (antet.isNotEmpty)
+                    Text(
+                      antet,
+                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                    ),
                   const SizedBox(height: 3),
                   Text(
-                    detaliu,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.38,
-                      color: AppColors.onSurfaceVariant,
+                    titlu,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: culoareTitlu,
                     ),
                   ),
+                  if (detaliu.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      detaliu,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.38,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if (document.isNotEmpty || s.dataPronuntare != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (document.isNotEmpty) document,
+                        // Data pronunțării apare doar dacă diferă de cea a documentului.
+                        if (s.dataPronuntare != null &&
+                            formateazaData(s.dataPronuntare) != formateazaData(s.dataDocument))
+                          'pronunțat ${formateazaData(s.dataPronuntare)}',
+                      ].join(' · '),
+                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                    ),
+                  ],
                 ],
-                if (document.isNotEmpty || s.dataPronuntare != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      if (document.isNotEmpty) document,
-                      // Data pronunțării apare doar dacă diferă de cea a documentului.
-                      if (s.dataPronuntare != null &&
-                          formateazaData(s.dataPronuntare) != formateazaData(s.dataDocument))
-                        'pronunțat ${formateazaData(s.dataPronuntare)}',
-                    ].join(' · '),
-                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

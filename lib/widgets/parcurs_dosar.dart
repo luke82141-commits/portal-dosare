@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/termene.dart';
 import 'elemente.dart';
+import 'partajare_solutie.dart';
 
 /// Același număr de dosar la toate instanțele prin care a trecut (fond,
 /// apel, recurs), căutat pe portal după număr.
@@ -269,7 +270,7 @@ class _EtapaState extends State<_Etapa> {
                       style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                     ),
                   const SizedBox(height: 8),
-                  _Solutie(solutie: solutie, termen: termen),
+                  _Solutie(solutie: solutie, termen: termen, dosar: d),
                   if (!widget.curent) ...[
                     const SizedBox(height: 4),
                     Wrap(
@@ -299,7 +300,7 @@ class _EtapaState extends State<_Etapa> {
                       ],
                     ),
                     if (_sedinte)
-                      for (final s in sedinte) SedintaRand(sedinta: s),
+                      for (final s in sedinte) SedintaRand(sedinta: s, dosar: d),
                   ],
                 ],
               ),
@@ -314,8 +315,9 @@ class _EtapaState extends State<_Etapa> {
 class _Solutie extends StatelessWidget {
   final Sedinta? solutie;
   final Sedinta? termen;
+  final Dosar dosar;
 
-  const _Solutie({required this.solutie, required this.termen});
+  const _Solutie({required this.solutie, required this.termen, required this.dosar});
 
   @override
   Widget build(BuildContext context) {
@@ -339,26 +341,30 @@ class _Solutie extends StatelessWidget {
       if (s.ora.isNotEmpty) 'ora ${s.ora}',
       if (s.complet.isNotEmpty) 'Complet ${s.complet}',
     ].join(' · ');
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Soluție: $titlu', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          if (s.solutieSumar.isNotEmpty && s.solutieSumar != s.solutie) ...[
-            const SizedBox(height: 4),
-            Text(scurteaza(s.solutieSumar, 220), style: const TextStyle(fontSize: 13, height: 1.35)),
+    return InkWell(
+      onLongPress: () => optiuniSolutie(context, s, dosar: dosar),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Soluție: $titlu', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            if (s.solutieSumar.isNotEmpty && s.solutieSumar != s.solutie) ...[
+              const SizedBox(height: 4),
+              Text(scurteaza(s.solutieSumar, 220), style: const TextStyle(fontSize: 13, height: 1.35)),
+            ],
+            if (detalii.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(detalii, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+            ],
           ],
-          if (detalii.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(detalii, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
-          ],
-        ],
+        ),
       ),
     );
   }

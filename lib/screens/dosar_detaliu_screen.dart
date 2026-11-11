@@ -92,7 +92,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         numar: sedinte.length,
                         copii: sedinte.isEmpty
                             ? [const _Gol('Nu există încă ședințe publicate.')]
-                            : [for (final s in sedinte) SedintaRand(sedinta: s)],
+                            : [for (final s in sedinte) SedintaRand(sedinta: s, dosar: dosar)],
                       ),
                       if (dosar.caiAtac.isNotEmpty) ...[
                         const SizedBox(height: 16),
