@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+
 import 'screens/home_screen.dart';
+import 'services/monitorizare_service.dart';
 
 void main() async {
-  // Obligatoriu pentru a inițializa canalele native înainte de orice operatie cu pluginuri
+  // Obligatoriu înainte de orice operație cu pluginuri.
   WidgetsFlutterBinding.ensureInitialized();
-  
-  runApp(const LegalManagementApp()); // sau numele clasei tale principale
+
+  // Notificările și verificarea periodică din fundal. O eroare aici nu
+  // trebuie să împiedice pornirea aplicației.
+  try {
+    await MonitorizareService.instance.porneste();
+  } catch (e) {
+    debugPrint('Monitorizarea dosarelor nu a putut fi pornită: $e');
+  }
+
+  runApp(const LegalManagementApp());
 }
 
 class LegalManagementApp extends StatelessWidget {

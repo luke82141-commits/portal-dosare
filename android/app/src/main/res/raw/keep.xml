@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Iconița notificărilor e referită doar din Dart; fără asta ar fi eliminată la build-ul de release. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_dosar" />

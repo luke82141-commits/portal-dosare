@@ -36,6 +36,9 @@ class SoapService {
   SoapService({http.Client? client}) : _client = client ?? http.Client();
 
   /// Caută dosare după număr și/sau obiect. Cel puțin un criteriu e obligatoriu.
+  ///
+  /// Căutarea după număr este exactă: portalul întoarce doar dosarele cu
+  /// numărul respectiv, de la toate instanțele la care a ajuns dosarul.
   Future<RezultatCautare> cautaDosare({
     String numarDosar = '',
     String obiectDosar = '',
@@ -71,7 +74,7 @@ class SoapService {
     // Răspunsurile pot avea mai mulți MB; parsarea se face în alt isolate
     // ca să nu blocheze interfața.
     final body = utf8.decode(response.bodyBytes);
-    final dosare = await Isolate.run(() => _parseazaRaspuns(body));
+    final dosare = await Isolate.run(() => parseazaRaspunsDosare(body));
     return RezultatCautare(dosare, dosare.length >= limitaServiciu);
   }
 
@@ -101,7 +104,8 @@ class SoapService {
       .replaceAll('"', '&quot;');
 }
 
-List<Dosar> _parseazaRaspuns(String body) {
+/// Transformă răspunsul SOAP al operației CautareDosare în lista de dosare.
+List<Dosar> parseazaRaspunsDosare(String body) {
   final doc = XmlDocument.parse(body);
 
   final fault = doc.findAllElements('faultstring').firstOrNull;
@@ -134,10 +138,25 @@ Dosar _parseazaDosar(XmlElement e) {
           ?.childElements
           .map((s) => Sedinta(
                 complet: text(s, 'complet'),
-                data: _formateazaData(text(s, 'data')),
+                data: _data(text(s, 'data')),
                 ora: text(s, 'ora'),
                 solutie: text(s, 'solutie'),
                 solutieSumar: text(s, 'solutieSumar'),
+                dataPronuntare: _data(text(s, 'dataPronuntare')),
+                document: text(s, 'documentSedinta'),
+                numarDocument: text(s, 'numarDocument'),
+                dataDocument: _data(text(s, 'dataDocument')),
+              ))
+          .toList() ??
+      [];
+
+  final caiAtac = e
+          .getElement('caiAtac')
+          ?.childElements
+          .map((c) => CaleAtac(
+                dataDeclarare: _data(text(c, 'dataDeclarare')),
+                parteDeclaratoare: text(c, 'parteDeclaratoare'),
+                tip: text(c, 'tipCaleAtac'),
               ))
           .toList() ??
       [];
@@ -147,21 +166,21 @@ Dosar _parseazaDosar(XmlElement e) {
 
   return Dosar(
     numar: text(e, 'numar'),
-    data: _formateazaData(text(e, 'data')),
+    data: _data(text(e, 'data')),
     institutie: text(e, 'institutie'),
     obiect: text(e, 'obiect'),
     stadiuProcesual: stadiu.isNotEmpty ? stadiu : text(e, 'stadiuProcesual'),
     sectie: text(e, 'departament'),
     categorie: categorie.isNotEmpty ? categorie : text(e, 'categorieCaz'),
+    dataModificare: _data(text(e, 'dataModificare')),
     parti: parti,
     sedinte: sedinte,
+    caiAtac: caiAtac,
   );
 }
 
-/// "2026-11-04T10:32:00" -> "04.11.2026"
-String _formateazaData(String iso) {
+/// Câmpurile de dată lipsă vin goale (xsi:nil) sau ca 0001-01-01.
+DateTime? _data(String iso) {
   final d = DateTime.tryParse(iso);
-  if (d == null) return iso;
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(d.day)}.${two(d.month)}.${d.year}';
+  return (d == null || d.year < 1900) ? null : d;
 }
