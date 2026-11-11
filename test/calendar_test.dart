@@ -5,6 +5,7 @@ import 'package:legal_management_app/screens/calendar_screen.dart';
 import 'package:legal_management_app/services/biblioteca_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:legal_management_app/utils/calendar.dart';
+import 'package:legal_management_app/utils/ruta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Sedinta _s(DateTime d, String ora) =>
@@ -94,5 +95,50 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('2026'), findsOneWidget);
     });
+
+    testWidgets('luna arată cel mult 4 termene pe zi, apoi „…”', (tester) async {
+      final zi = DateTime(2026, 11, 13);
+      await tester.runAsync(() async {
+        for (var i = 1; i <= 6; i++) {
+          await BibliotecaService.instance.adauga(_d('$i/1/2026', [_s(zi, '0$i:00')]));
+        }
+      });
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        theme: construiesteTema(),
+        home: Scaffold(
+          body: CalendarScreen(azi: DateTime(2026, 11, 11)),
+          bottomNavigationBar: NavigationBar(destinations: const [
+            NavigationDestination(icon: Icon(Icons.search), label: 'a'),
+            NavigationDestination(icon: Icon(Icons.search), label: 'b'),
+          ]),
+        ),
+      ));
+      for (var i = 1; i <= 4; i++) {
+        expect(find.text('$i/1'), findsOneWidget);
+      }
+      expect(find.text('5/1'), findsNothing);
+      expect(find.text('… +2'), findsOneWidget);
+
+      // Ziua → vederea pe zi → detaliul dosarului.
+      await tester.tap(find.text('… +2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Vineri, 13 noiembrie'), findsOneWidget);
+      await tester.tap(find.text('6/1/2026'));
+      await tester.pumpAndSettle();
+      expect(find.text('Detaliu dosar'), findsOneWidget);
+      expect(find.text('Mergi la instanță'), findsOneWidget);
+    });
+  });
+
+  test('rutele către instanță pornesc din locația curentă', () {
+    final g = rutaGoogleMaps('Judecătoria Sectorul 1 București');
+    expect(g.host, 'www.google.com');
+    expect(g.queryParameters['destination'], 'Judecătoria Sectorul 1 București, România');
+    expect(g.queryParameters.containsKey('origin'), isFalse);
+    final w = rutaWaze('Tribunalul București');
+    expect(w.queryParameters, {'q': 'Tribunalul București, România', 'navigate': 'yes'});
   });
 }

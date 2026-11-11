@@ -9,6 +9,9 @@ enum VedereCalendar { zi, saptamana, luna, an }
 
 const _initialeZile = ['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'];
 
+/// Câte termene încap într-o zi din vederea lunii înainte de „…”.
+const _maxPeZi = 4;
+
 /// Termenele dosarelor monitorizate într-un calendar cu vederi pe zi,
 /// săptămână, lună și an, după modelul Google Calendar.
 class CalendarScreen extends StatefulWidget {
@@ -236,7 +239,7 @@ class _Banda extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: 1),
       child: Material(
         color: t.trecut ? t.culoare.withValues(alpha: 0.45) : t.culoare,
         borderRadius: BorderRadius.circular(4),
@@ -244,7 +247,7 @@ class _Banda extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           onTap: onTap ?? () => _deschideDosar(context, t),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
             child: Text(
               scurt
                   ? t.dosar.numar.replaceFirst(RegExp('/${t.zi.year}\$'), '')
@@ -252,7 +255,7 @@ class _Banda extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.clip,
               softWrap: false,
-              style: const TextStyle(fontSize: 10, height: 1.3, color: Colors.white, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 10, height: 1.2, color: Colors.white, fontWeight: FontWeight.w500),
             ),
           ),
         ),
@@ -330,8 +333,13 @@ class _Luna extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, c) {
             // Câte benzi încap sub număr (24 px), fiecare de ~17 px.
-            final loc = ((c.maxHeight - 26) / 17).floor().clamp(0, 99);
-            final vizibile = ale.length <= loc ? ale.length : (loc - 1).clamp(0, ale.length);
+            // Cel mult 4, ca în Google Calendar; restul se semnalează cu „…”.
+            // O bandă are 14 px, numărul zilei 24 px, rândul „…” 12 px.
+            final spatiu = c.maxHeight - 24;
+            final toate = ale.length <= _maxPeZi && ale.length * 14 <= spatiu;
+            final vizibile = toate
+                ? ale.length
+                : ((spatiu - 12) / 14).floor().clamp(0, _maxPeZi).clamp(0, ale.length);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -340,16 +348,18 @@ class _Luna extends StatelessWidget {
                     zi,
                     azi: DateUtils.isSameDay(zi, azi),
                     estompat: zi.month != luna.month,
+                    marime: 22,
                   ),
                 ),
                 const SizedBox(height: 2),
                 for (final t in ale.take(vizibile)) _Banda(t, scurt: true, onTap: () => onZi(zi)),
                 if (ale.length > vizibile)
                   Text(
-                    '+${ale.length - vizibile}',
+                    '… +${ale.length - vizibile}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 10,
+                      height: 1.2,
                       fontWeight: FontWeight.w600,
                       color: AppColors.onSurfaceVariant,
                     ),

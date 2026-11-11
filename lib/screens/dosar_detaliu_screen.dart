@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
+import '../utils/ruta.dart';
+import '../utils/termene.dart';
 import '../widgets/comutare_monitorizare.dart';
 import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
@@ -64,6 +68,8 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         _Modificari(salvat: salvat),
                         const SizedBox(height: 16),
                       ],
+                      _RutaInstanta(dosar: dosar),
+                      const SizedBox(height: 16),
                       _InformatiiGenerale(dosar: dosar),
                       const SizedBox(height: 16),
                       SectiuneExtensibila(
@@ -410,6 +416,94 @@ void _arataDosarele(BuildContext context, Dosar curent) {
       );
     },
   );
+}
+
+/// Ruta către instanță, din locația curentă, cu Google Maps sau Waze.
+class _RutaInstanta extends StatelessWidget {
+  final Dosar dosar;
+
+  const _RutaInstanta({required this.dosar});
+
+  Future<void> _deschide(BuildContext context, Uri uri, String aplicatie) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var reusit = false;
+    try {
+      reusit = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!reusit) {
+      messenger.showSnackBar(SnackBar(content: Text('Nu am putut deschide $aplicatie.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final termen = urmatorulTermen(dosar);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.directions, color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mergi la instanță',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        termen == null
+                            ? 'Ruta pornește din locația ta.'
+                            : 'Termen ${formateazaData(termen.data)}'
+                                '${termen.ora.isEmpty ? '' : ', ora ${termen.ora}'}'
+                                ' · ruta pornește din locația ta.',
+                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deschide(context, rutaGoogleMaps(dosar.instanta), 'Google Maps'),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('Google Maps'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deschide(context, rutaWaze(dosar.instanta), 'Waze'),
+                    icon: const Icon(Icons.navigation_outlined, size: 18),
+                    label: const Text('Waze'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _InformatiiGenerale extends StatelessWidget {
