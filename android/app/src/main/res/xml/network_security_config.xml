@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Serviciul SOAP al portalului just.ro funcționează doar pe HTTP -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">portalquery.just.ro</domain>
+    </domain-config>
+</network-security-config>
