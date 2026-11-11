@@ -133,4 +133,37 @@ void main() {
     expect(find.text('suspendare executare act administrativ'), findsOneWidget);
     expect(find.text('468/310/2026'), findsNothing);
   });
+
+  testWidgets('Tap pe instanță filtrează dosarele salvate', (tester) async {
+    final altaInstanta = Dosar(
+      numar: '5900/2/2026',
+      data: DateTime(2026, 9, 16),
+      institutie: 'CurteadeApelBUCURESTI',
+      obiect: 'suspendare executare',
+      stadiuProcesual: 'Recurs',
+      sectie: '',
+      categorie: 'Civil',
+      parti: const [],
+      sedinte: const [],
+    );
+    await tester.runAsync(() async {
+      await BibliotecaService.instance.adauga(_dosar);
+      await BibliotecaService.instance.adauga(altaInstanta);
+    });
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Judecătoria Sectorul 1 București'));
+    await tester.pumpAndSettle();
+    expect(find.text('Dosarele mele'), findsOneWidget);
+    expect(find.text('Un dosar'), findsOneWidget);
+    expect(find.text('5900/2/2026'), findsNothing);
+
+    // Scos filtrul de instanță și pus cel de materie: ambele sunt „Civil”.
+    await tester.tap(find.text('Judecătoria Sectorul 1 București'));
+    await tester.tap(find.text('Civil'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 dosare'), findsOneWidget);
+  });
 }

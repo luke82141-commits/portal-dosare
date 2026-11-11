@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../widgets/comutare_monitorizare.dart';
 import '../widgets/elemente.dart';
+import 'dosare_filtrate_screen.dart';
 
 /// Toate datele unui dosar (Figma: „03 · Detaliu dosar”): antet albastru cu
 /// numărul și comutatorul de monitorizare, informațiile generale, apoi
@@ -122,10 +123,14 @@ class _Antet extends StatelessWidget {
   Widget build(BuildContext context) {
     const alb = AppColors.onPrimary;
     final chips = [
-      dosar.stadiuProcesual,
-      dosar.categorie,
-      if (dosar.data != null) 'Înregistrat ${formateazaData(dosar.data)}',
-    ].where((e) => e.isNotEmpty);
+      (dosar.stadiuProcesual, TipFiltru.stadiu),
+      (dosar.categorie, TipFiltru.categorie),
+      if (dosar.data != null) ('Înregistrat ${formateazaData(dosar.data)}', TipFiltru.an),
+    ].where((e) => e.$1.isNotEmpty);
+
+    void filtreaza(TipFiltru tip) => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DosareFiltrateScreen(sursa: dosar, initial: tip)),
+        );
 
     return Container(
       decoration: const BoxDecoration(
@@ -197,40 +202,57 @@ class _Antet extends StatelessWidget {
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: alb),
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Icon(Icons.account_balance, size: 16, color: alb.withValues(alpha: 0.8)),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => filtreaza(TipFiltru.instanta),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.account_balance,
+                              size: 16,
+                              color: alb.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              dosar.instanta,
+                              style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.85)),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.chevron_right, size: 18, color: alb.withValues(alpha: 0.6)),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          dosar.instanta,
-                          style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.85)),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final c in chips)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: alb.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            c,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: alb,
+                      for (final (text, tip) in chips)
+                        Material(
+                          color: alb.withValues(alpha: 0.16),
+                          shape: const StadiumBorder(),
+                          child: InkWell(
+                            customBorder: const StadiumBorder(),
+                            onTap: () => filtreaza(tip),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              child: Text(
+                                text,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: alb,
+                                ),
+                              ),
                             ),
                           ),
                         ),
