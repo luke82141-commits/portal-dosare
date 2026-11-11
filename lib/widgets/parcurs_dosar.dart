@@ -61,7 +61,8 @@ class ParcursDosar {
   }
 }
 
-/// Cardul „Parcursul dosarului” din detaliu: soluția de la fond când dosarul
+/// Cardul „Parcursul dosarului” din detaliu, ordonat ca ierarhia instanțelor
+/// (judecătoria jos, instanța cea mai înaltă sus): soluția de la fond când dosarul
 /// e în cale de atac, și calea de atac (instanța, soluția, ședințele) când e
 /// deschis de la fond.
 class ParcursDosarCard extends StatefulWidget {
@@ -171,7 +172,7 @@ class _Parcurs extends StatelessWidget {
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       Text(
-                        'La ${etape.length} instanțe, de la fond la căile de atac',
+                        'La ${etape.length} instanțe · de jos în sus, de la fond la căile de atac',
                         style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                       ),
                     ],
@@ -180,7 +181,8 @@ class _Parcurs extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            for (final (i, d) in etape.indexed)
+            // Ca în ierarhia instanțelor: cea mai înaltă sus, judecătoria jos.
+            for (final (i, d) in etape.reversed.indexed)
               _Etapa(
                 dosar: d,
                 curent: d.cheie == curent.cheie,

@@ -238,6 +238,11 @@ void main() {
     expect(find.text('20.10.2026 · ora 10:30 · Complet A2'), findsOneWidget);
     // Soluția de la fond apare și ea, în aceeași cronologie.
     expect(find.text('Soluție: Amână cauza'), findsOneWidget);
+    // Ierarhic: tribunalul (apel) deasupra judecătoriei (fond).
+    expect(
+      tester.getTopLeft(find.text('Tribunalul Prahova')).dy,
+      lessThan(tester.getTopLeft(find.text('Soluție: Amână cauza')).dy),
+    );
     await tester.tap(find.text('Ședințe (1)'));
     await tester.pumpAndSettle();
     expect(find.text('Respinge apelul ca nefondat. Definitivă.'), findsWidgets);
