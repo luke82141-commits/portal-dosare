@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/monitorizare_service.dart';
+import 'calendar_screen.dart';
 import 'cautare_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
 
-/// Cadrul aplicației: Căutare, Monitorizate și Notificări, cu bara de
+/// Cadrul aplicației: Căutare, Monitorizate, Calendar și Notificări, cu bara de
 /// navigare jos (Figma: „Bară navigare”).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const _filaMonitorizate = 1;
-  static const _filaNotificari = 2;
+  static const _filaNotificari = 3;
 
   int _tab = 0;
 
@@ -71,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           CautareScreen(onVeziMonitorizate: () => setState(() => _tab = _filaMonitorizate)),
           const MonitorizateScreen(),
+          const CalendarScreen(),
           const NotificariScreen(),
         ],
       ),
@@ -92,6 +94,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 icon: Icon(Icons.bookmark_border),
                 selectedIcon: Icon(Icons.bookmark),
                 label: 'Monitorizate',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.calendar_month_outlined),
+                selectedIcon: Icon(Icons.calendar_month),
+                label: 'Calendar',
               ),
               NavigationDestination(
                 icon: clopotel(Icons.notifications_none),
