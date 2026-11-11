@@ -13,6 +13,10 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Pentru a pune termenele dosarelor în calendar (iCloud, Google) și a găsi dosarele din calendar.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Pentru a pune termenele dosarelor în calendar (iCloud, Google) și a găsi dosarele din calendar.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
