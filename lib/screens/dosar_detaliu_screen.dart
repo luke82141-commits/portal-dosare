@@ -129,7 +129,7 @@ class _Antet extends StatelessWidget {
     ].where((e) => e.$1.isNotEmpty);
 
     void filtreaza(TipFiltru tip) => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => DosareFiltrateScreen(sursa: dosar, initial: tip)),
+          MaterialPageRoute(builder: (_) => DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar))),
         );
 
     return Container(

@@ -160,9 +160,8 @@ void main() {
     expect(find.text('Un dosar'), findsOneWidget);
     expect(find.text('5900/2/2026'), findsNothing);
 
-    // Scos filtrul de instanță și pus cel de materie: ambele sunt „Civil”.
-    await tester.tap(find.text('Judecătoria Sectorul 1 București'));
-    await tester.tap(find.text('Civil'));
+    // Scos filtrul de instanță: apar ambele dosare.
+    await tester.tap(find.byTooltip('Scoate filtrul'));
     await tester.pumpAndSettle();
     expect(find.text('2 dosare'), findsOneWidget);
   });
