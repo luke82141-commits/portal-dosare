@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/home_screen.dart';
 import 'services/monitorizare_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   // Obligatoriu înainte de orice operație cu pluginuri.
@@ -24,11 +25,8 @@ class LegalManagementApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Legal Management App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
+      title: 'Portal Dosare',
+      theme: construiesteTema(),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
     );
