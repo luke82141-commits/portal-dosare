@@ -179,7 +179,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
         itemBuilder: (context, i) {
           if (i == 0) return _rezumat(afisate.length);
           final d = afisate[i - 1];
-          return DosarCardWidget(key: ValueKey(d.cheie), dosar: d);
+          return DosarCardWidget(key: ValueKey(d.cheie), dosar: d, cuBiblioteca: true);
         },
       ),
     );

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:legal_management_app/main.dart';
 import 'package:legal_management_app/models/dosar_model.dart';
+import 'package:legal_management_app/screens/rezultate_screen.dart';
 import 'package:legal_management_app/services/biblioteca_service.dart';
+import 'package:legal_management_app/services/soap_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:legal_management_app/widgets/dosar_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +44,12 @@ Future<void> _pompeazaCard(WidgetTester tester) => tester.pumpWidget(
         ),
       ),
     );
+
+class _SoapFals extends SoapService {
+  @override
+  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+      RezultatCautare([_dosar], false);
+}
 
 void main() {
   setUp(() async {
@@ -164,5 +172,32 @@ void main() {
     await tester.tap(find.byTooltip('Scoate filtrul'));
     await tester.pumpAndSettle();
     expect(find.text('2 dosare'), findsOneWidget);
+  });
+
+  testWidgets('Din rezultate dosarul se adaugă și se scoate din bibliotecă', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: construiesteTema(),
+      home: RezultateScreen(numar: '468/310/2026', soap: _SoapFals()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Adaugă'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Adaugă în bibliotecă'));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pump();
+    expect(BibliotecaService.instance.contine(_dosar.cheie), isTrue);
+    expect(find.text('În bibliotecă'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Scoate din bibliotecă'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Oprește'));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(BibliotecaService.instance.contine(_dosar.cheie), isFalse);
+    expect(find.text('Adaugă'), findsOneWidget);
   });
 }
