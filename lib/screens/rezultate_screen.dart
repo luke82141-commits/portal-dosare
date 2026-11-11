@@ -5,6 +5,7 @@ import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
+import '../widgets/parcurs_dosar.dart';
 
 /// Rezultatele unei căutări (Figma: „02 · Rezultate”, „06 · se încarcă”,
 /// „07 · eroare & fără rezultate”).
@@ -43,6 +44,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
     });
     try {
       final r = await _soap.cautaDosare(numarDosar: widget.numar, obiectDosar: widget.obiect);
+      // Căutarea după număr aduce toate instanțele dosarului: le păstrăm
+      // pentru „Parcursul dosarului” din detaliu.
+      if (widget.numar.trim().isNotEmpty) ParcursDosar.memoreaza(r.dosare);
       if (!mounted) return;
       setState(() {
         _dosare = r.dosare;
