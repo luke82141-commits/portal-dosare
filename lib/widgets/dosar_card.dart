@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/dosar_model.dart';
 import '../screens/dosar_detaliu_screen.dart';
+import '../services/biblioteca_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/termene.dart';
+import 'alege_culoare.dart';
+import 'comutare_monitorizare.dart';
 import 'elemente.dart';
 
 /// Cardul compact al unui dosar în liste (Figma: „Card dosar”): număr,
@@ -12,11 +15,20 @@ import 'elemente.dart';
 ///
 /// Dacă primește [salvat] cu modificări necitite, arată chip-ul „Nou” și
 /// ultima modificare.
+///
+/// Cu [cuBiblioteca] (în rezultatele căutării) arată dacă dosarul e deja în
+/// bibliotecă, cu un buton care îl adaugă sau îl scoate direct din listă.
 class DosarCardWidget extends StatelessWidget {
   final Dosar dosar;
   final DosarSalvat? salvat;
+  final bool cuBiblioteca;
 
-  const DosarCardWidget({super.key, required this.dosar, this.salvat});
+  const DosarCardWidget({
+    super.key,
+    required this.dosar,
+    this.salvat,
+    this.cuBiblioteca = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +50,11 @@ class DosarCardWidget extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  if (salvat != null)
+                    Transform.translate(
+                      offset: const Offset(-8, 0),
+                      child: BulinaCuloare(dosar),
+                    ),
                   Expanded(
                     child: Text(
                       dosar.numar,
@@ -116,13 +133,62 @@ class DosarCardWidget extends StatelessWidget {
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ),
-                  const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
+                  if (cuBiblioteca)
+                    _ButonBiblioteca(dosar)
+                  else
+                    const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// „+ Bibliotecă” / „În bibliotecă”, comutat direct din card.
+class _ButonBiblioteca extends StatelessWidget {
+  final Dosar dosar;
+
+  const _ButonBiblioteca(this.dosar);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: BibliotecaService.instance,
+      builder: (context, _) {
+        final salvat = BibliotecaService.instance.contine(dosar.cheie);
+        final culoare = salvat ? AppColors.success : AppColors.primary;
+        return Tooltip(
+          message: salvat ? 'Scoate din bibliotecă' : 'Adaugă în bibliotecă',
+          child: Material(
+            color: salvat ? AppColors.successContainer : AppColors.card,
+            shape: StadiumBorder(
+              side: salvat ? BorderSide.none : const BorderSide(color: AppColors.outline),
+            ),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () => comutaMonitorizare(context, dosar),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(salvat ? Icons.bookmark_added : Icons.bookmark_add_outlined,
+                        size: 16, color: culoare),
+                    const SizedBox(width: 6),
+                    Text(
+                      salvat ? 'În bibliotecă' : 'Adaugă',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: culoare),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

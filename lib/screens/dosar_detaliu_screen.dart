@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+
+import '../data/instante_portal.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
+import '../utils/ruta.dart';
+import '../utils/termene.dart';
 import '../widgets/comutare_monitorizare.dart';
 import '../widgets/elemente.dart';
+import 'dosare_filtrate_screen.dart';
+import 'instante_screen.dart';
 
 /// Toate datele unui dosar (Figma: „03 · Detaliu dosar”): antet albastru cu
 /// numărul și comutatorul de monitorizare, informațiile generale, apoi
@@ -63,6 +70,8 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         _Modificari(salvat: salvat),
                         const SizedBox(height: 16),
                       ],
+                      _RutaInstanta(dosar: dosar),
+                      const SizedBox(height: 16),
                       _InformatiiGenerale(dosar: dosar),
                       const SizedBox(height: 16),
                       SectiuneExtensibila(
@@ -122,10 +131,14 @@ class _Antet extends StatelessWidget {
   Widget build(BuildContext context) {
     const alb = AppColors.onPrimary;
     final chips = [
-      dosar.stadiuProcesual,
-      dosar.categorie,
-      if (dosar.data != null) 'Înregistrat ${formateazaData(dosar.data)}',
-    ].where((e) => e.isNotEmpty);
+      (dosar.stadiuProcesual, TipFiltru.stadiu),
+      (dosar.categorie, TipFiltru.categorie),
+      if (dosar.data != null) ('Înregistrat ${formateazaData(dosar.data)}', TipFiltru.an),
+    ].where((e) => e.$1.isNotEmpty);
+
+    void filtreaza(TipFiltru tip) => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar))),
+        );
 
     return Container(
       decoration: const BoxDecoration(
@@ -148,6 +161,23 @@ class _Antet extends StatelessWidget {
                       'Detaliu dosar',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: alb),
                     ),
+                  ),
+                  ListenableBuilder(
+                    listenable: BibliotecaService.instance,
+                    builder: (context, _) {
+                      final b = BibliotecaService.instance;
+                      if (b.dosare.isEmpty) return const SizedBox.shrink();
+                      return IconButton(
+                        tooltip: 'Dosarele mele',
+                        color: alb,
+                        icon: Badge(
+                          isLabelVisible: b.totalNecitite > 0,
+                          label: Text('${b.totalNecitite}'),
+                          child: const Icon(Icons.collections_bookmark_outlined),
+                        ),
+                        onPressed: () => _arataDosarele(context, dosar),
+                      );
+                    },
                   ),
                   IconButton(
                     tooltip: 'Copiază numărul dosarului',
@@ -180,40 +210,57 @@ class _Antet extends StatelessWidget {
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: alb),
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Icon(Icons.account_balance, size: 16, color: alb.withValues(alpha: 0.8)),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => filtreaza(TipFiltru.instanta),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.account_balance,
+                              size: 16,
+                              color: alb.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              dosar.instanta,
+                              style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.85)),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.chevron_right, size: 18, color: alb.withValues(alpha: 0.6)),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          dosar.instanta,
-                          style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.85)),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final c in chips)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: alb.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            c,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: alb,
+                      for (final (text, tip) in chips)
+                        Material(
+                          color: alb.withValues(alpha: 0.16),
+                          shape: const StadiumBorder(),
+                          child: InkWell(
+                            customBorder: const StadiumBorder(),
+                            onTap: () => filtreaza(tip),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              child: Text(
+                                text,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: alb,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -272,6 +319,198 @@ class _Antet extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lista dosarelor monitorizate, ca foaie de jos: tap deschide direct
+/// detaliul altui dosar, fără întoarcere la ecranul principal.
+void _arataDosarele(BuildContext context, Dosar curent) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    backgroundColor: AppColors.card,
+    builder: (ctx) {
+      final dosare = BibliotecaService.instance.dosare;
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                dosare.length == 1 ? 'Un dosar monitorizat' : '${dosare.length} dosare monitorizate',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                itemCount: dosare.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 4),
+                itemBuilder: (_, i) {
+                  final s = dosare[i];
+                  final esteCurent = s.dosar.cheie == curent.cheie;
+                  return Material(
+                    color: esteCurent ? AppColors.primaryContainer : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        if (esteCurent) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: s.dosar)),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.dosar.numar,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    [s.dosar.instanta, s.dosar.obiect]
+                                        .where((e) => e.isNotEmpty)
+                                        .join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            s.necitite > 0
+                                ? StadiuChip.nou(s.necitite)
+                                : StadiuChip.stadiu(s.dosar.stadiuProcesual),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// Ruta către instanță, din locația curentă, cu Google Maps sau Waze.
+class _RutaInstanta extends StatelessWidget {
+  final Dosar dosar;
+
+  const _RutaInstanta({required this.dosar});
+
+  Future<void> _deschide(BuildContext context, Uri uri, String aplicatie) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var reusit = false;
+    try {
+      reusit = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+    if (!reusit) {
+      messenger.showSnackBar(SnackBar(content: Text('Nu am putut deschide $aplicatie.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final termen = urmatorulTermen(dosar);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.directions, color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mergi la instanță',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        termen == null
+                            ? 'Ruta pornește din locația ta.'
+                            : 'Termen ${formateazaData(termen.data)}'
+                                '${termen.ora.isEmpty ? '' : ', ora ${termen.ora}'}'
+                                ' · ruta pornește din locația ta.',
+                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deschide(context, rutaGoogleMaps(dosar.instanta), 'Google Maps'),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('Google Maps'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deschide(context, rutaWaze(dosar.instanta), 'Waze'),
+                    icon: const Icon(Icons.navigation_outlined, size: 18),
+                    label: const Text('Waze'),
+                  ),
+                ),
+              ],
+            ),
+            if (instantaDupaCod(dosar.institutie) case final instanta?) ...[
+              const SizedBox(height: 10),
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => InstantaScreen(instanta: instanta)),
+                ),
+                icon: const Icon(Icons.contact_phone_outlined, size: 18),
+                label: const Text('Contact și program instanță'),
+              ),
+            ],
           ],
         ),
       ),

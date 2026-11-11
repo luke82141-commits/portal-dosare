@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:legal_management_app/main.dart';
 import 'package:legal_management_app/models/dosar_model.dart';
+import 'package:legal_management_app/screens/rezultate_screen.dart';
 import 'package:legal_management_app/services/biblioteca_service.dart';
+import 'package:legal_management_app/services/soap_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:legal_management_app/widgets/dosar_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +44,12 @@ Future<void> _pompeazaCard(WidgetTester tester) => tester.pumpWidget(
         ),
       ),
     );
+
+class _SoapFals extends SoapService {
+  @override
+  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+      RezultatCautare([_dosar], false);
+}
 
 void main() {
   setUp(() async {
@@ -102,5 +110,94 @@ void main() {
     expect(BibliotecaService.instance.contine(_dosar.cheie), isTrue);
     expect(find.byTooltip('Oprește monitorizarea'), findsOneWidget);
     expect(find.text('Monitorizare activă'), findsOneWidget);
+  });
+
+  testWidgets('Din detaliu se poate sări la alt dosar monitorizat', (tester) async {
+    final altul = Dosar(
+      numar: '5900/2/2026',
+      data: DateTime(2026, 9, 16),
+      institutie: 'CurteadeApelBUCURESTI',
+      obiect: 'suspendare executare act administrativ',
+      stadiuProcesual: 'Recurs',
+      sectie: '',
+      categorie: '',
+      parti: const [],
+      sedinte: const [],
+    );
+    await tester.runAsync(() async {
+      await BibliotecaService.instance.adauga(_dosar);
+      await BibliotecaService.instance.adauga(altul);
+    });
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Dosarele mele'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 dosare monitorizate'), findsOneWidget);
+
+    await tester.tap(find.text('5900/2/2026'));
+    await tester.pumpAndSettle();
+    expect(find.text('suspendare executare act administrativ'), findsOneWidget);
+    expect(find.text('468/310/2026'), findsNothing);
+  });
+
+  testWidgets('Tap pe instanță filtrează dosarele salvate', (tester) async {
+    final altaInstanta = Dosar(
+      numar: '5900/2/2026',
+      data: DateTime(2026, 9, 16),
+      institutie: 'CurteadeApelBUCURESTI',
+      obiect: 'suspendare executare',
+      stadiuProcesual: 'Recurs',
+      sectie: '',
+      categorie: 'Civil',
+      parti: const [],
+      sedinte: const [],
+    );
+    await tester.runAsync(() async {
+      await BibliotecaService.instance.adauga(_dosar);
+      await BibliotecaService.instance.adauga(altaInstanta);
+    });
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Judecătoria Sectorul 1 București'));
+    await tester.pumpAndSettle();
+    expect(find.text('Dosarele mele'), findsOneWidget);
+    expect(find.text('Un dosar'), findsOneWidget);
+    expect(find.text('5900/2/2026'), findsNothing);
+
+    // Scos filtrul de instanță: apar ambele dosare.
+    await tester.tap(find.byTooltip('Scoate filtrul'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 dosare'), findsOneWidget);
+  });
+
+  testWidgets('Din rezultate dosarul se adaugă și se scoate din bibliotecă', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: construiesteTema(),
+      home: RezultateScreen(numar: '468/310/2026', soap: _SoapFals()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Adaugă'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Adaugă în bibliotecă'));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pump();
+    expect(BibliotecaService.instance.contine(_dosar.cheie), isTrue);
+    expect(find.text('În bibliotecă'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Scoate din bibliotecă'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Oprește'));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(BibliotecaService.instance.contine(_dosar.cheie), isFalse);
+    expect(find.text('Adaugă'), findsOneWidget);
   });
 }

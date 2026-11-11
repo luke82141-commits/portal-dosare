@@ -7,6 +7,7 @@ import '../utils/formatare.dart';
 import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
+import 'dosare_filtrate_screen.dart';
 
 /// Dosarele monitorizate (Figma: „04 · Dosare monitorizate”).
 class MonitorizateScreen extends StatefulWidget {
@@ -81,6 +82,16 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                               ),
                             ),
+                            if (dosare.isNotEmpty) ...[
+                              _butonRotund(
+                                tooltip: 'Filtrează dosarele',
+                                icon: Icons.tune,
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const DosareFiltrateScreen()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
                             _butonVerificare(),
                           ],
                         ),
@@ -152,6 +163,29 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _butonRotund({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: AppColors.card,
+      shape: const CircleBorder(side: BorderSide(color: AppColors.outline)),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: IconButton(
+          tooltip: tooltip,
+          padding: EdgeInsets.zero,
+          iconSize: 20,
+          color: AppColors.primary,
+          onPressed: onPressed,
+          icon: Icon(icon),
+        ),
       ),
     );
   }
