@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
+import '../data/instante_portal.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../utils/termene.dart';
 import '../widgets/comutare_monitorizare.dart';
 import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
+import 'instante_screen.dart';
 
 /// Toate datele unui dosar (Figma: „03 · Detaliu dosar”): antet albastru cu
 /// numărul și comutatorul de monitorizare, informațiile generale, apoi
@@ -499,6 +501,16 @@ class _RutaInstanta extends StatelessWidget {
                 ),
               ],
             ),
+            if (instantaDupaCod(dosar.institutie) case final instanta?) ...[
+              const SizedBox(height: 10),
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => InstantaScreen(instanta: instanta)),
+                ),
+                icon: const Icon(Icons.contact_phone_outlined, size: 18),
+                label: const Text('Contact și program instanță'),
+              ),
+            ],
           ],
         ),
       ),

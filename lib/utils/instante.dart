@@ -138,6 +138,7 @@ const Map<String, String> _localitati = {
   'NEGRESTIOAS': 'Negrești-Oaș',
   'NOVACI': 'Novaci',
   'ODORHEIULSECUIESC': 'Odorheiu Secuiesc',
+  'ODORHEIUSECUIESC': 'Odorheiu Secuiesc',
   'OLT': 'Olt',
   'OLTENITA': 'Oltenița',
   'ONESTI': 'Onești',
