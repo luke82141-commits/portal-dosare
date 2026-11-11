@@ -39,5 +39,14 @@ void main() {
     expect(numeDocument('incheieredesedinta'), 'Încheiere de ședință');
     expect(numeDocument('_IncheiereFinalaDezinvestire'), 'Încheiere finală (dezînvestire)');
     expect(numeDocument('Altceva'), 'Altceva');
+    // Codul real de la portal, cu altă ortografie decât cea din listă.
+    expect(
+      numeDocument('incheiereAmanareinitialaapronuntarii'),
+      'Încheiere de amânare a pronunțării',
+    );
+    // Coduri necunoscute: despărțite în cuvinte, cu diacritice.
+    expect(numeDocument('SentintaCivila'), 'Sentință civilă');
+    expect(numeDocument('incheiereRepunerePeRol'), 'Încheiere repunere pe rol');
+    expect(numeDocument('DecizieRecursPenala'), 'Decizie recurs penală');
   });
 }

@@ -336,7 +336,9 @@ class SedintaRand extends StatelessWidget {
                   Text(
                     [
                       if (document.isNotEmpty) document,
-                      if (s.dataPronuntare != null)
+                      // Data pronunțării apare doar dacă diferă de cea a documentului.
+                      if (s.dataPronuntare != null &&
+                          formateazaData(s.dataPronuntare) != formateazaData(s.dataDocument))
                         'pronunțat ${formateazaData(s.dataPronuntare)}',
                     ].join(' · '),
                     style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),

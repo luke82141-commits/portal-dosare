@@ -253,6 +253,7 @@ const Map<String, String> _documente = {
   'incheiereindreptareeroaremateriala': 'Încheiere de îndreptare a erorii materiale',
   'incheieresuspendare': 'Încheiere de suspendare',
   'incheiereamanareainitialaapronuntarii': 'Încheiere de amânare a pronunțării',
+  'incheiereamanareinitialaapronuntarii': 'Încheiere de amânare a pronunțării',
   'incheiereamanareulterioaraapronuntarii': 'Încheiere de amânare a pronunțării',
   'hotarare': 'Hotărâre',
   'hotararecameraconsiliu': 'Hotărâre (cameră de consiliu)',
@@ -261,11 +262,147 @@ const Map<String, String> _documente = {
   'rezolutie': 'Rezoluție',
 };
 
+/// Cuvintele din care sunt lipite codurile de document ale portalului, cu
+/// forma lor corectă în română. Folosite pentru codurile care nu sunt în
+/// [_documente].
+const Map<String, String> _cuvinteDocument = {
+  'incheiere': 'încheiere',
+  'incheierea': 'încheierea',
+  'sentinta': 'sentință',
+  'decizie': 'decizie',
+  'decizia': 'decizia',
+  'hotarare': 'hotărâre',
+  'hotararea': 'hotărârea',
+  'minuta': 'minută',
+  'rezolutie': 'rezoluție',
+  'ordonanta': 'ordonanță',
+  'ordonantapresedintiala': 'ordonanță președințială',
+  'presedintiala': 'președințială',
+  'amanare': 'amânare',
+  'amanarea': 'amânarea',
+  'amanarii': 'amânării',
+  'pronuntare': 'pronunțare',
+  'pronuntarea': 'pronunțarea',
+  'pronuntarii': 'pronunțării',
+  'initiala': 'inițială',
+  'ulterioara': 'ulterioară',
+  'finala': 'finală',
+  'intermediara': 'intermediară',
+  'interlocutorie': 'interlocutorie',
+  'sedinta': 'ședință',
+  'sedinte': 'ședințe',
+  'camera': 'cameră',
+  'consiliu': 'consiliu',
+  'preliminara': 'preliminară',
+  'suspendare': 'suspendare',
+  'suspendarea': 'suspendarea',
+  'repunere': 'repunere',
+  'redeschidere': 'redeschidere',
+  'dezbateri': 'dezbateri',
+  'dezbaterilor': 'dezbaterilor',
+  'dezinvestire': 'dezînvestire',
+  'indreptare': 'îndreptare',
+  'eroare': 'eroare',
+  'erori': 'erori',
+  'materiala': 'materială',
+  'materiale': 'materiale',
+  'completare': 'completare',
+  'lamurire': 'lămurire',
+  'dispozitiv': 'dispozitiv',
+  'admitere': 'admitere',
+  'respingere': 'respingere',
+  'anulare': 'anulare',
+  'perimare': 'perimare',
+  'renuntare': 'renunțare',
+  'judecata': 'judecată',
+  'judecare': 'judecare',
+  'cerere': 'cerere',
+  'cererii': 'cererii',
+  'cereri': 'cereri',
+  'recurs': 'recurs',
+  'apel': 'apel',
+  'contestatie': 'contestație',
+  'contestatia': 'contestația',
+  'executare': 'executare',
+  'executarii': 'executării',
+  'conflict': 'conflict',
+  'competenta': 'competență',
+  'declinare': 'declinare',
+  'declinarea': 'declinarea',
+  'stramutare': 'strămutare',
+  'stramutarea': 'strămutarea',
+  'recuzare': 'recuzare',
+  'abtinere': 'abținere',
+  'incompatibilitate': 'incompatibilitate',
+  'masuri': 'măsuri',
+  'masura': 'măsură',
+  'preventive': 'preventive',
+  'preventiva': 'preventivă',
+  'arest': 'arest',
+  'arestare': 'arestare',
+  'control': 'control',
+  'judiciar': 'judiciar',
+  'judiciara': 'judiciară',
+  'civila': 'civilă',
+  'civil': 'civil',
+  'penala': 'penală',
+  'penal': 'penal',
+  'comerciala': 'comercială',
+  'administrativ': 'administrativ',
+  'fiscal': 'fiscal',
+  'cauza': 'cauză',
+  'cauzei': 'cauzei',
+  'probe': 'probe',
+  'probatoriu': 'probatoriu',
+  'expertiza': 'expertiză',
+  'rol': 'rol',
+  'termen': 'termen',
+  'fond': 'fond',
+  'de': 'de',
+  'a': 'a',
+  'al': 'al',
+  'la': 'la',
+  'pe': 'pe',
+  'in': 'în',
+  'si': 'și',
+  'cu': 'cu',
+  'din': 'din',
+  'pentru': 'pentru',
+  'privind': 'privind',
+};
+
 /// Tipul documentului de ședință, lizibil. Portalul are sute de tipuri, toate
-/// lipite; cele uzuale sunt traduse, restul rămân cum vin.
+/// lipite și fără diacritice („incheiereAmanareinitialaapronuntarii”). Cele
+/// uzuale au o traducere fixă; restul sunt despărțite în cuvinte și scrise cu
+/// diacritice. Doar un cod din care nu se recunoaște nimic rămâne cum vine.
 String numeDocument(String cod) {
-  final c = cod.trim();
+  final c = cod.trim().replaceAll('_', '');
   if (c.isEmpty) return '';
-  final cheie = c.replaceAll('_', '').toLowerCase();
-  return _documente[cheie] ?? c.replaceAll('_', '');
+  final cheie = c.toLowerCase();
+  final fix = _documente[cheie];
+  if (fix != null) return fix;
+
+  final cuvinte = _desparte(cheie);
+  if (cuvinte == null) return c;
+  final text = cuvinte.join(' ');
+  return text[0].toUpperCase() + text.substring(1);
+}
+
+/// Desparte [s] în cuvinte din [_cuvinteDocument], preferând cât mai puține
+/// cuvinte (deci cele lungi). Întoarce null dacă nu se poate acoperi tot.
+List<String>? _desparte(String s) {
+  final n = s.length;
+  // cel[i] = cea mai bună despărțire a lui s[i..]
+  final cel = List<List<String>?>.filled(n + 1, null);
+  cel[n] = const [];
+  for (var i = n - 1; i >= 0; i--) {
+    for (var j = n; j > i; j--) {
+      final rest = cel[j];
+      final cuvant = _cuvinteDocument[s.substring(i, j)];
+      if (cuvant == null || rest == null) continue;
+      final candidat = [cuvant, ...rest];
+      if (cel[i] == null || candidat.length < cel[i]!.length) cel[i] = candidat;
+    }
+  }
+  return cel[0];
 }
