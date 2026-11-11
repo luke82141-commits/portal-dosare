@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/dosar_model.dart';
-import '../services/soap_service.dart';
+import '../services/biblioteca_service.dart';
+import '../services/cautari_recente_service.dart';
+import '../theme/app_theme.dart';
+import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
+import '../widgets/elemente.dart';
+import 'rezultate_screen.dart';
 
+/// Ecranul principal de căutare (Figma: „01 · Căutare”).
 class CautareScreen extends StatefulWidget {
-  const CautareScreen({super.key});
+  /// Deschide fila „Monitorizate” (butonul „Vezi toate”).
+  final VoidCallback? onVeziMonitorizate;
+
+  const CautareScreen({super.key, this.onVeziMonitorizate});
 
   @override
   State<CautareScreen> createState() => _CautareScreenState();
 }
 
 class _CautareScreenState extends State<CautareScreen> {
-  final TextEditingController _numarController = TextEditingController();
-  final TextEditingController _obiectController = TextEditingController();
-  final SoapService _soapService = SoapService();
+  final _numarController = TextEditingController();
+  final _obiectController = TextEditingController();
 
-  List<Dosar> _dosare = [];
-  bool _isLoading = false;
-  bool _limitaAtinsa = false;
-  bool _cautareEfectuata = false;
+  @override
+  void initState() {
+    super.initState();
+    CautariRecenteService.instance.incarca();
+  }
 
   @override
   void dispose() {
@@ -28,7 +38,7 @@ class _CautareScreenState extends State<CautareScreen> {
     super.dispose();
   }
 
-  Future<void> _cautaDosare() async {
+  void _cauta() {
     final numar = _numarController.text.trim();
     final obiect = _obiectController.text.trim();
     if (numar.isEmpty && obiect.isEmpty) {
@@ -37,116 +47,216 @@ class _CautareScreenState extends State<CautareScreen> {
       );
       return;
     }
-
     FocusScope.of(context).unfocus();
-    setState(() => _isLoading = true);
+    CautariRecenteService.instance.adauga(CautareRecenta(numar: numar, obiect: obiect));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => RezultateScreen(numar: numar, obiect: obiect)),
+    );
+  }
 
-    try {
-      final rezultat = await _soapService.cautaDosare(
-        numarDosar: numar,
-        obiectDosar: obiect,
-      );
-      if (!mounted) return;
-      setState(() {
-        _dosare = rezultat.dosare;
-        _limitaAtinsa = rezultat.limitaAtinsa;
-        _cautareEfectuata = true;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Eroare la căutare: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _reia(CautareRecenta c) {
+    _numarController.text = c.numar;
+    _obiectController.text = c.obiect;
+    _cauta();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Căutare dosare'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            TextField(
-              controller: _numarController,
-              decoration: InputDecoration(
-                labelText: 'Număr dosar',
-                hintText: 'Ex: 12345/300/2023',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+            _antet(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [_recente(), _termene()],
               ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _cautaDosare(),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _obiectController,
-              decoration: InputDecoration(
-                labelText: 'Obiectul dosarului',
-                hintText: 'Ex: uzucapiune, pretenții, divorț',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-              ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _cautaDosare(),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _isLoading ? null : _cautaDosare,
-              icon: const Icon(Icons.search),
-              label: const Text('Caută'),
-            ),
-            const SizedBox(height: 12),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-              if (_cautareEfectuata && _dosare.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    _limitaAtinsa
-                        ? 'Afișate primele ${_dosare.length} dosare (limita portalului). '
-                            'Restrânge căutarea pentru rezultate complete.'
-                        : _dosare.length == 1
-                            ? 'Un dosar găsit'
-                            : '${_dosare.length} dosare găsite',
-                    style: TextStyle(
-                      color: _limitaAtinsa ? Colors.orange[800] : Colors.grey[700],
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: _dosare.isEmpty
-                    ? Center(
-                        child: Text(
-                          _cautareEfectuata
-                              ? 'Niciun dosar găsit.'
-                              : 'Caută după număr, după obiect sau după ambele.',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: _dosare.length,
-                        itemBuilder: (context, index) => DosarCardWidget(
-                          key: ValueKey(_dosare[index].cheie),
-                          dosar: _dosare[index],
-                        ),
-                      ),
-              ),
-            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _antet() {
+    const alb = AppColors.onPrimary;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.hero)),
+      ),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'PORTAL DOSARE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6,
+                      color: AppColors.accentContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Caută un dosar',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: alb),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Date preluate direct de pe portal.just.ro',
+                    style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.8)),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x2E0D1433), blurRadius: 24, offset: Offset(0, 8)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _camp(
+                      eticheta: 'Număr dosar',
+                      hint: 'ex. 14993/299/2026',
+                      icon: Icons.folder,
+                      controller: _numarController,
+                    ),
+                    const SizedBox(height: 14),
+                    _camp(
+                      eticheta: 'Obiectul dosarului',
+                      hint: 'ex. uzucapiune, pretenții (opțional)',
+                      icon: Icons.search,
+                      controller: _obiectController,
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: _cauta,
+                      icon: const Icon(Icons.search, size: 20),
+                      label: const Text('Caută dosar'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _camp({
+    required String eticheta,
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eticheta,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _cauta(),
+          decoration: InputDecoration(hintText: hint, prefixIcon: Icon(icon, size: 20)),
+        ),
+      ],
+    );
+  }
+
+  Widget _recente() {
+    return ListenableBuilder(
+      listenable: CautariRecenteService.instance,
+      builder: (context, _) {
+        final recente = CautariRecenteService.instance.lista;
+        if (recente.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AntetSectiune(
+                'Căutări recente',
+                actiune: 'Șterge',
+                onActiune: CautariRecenteService.instance.sterge,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final c in recente)
+                    Pastila(c.eticheta, icon: Icons.history, onTap: () => _reia(c)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _termene() {
+    return ListenableBuilder(
+      listenable: BibliotecaService.instance,
+      builder: (context, _) {
+        final cuTermen = <(DosarSalvat, Sedinta)>[
+          for (final s in BibliotecaService.instance.dosare)
+            if (urmatorulTermen(s.dosar) case final t?) (s, t),
+        ]..sort((a, b) => a.$2.data!.compareTo(b.$2.data!));
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AntetSectiune(
+              'Termene apropiate',
+              actiune: cuTermen.isEmpty ? null : 'Vezi toate',
+              onActiune: widget.onVeziMonitorizate,
+            ),
+            const SizedBox(height: 8),
+            if (cuTermen.isEmpty)
+              const Text(
+                'Monitorizează un dosar ca să vezi aici următoarele termene.',
+                style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
+              )
+            else
+              for (final (s, _) in cuTermen.take(3))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DosarCardWidget(key: ValueKey(s.dosar.cheie), dosar: s.dosar, salvat: s),
+                ),
+          ],
+        );
+      },
     );
   }
 }

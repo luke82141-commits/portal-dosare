@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/monitorizare_service.dart';
-import 'biblioteca_screen.dart';
 import 'cautare_screen.dart';
+import 'monitorizate_screen.dart';
+import 'notificari_screen.dart';
 
-/// Cadrul aplicației: căutarea și biblioteca, cu bară de navigare jos.
+/// Cadrul aplicației: Căutare, Monitorizate și Notificări, cu bara de
+/// navigare jos (Figma: „Bară navigare”).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -14,6 +16,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  static const _filaMonitorizate = 1;
+  static const _filaNotificari = 2;
+
   int _tab = 0;
 
   @override
@@ -50,11 +55,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Aplicația deschisă dintr-o notificare sare direct la Notificări.
   void _laNotificare() {
     final semnal = MonitorizareService.instance.deschideBiblioteca;
     if (!semnal.value) return;
     semnal.value = false;
-    if (mounted) setState(() => _tab = 1);
+    if (mounted) setState(() => _tab = _filaNotificari);
   }
 
   @override
@@ -62,32 +68,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       body: IndexedStack(
         index: _tab,
-        children: const [CautareScreen(), BibliotecaScreen()],
+        children: [
+          CautareScreen(onVeziMonitorizate: () => setState(() => _tab = _filaMonitorizate)),
+          const MonitorizateScreen(),
+          const NotificariScreen(),
+        ],
       ),
       bottomNavigationBar: ListenableBuilder(
         listenable: BibliotecaService.instance,
         builder: (context, _) {
           final necitite = BibliotecaService.instance.totalNecitite;
+          Widget clopotel(IconData icon) => Badge(
+                isLabelVisible: necitite > 0,
+                label: Text('$necitite'),
+                child: Icon(icon),
+              );
           return NavigationBar(
             selectedIndex: _tab,
             onDestinationSelected: (i) => setState(() => _tab = i),
             destinations: [
+              const NavigationDestination(icon: Icon(Icons.search), label: 'Căutare'),
               const NavigationDestination(
-                icon: Icon(Icons.search),
-                label: 'Căutare',
+                icon: Icon(Icons.bookmark_border),
+                selectedIcon: Icon(Icons.bookmark),
+                label: 'Monitorizate',
               ),
               NavigationDestination(
-                icon: Badge(
-                  isLabelVisible: necitite > 0,
-                  label: Text('$necitite'),
-                  child: const Icon(Icons.bookmarks_outlined),
-                ),
-                selectedIcon: Badge(
-                  isLabelVisible: necitite > 0,
-                  label: Text('$necitite'),
-                  child: const Icon(Icons.bookmarks),
-                ),
-                label: 'Bibliotecă',
+                icon: clopotel(Icons.notifications_none),
+                selectedIcon: clopotel(Icons.notifications),
+                label: 'Notificări',
               ),
             ],
           );
