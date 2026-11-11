@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:legal_management_app/main.dart';
 import 'package:legal_management_app/models/dosar_model.dart';
+import 'package:legal_management_app/screens/dosar_detaliu_screen.dart';
 import 'package:legal_management_app/screens/rezultate_screen.dart';
 import 'package:legal_management_app/services/biblioteca_service.dart';
 import 'package:legal_management_app/services/soap_service.dart';
@@ -253,5 +254,15 @@ void main() {
     await tester.tap(find.byType(DosarCardWidget));
     await tester.pumpAndSettle();
     expect(find.text('Parcursul dosarului'), findsNothing);
+    expect(find.textContaining('apare doar la'), findsNothing);
+  });
+
+  testWidgets('În apel, fără fondul pe portal, spune ce lipsește', (tester) async {
+    ParcursDosar.soap = () => _SoapFals([_apel]);
+    await tester.pumpWidget(MaterialApp(theme: construiesteTema(), home: DosarDetaliuScreen(dosar: _apel)));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcursul dosarului'), findsNothing);
+    expect(find.textContaining('apare doar la Tribunalul Prahova'), findsOneWidget);
+    expect(find.text('Reîncearcă'), findsOneWidget);
   });
 }
