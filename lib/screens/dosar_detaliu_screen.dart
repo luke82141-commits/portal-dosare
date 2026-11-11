@@ -149,6 +149,23 @@ class _Antet extends StatelessWidget {
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: alb),
                     ),
                   ),
+                  ListenableBuilder(
+                    listenable: BibliotecaService.instance,
+                    builder: (context, _) {
+                      final b = BibliotecaService.instance;
+                      if (b.dosare.isEmpty) return const SizedBox.shrink();
+                      return IconButton(
+                        tooltip: 'Dosarele mele',
+                        color: alb,
+                        icon: Badge(
+                          isLabelVisible: b.totalNecitite > 0,
+                          label: Text('${b.totalNecitite}'),
+                          child: const Icon(Icons.collections_bookmark_outlined),
+                        ),
+                        onPressed: () => _arataDosarele(context, dosar),
+                      );
+                    },
+                  ),
                   IconButton(
                     tooltip: 'Copiază numărul dosarului',
                     color: alb,
@@ -277,6 +294,100 @@ class _Antet extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lista dosarelor monitorizate, ca foaie de jos: tap deschide direct
+/// detaliul altui dosar, fără întoarcere la ecranul principal.
+void _arataDosarele(BuildContext context, Dosar curent) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    backgroundColor: AppColors.card,
+    builder: (ctx) {
+      final dosare = BibliotecaService.instance.dosare;
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                dosare.length == 1 ? 'Un dosar monitorizat' : '${dosare.length} dosare monitorizate',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                itemCount: dosare.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 4),
+                itemBuilder: (_, i) {
+                  final s = dosare[i];
+                  final esteCurent = s.dosar.cheie == curent.cheie;
+                  return Material(
+                    color: esteCurent ? AppColors.primaryContainer : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        if (esteCurent) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: s.dosar)),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    s.dosar.numar,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    [s.dosar.instanta, s.dosar.obiect]
+                                        .where((e) => e.isNotEmpty)
+                                        .join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            s.necitite > 0
+                                ? StadiuChip.nou(s.necitite)
+                                : StadiuChip.stadiu(s.dosar.stadiuProcesual),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _InformatiiGenerale extends StatelessWidget {

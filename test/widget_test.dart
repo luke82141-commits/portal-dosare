@@ -103,4 +103,34 @@ void main() {
     expect(find.byTooltip('Oprește monitorizarea'), findsOneWidget);
     expect(find.text('Monitorizare activă'), findsOneWidget);
   });
+
+  testWidgets('Din detaliu se poate sări la alt dosar monitorizat', (tester) async {
+    final altul = Dosar(
+      numar: '5900/2/2026',
+      data: DateTime(2026, 9, 16),
+      institutie: 'CurteadeApelBUCURESTI',
+      obiect: 'suspendare executare act administrativ',
+      stadiuProcesual: 'Recurs',
+      sectie: '',
+      categorie: '',
+      parti: const [],
+      sedinte: const [],
+    );
+    await tester.runAsync(() async {
+      await BibliotecaService.instance.adauga(_dosar);
+      await BibliotecaService.instance.adauga(altul);
+    });
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Dosarele mele'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 dosare monitorizate'), findsOneWidget);
+
+    await tester.tap(find.text('5900/2/2026'));
+    await tester.pumpAndSettle();
+    expect(find.text('suspendare executare act administrativ'), findsOneWidget);
+    expect(find.text('468/310/2026'), findsNothing);
+  });
 }
