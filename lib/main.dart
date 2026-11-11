@@ -27,8 +27,23 @@ class LegalManagementApp extends StatelessWidget {
     return MaterialApp(
       title: 'Portal Dosare',
       theme: construiesteTema(),
+      scrollBehavior: const FaraIntindere(),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
+}
+
+/// Oprește efectul de „întindere” al Android 12+ când o listă e trasă peste
+/// capăt (deforma textul). Listele se opresc pur și simplu la margine.
+class FaraIntindere extends MaterialScrollBehavior {
+  const FaraIntindere();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) =>
+      child;
 }
