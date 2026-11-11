@@ -101,8 +101,22 @@ class _ParcursDosarCardState extends State<ParcursDosarCard> {
           );
         }
         final toate = snap.data!;
-        // Fără alte instanțe, cardul nu apare.
-        if (!toate.any((d) => d.cheie != widget.dosar.cheie)) return const SizedBox.shrink();
+        if (!toate.any((d) => d.cheie != widget.dosar.cheie)) {
+          // Un dosar la fond, fără cale de atac declarată, nu are parcurs.
+          // Dacă e în cale de atac sau are una declarată, spunem ce lipsește.
+          final d = widget.dosar;
+          final inCaleDeAtac = !d.stadiuProcesual.toLowerCase().startsWith('fond');
+          if (!inCaleDeAtac && d.caiAtac.isEmpty) return const SizedBox.shrink();
+          return _CardMic(
+            icon: Icons.info_outline,
+            text: inCaleDeAtac
+                ? 'Pe portal, dosarul ${d.numar} apare doar la ${d.instanta}. '
+                    'Instanța anterioară nu a fost găsită după acest număr.'
+                : 'Calea de atac declarată nu apare încă pe portal la altă instanță.',
+            actiune: 'Reîncearcă',
+            onActiune: _reincearca,
+          );
+        }
         final etape = toate.any((d) => d.cheie == widget.dosar.cheie) ? toate : [...toate, widget.dosar];
         return _Parcurs(etape: ParcursDosar.ordoneaza(etape), curent: widget.dosar);
       },
