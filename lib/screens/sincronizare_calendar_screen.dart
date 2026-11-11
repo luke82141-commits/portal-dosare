@@ -59,10 +59,10 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
     setState(() => _lucreaza = true);
     try {
       final r = await _sync.trimite([for (final s in BibliotecaService.instance.dosare) s.dosar]);
+      final n = _alese.length;
       _mesaj(r.adaugate == 0
-          ? 'Calendarul era deja la zi${r.existente > 0 ? ' (${r.existente} termene existau)' : ''}.'
-          : '${r.adaugate == 1 ? 'Un termen adăugat' : '${r.adaugate} termene adăugate'} în calendar'
-              '${r.existente > 0 ? ', ${r.existente} existau deja' : ''}.');
+          ? 'Calendarul era deja la zi.'
+          : '${n == 1 ? 'Un dosar sincronizat' : '$n dosare sincronizate'} în calendar.');
     } catch (e) {
       _mesaj('Sincronizarea a eșuat: $e');
     } finally {
@@ -120,9 +120,9 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             const Text(
-              'Termenele apar în calendarul ales (Google, iCloud sau altul configurat în telefon), '
-              'cu instanța ca locație. Așa, Google Calendar și Maps îți pot spune când să pleci '
-              'ca să ajungi la timp. Nimic nu se șterge, iar termenele deja trimise nu se dublează.',
+              'Dosarele apar în calendarul ales (Google, iCloud sau altul configurat în telefon), '
+              'la data și ora fiecărei ședințe, cu instanța ca locație. Așa, Google Calendar și Maps '
+              'îți pot spune când să pleci ca să ajungi la timp. Nimic nu se șterge și nimic nu se dublează.',
               style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
@@ -200,7 +200,7 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _titlu('Calendarul în care trimit', Icons.event_available),
+            _titlu('Calendarul sincronizat', Icons.event_available),
             continut,
             const SizedBox(height: 8),
             Row(
@@ -228,12 +228,7 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
   Widget _cardDosare() {
     final dosare = BibliotecaService.instance.dosare;
     final toate = dosare.isNotEmpty && _alese.length == dosare.length;
-    final termene = [
-      for (final s in dosare)
-        if (_alese.contains(s.dosar.cheie))
-          for (final t in s.dosar.sedinte)
-            if (esteTermenViitor(t)) t,
-    ].length;
+    final alese = dosare.where((s) => _alese.contains(s.dosar.cheie)).length;
 
     return Card(
       child: Padding(
@@ -241,7 +236,7 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _titlu('Dosarele trimise în calendar', Icons.checklist),
+            _titlu('Dosarele sincronizate', Icons.checklist),
             if (dosare.isEmpty)
               const Text('Biblioteca e goală.', style: TextStyle(color: AppColors.onSurfaceVariant))
             else ...[
@@ -273,11 +268,11 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
                 ),
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _lucreaza || !_sync.configurat || termene == 0 ? null : _trimite,
+                onPressed: _lucreaza || !_sync.configurat || alese == 0 ? null : _trimite,
                 icon: const Icon(Icons.sync),
-                label: Text(termene == 0
-                    ? 'Niciun termen viitor de trimis'
-                    : 'Trimite ${termene == 1 ? 'un termen' : '$termene termene'} în calendar'),
+                label: Text(alese == 0
+                    ? 'Bifează dosarele de sincronizat'
+                    : 'Sincronizează ${alese == 1 ? 'un dosar' : '$alese dosare'} în calendar'),
               ),
               if (!_sync.configurat)
                 const Padding(
@@ -292,7 +287,7 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
                   child: Text(
                     'Ultima sincronizare: ${formateazaDataOra(_sync.ultimaSincronizare)}'
                     '${_sync.numeCalendar == null ? '' : ' · ${_sync.numeCalendar}'}. '
-                    'Termenele noi se trimit automat când deschizi aplicația.',
+                    'Dosarele se sincronizează automat când deschizi aplicația.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),

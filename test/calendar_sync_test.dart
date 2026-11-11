@@ -167,14 +167,14 @@ void main() {
     await tester.tap(find.text('Termene'));
     await tester.pumpAndSettle();
     expect(sync.calendarId, 'g1');
-    await tester.ensureVisible(find.text('Trimite un termen în calendar'));
+    await tester.ensureVisible(find.text('Sincronizează un dosar în calendar'));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
-      await tester.tap(find.text('Trimite un termen în calendar'));
+      await tester.tap(find.text('Sincronizează un dosar în calendar'));
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
     expect(cal.creat, hasLength(1));
-    expect(find.text('Un termen adăugat în calendar.'), findsOneWidget);
+    expect(find.text('Un dosar sincronizat în calendar.'), findsOneWidget);
   });
 }
