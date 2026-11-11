@@ -7,6 +7,7 @@ import 'package:legal_management_app/services/biblioteca_service.dart';
 import 'package:legal_management_app/services/soap_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:legal_management_app/widgets/dosar_card.dart';
+import 'package:legal_management_app/widgets/parcurs_dosar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final _dosar = Dosar(
@@ -46,15 +47,40 @@ Future<void> _pompeazaCard(WidgetTester tester) => tester.pumpWidget(
     );
 
 class _SoapFals extends SoapService {
+  final List<Dosar> dosare;
+  _SoapFals([List<Dosar>? dosare]) : dosare = dosare ?? [_dosar];
+
   @override
   Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
-      RezultatCautare([_dosar], false);
+      RezultatCautare(dosare, false);
 }
+
+final _apel = Dosar(
+  numar: '468/310/2026',
+  data: DateTime(2026, 10, 1),
+  institutie: 'TribunalulPRAHOVA',
+  obiect: 'uzucapiune',
+  stadiuProcesual: 'Apel',
+  sectie: 'Secția I Civilă',
+  categorie: 'Civil',
+  parti: const [],
+  sedinte: [
+    Sedinta(
+      complet: 'A2',
+      data: DateTime(2026, 10, 20),
+      ora: '10:30',
+      solutie: 'Respinge apelul',
+      solutieSumar: 'Respinge apelul ca nefondat. Definitivă.',
+    ),
+  ],
+);
 
 void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await BibliotecaService.instance.incarca();
+    ParcursDosar.golesteCache();
+    ParcursDosar.soap = _SoapFals.new;
   });
 
   testWidgets('Ecranul de căutare are câmpurile pentru număr și obiect', (tester) async {
@@ -199,5 +225,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(BibliotecaService.instance.contine(_dosar.cheie), isFalse);
     expect(find.text('Adaugă'), findsOneWidget);
+  });
+
+  testWidgets('La fond apare și calea de atac, cu soluția și ședințele ei', (tester) async {
+    ParcursDosar.soap = () => _SoapFals([_dosar, _apel]);
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcursul dosarului'), findsOneWidget);
+    expect(find.text('Tribunalul Prahova'), findsOneWidget);
+    expect(find.text('Soluție: Respinge apelul'), findsOneWidget);
+    expect(find.text('20.10.2026 · ora 10:30 · Complet A2'), findsOneWidget);
+    // Soluția de la fond apare și ea, în aceeași cronologie.
+    expect(find.text('Soluție: Amână cauza'), findsOneWidget);
+    // Ierarhic: tribunalul (apel) deasupra judecătoriei (fond).
+    expect(
+      tester.getTopLeft(find.text('Tribunalul Prahova')).dy,
+      lessThan(tester.getTopLeft(find.text('Soluție: Amână cauza')).dy),
+    );
+    await tester.tap(find.text('Ședințe (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Respinge apelul ca nefondat. Definitivă.'), findsWidgets);
+  });
+
+  testWidgets('Fără alte instanțe, parcursul nu apare', (tester) async {
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcursul dosarului'), findsNothing);
   });
 }

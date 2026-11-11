@@ -8,6 +8,7 @@ import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
+import 'sincronizare_calendar_screen.dart';
 
 /// Dosarele monitorizate (Figma: „04 · Dosare monitorizate”).
 class MonitorizateScreen extends StatefulWidget {
@@ -83,6 +84,14 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                               ),
                             ),
                             if (dosare.isNotEmpty) ...[
+                              _butonRotund(
+                                tooltip: 'Sincronizare Google / iCloud Calendar',
+                                icon: Icons.event_repeat,
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const SincronizareCalendarScreen()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               _butonRotund(
                                 tooltip: 'Filtrează dosarele',
                                 icon: Icons.tune,

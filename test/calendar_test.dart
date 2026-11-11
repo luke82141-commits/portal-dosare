@@ -6,6 +6,8 @@ import 'package:legal_management_app/services/biblioteca_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:legal_management_app/utils/calendar.dart';
 import 'package:legal_management_app/utils/ruta.dart';
+import 'package:legal_management_app/services/soap_service.dart';
+import 'package:legal_management_app/widgets/parcurs_dosar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Sedinta _s(DateTime d, String ora) =>
@@ -22,6 +24,12 @@ Dosar _d(String numar, List<Sedinta> sedinte) => Dosar(
       parti: const [],
       sedinte: sedinte,
     );
+
+class _SoapGol extends SoapService {
+  @override
+  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+      const RezultatCautare([], false);
+}
 
 void main() {
   test('ora portalului devine minutul din zi', () {
@@ -62,6 +70,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       await BibliotecaService.instance.incarca();
+      ParcursDosar.soap = _SoapGol.new;
     });
 
     testWidgets('trece prin vederile lună, zi, săptămână și an', (tester) async {

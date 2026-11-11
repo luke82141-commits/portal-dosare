@@ -12,6 +12,7 @@ import '../utils/ruta.dart';
 import '../utils/termene.dart';
 import '../widgets/comutare_monitorizare.dart';
 import '../widgets/elemente.dart';
+import '../widgets/parcurs_dosar.dart';
 import 'dosare_filtrate_screen.dart';
 import 'instante_screen.dart';
 
@@ -70,6 +71,8 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         _Modificari(salvat: salvat),
                         const SizedBox(height: 16),
                       ],
+                      ParcursDosarCard(key: ValueKey(dosar.cheie), dosar: dosar),
+                      const SizedBox(height: 16),
                       _RutaInstanta(dosar: dosar),
                       const SizedBox(height: 16),
                       _InformatiiGenerale(dosar: dosar),
@@ -89,7 +92,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         numar: sedinte.length,
                         copii: sedinte.isEmpty
                             ? [const _Gol('Nu există încă ședințe publicate.')]
-                            : [for (final s in sedinte) SedintaRand(sedinta: s)],
+                            : [for (final s in sedinte) SedintaRand(sedinta: s, dosar: dosar)],
                       ),
                       if (dosar.caiAtac.isNotEmpty) ...[
                         const SizedBox(height: 16),
