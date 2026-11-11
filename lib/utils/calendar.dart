@@ -9,28 +9,6 @@ const lunileAnului = [
 
 const zileleSaptamanii = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
-/// Culorile dosarelor în calendar, ca în Google Calendar: fiecare dosar își
-/// păstrează culoarea.
-const _paleta = [
-  Color(0xFF1F3A93),
-  Color(0xFF0B8043),
-  Color(0xFFB8892F),
-  Color(0xFF8E24AA),
-  Color(0xFFD50000),
-  Color(0xFF039BE5),
-  Color(0xFFF4511E),
-  Color(0xFF616161),
-];
-
-/// Culoarea fixă a unui dosar, derivată din numărul și instanța lui.
-Color culoareDosar(Dosar d) {
-  var h = 0;
-  for (final c in d.cheie.codeUnits) {
-    h = (h * 31 + c) & 0x7fffffff;
-  }
-  return _paleta[h % _paleta.length];
-}
-
 /// Un termen (o ședință) al unui dosar, așezat în calendar.
 class Termen {
   final Dosar dosar;
@@ -69,10 +47,14 @@ int? minutDinOra(String ora) {
 }
 
 /// Toate ședințele dosarelor, grupate pe zile și ordonate după oră.
-Map<DateTime, List<Termen>> termenePeZile(List<Dosar> dosare) {
+/// [culoare] dă culoarea fiecărui dosar (aleasă sau automată).
+Map<DateTime, List<Termen>> termenePeZile(
+  List<Dosar> dosare, {
+  Color Function(Dosar)? culoare,
+}) {
   final rezultat = <DateTime, List<Termen>>{};
   for (final d in dosare) {
-    final culoare = culoareDosar(d);
+    final c = culoare?.call(d) ?? const Color(0xFF1F3A93);
     for (final s in d.sedinte) {
       if (s.data == null) continue;
       final zi = DateUtils.dateOnly(s.data!);
@@ -81,7 +63,7 @@ Map<DateTime, List<Termen>> termenePeZile(List<Dosar> dosare) {
         sedinta: s,
         zi: zi,
         minut: minutDinOra(s.ora),
-        culoare: culoare,
+        culoare: c,
       ));
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/biblioteca_service.dart';
+import '../services/culori_service.dart';
 import '../services/monitorizare_service.dart';
 import 'calendar_screen.dart';
 import 'cautare_screen.dart';
@@ -49,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _actualizeaza() async {
     try {
       await BibliotecaService.instance.incarca();
+      await CuloriDosareService.instance.incarca();
       await MonitorizareService.instance.verificaToate();
     } catch (e) {
       // Fără rețea la pornire: rămân datele salvate, iar verificarea din

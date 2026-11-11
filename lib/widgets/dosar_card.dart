@@ -6,6 +6,7 @@ import '../services/biblioteca_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/termene.dart';
+import 'alege_culoare.dart';
 import 'comutare_monitorizare.dart';
 import 'elemente.dart';
 
@@ -49,6 +50,11 @@ class DosarCardWidget extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  if (salvat != null)
+                    Transform.translate(
+                      offset: const Offset(-8, 0),
+                      child: BulinaCuloare(dosar),
+                    ),
                   Expanded(
                     child: Text(
                       dosar.numar,

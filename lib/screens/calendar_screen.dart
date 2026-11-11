@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../services/biblioteca_service.dart';
+import '../services/culori_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/calendar.dart';
+import '../widgets/alege_culoare.dart';
 import 'dosar_detaliu_screen.dart';
 
 enum VedereCalendar { zi, saptamana, luna, an }
@@ -69,11 +71,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListenableBuilder(
-        listenable: BibliotecaService.instance,
+        listenable: Listenable.merge([BibliotecaService.instance, CuloriDosareService.instance]),
         builder: (context, _) {
-          final termene = termenePeZile([
-            for (final s in BibliotecaService.instance.dosare) s.dosar,
-          ]);
+          final termene = termenePeZile(
+            [for (final s in BibliotecaService.instance.dosare) s.dosar],
+            culoare: CuloriDosareService.instance.culoare,
+          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -246,6 +249,7 @@ class _Banda extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(4),
           onTap: onTap ?? () => _deschideDosar(context, t),
+          onLongPress: () => alegeCuloare(context, t.dosar),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0.5),
             child: Text(
@@ -600,6 +604,7 @@ class _Bloc extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _deschideDosar(context, t),
+        onLongPress: () => alegeCuloare(context, t.dosar),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(5, 3, 4, 2),
           child: Column(
