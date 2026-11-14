@@ -23,6 +23,20 @@ class SoapException implements Exception {
   String toString() => mesaj;
 }
 
+/// Portalul a refuzat cererea pentru că au venit prea multe într-un timp
+/// scurt (HTTP 429) sau e supraîncărcat (503). Nu e o defecțiune: trece
+/// singur după câteva minute.
+class PortalOcupatException extends SoapException {
+  final DateTime reincearcaDupa;
+  PortalOcupatException(this.reincearcaDupa)
+    : super(
+        'Portalul instanțelor a primit prea multe cereri într-un timp scurt și a pus '
+        'o pauză. Reîncearcă după ora ${reincearcaDupa.hour.toString().padLeft(2, '0')}:'
+        '${reincearcaDupa.minute.toString().padLeft(2, '0')}; '
+        'verificarea automată reia singură.',
+      );
+}
+
 /// Client pentru serviciul web oficial al Ministerului Justiției
 /// (portalquery.just.ro). Serviciul răspunde doar pe HTTP; pe HTTPS
 /// întoarce eroarea 525.
@@ -34,6 +48,42 @@ class SoapService {
   final http.Client _client;
 
   SoapService({http.Client? client}) : _client = client ?? http.Client();
+
+  /// Pauza minimă între două cereri către portal, pentru toată aplicația
+  /// (verificări, căutări, părți urmărite), ca să nu fim limitați (HTTP 429).
+  static Duration pauzaIntreCereri = const Duration(milliseconds: 800);
+
+  /// Cât așteptăm după un 429 fără antet Retry-After.
+  static Duration asteptareImplicita = const Duration(minutes: 5);
+
+  static DateTime? _ultimaCerere;
+  static DateTime? _blocatPanaLa;
+  static Future<void> _coada = Future.value();
+
+  /// Așteaptă rândul: cererile pleacă una câte una, cu [pauzaIntreCereri]
+  /// între ele. Cât timp portalul ne-a cerut pauză, nu mai trimitem nimic.
+  static Future<void> _asteaptaRandul() {
+    final rand = _coada.then((_) async {
+      final blocat = _blocatPanaLa;
+      if (blocat != null && DateTime.now().isBefore(blocat)) {
+        throw PortalOcupatException(blocat);
+      }
+      final ultima = _ultimaCerere;
+      if (ultima != null) {
+        final ramas = pauzaIntreCereri - DateTime.now().difference(ultima);
+        if (ramas > Duration.zero) await Future<void>.delayed(ramas);
+      }
+      _ultimaCerere = DateTime.now();
+    });
+    _coada = rand.catchError((_) {});
+    return rand;
+  }
+
+  /// Pentru teste: uită pauza cerută de portal.
+  static void reseteazaLimita() {
+    _blocatPanaLa = null;
+    _ultimaCerere = null;
+  }
 
   /// Caută dosare după număr, obiect și/sau numele unei părți. Cel puțin unul
   /// dintre aceste trei criterii e obligatoriu; [institutie] (codul SOAP al
@@ -66,6 +116,8 @@ class SoapService {
       dataStop: dataStop,
     );
 
+    await _asteaptaRandul();
+
     final http.Response response;
     try {
       response = await _client
@@ -82,6 +134,15 @@ class SoapService {
       throw SoapException('Nu s-a putut contacta portalul instanțelor: $e');
     }
 
+    if (response.statusCode == 429 || response.statusCode == 503) {
+      final secunde = int.tryParse(response.headers['retry-after'] ?? '');
+      final pauza = secunde != null && secunde > 0 && secunde < 3600
+          ? Duration(seconds: secunde)
+          : asteptareImplicita;
+      final pana = DateTime.now().add(pauza);
+      _blocatPanaLa = pana;
+      throw PortalOcupatException(pana);
+    }
     if (response.statusCode != 200) {
       throw SoapException('Portalul a răspuns cu eroarea ${response.statusCode}.');
     }
@@ -110,13 +171,12 @@ String construiesteCerereCautare({
   DateTime? dataStart,
   DateTime? dataStop,
 }) {
-  String camp(String nume, String valoare) => valoare.isEmpty
-      ? '<$nume xsi:nil="true"/>'
-      : '<$nume>${SoapService.escape(valoare)}</$nume>';
+  String camp(String nume, String valoare) =>
+      valoare.isEmpty ? '<$nume xsi:nil="true"/>' : '<$nume>${SoapService.escape(valoare)}</$nume>';
   String zi(DateTime? d) => d == null
       ? ''
       : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}'
-          '-${d.day.toString().padLeft(2, '0')}T00:00:00';
+            '-${d.day.toString().padLeft(2, '0')}T00:00:00';
 
   return '<?xml version="1.0" encoding="utf-8"?>'
       '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
@@ -144,48 +204,51 @@ List<Dosar> parseazaRaspunsDosare(String body) {
   final result = doc.findAllElements('CautareDosareResult').firstOrNull;
   if (result == null) return [];
 
-  return result.childElements
-      .where((e) => e.localName == 'Dosar')
-      .map(_parseazaDosar)
-      .toList();
+  return result.childElements.where((e) => e.localName == 'Dosar').map(_parseazaDosar).toList();
 }
 
 Dosar _parseazaDosar(XmlElement e) {
-  String text(XmlElement parent, String name) =>
-      parent.getElement(name)?.innerText.trim() ?? '';
+  String text(XmlElement parent, String name) => parent.getElement(name)?.innerText.trim() ?? '';
 
-  final parti = e
+  final parti =
+      e
           .getElement('parti')
           ?.childElements
           .map((p) => Parte(nume: text(p, 'nume'), calitate: text(p, 'calitateParte')))
           .toList() ??
       [];
 
-  final sedinte = e
+  final sedinte =
+      e
           .getElement('sedinte')
           ?.childElements
-          .map((s) => Sedinta(
-                complet: text(s, 'complet'),
-                data: _data(text(s, 'data')),
-                ora: text(s, 'ora'),
-                solutie: text(s, 'solutie'),
-                solutieSumar: text(s, 'solutieSumar'),
-                dataPronuntare: _data(text(s, 'dataPronuntare')),
-                document: text(s, 'documentSedinta'),
-                numarDocument: text(s, 'numarDocument'),
-                dataDocument: _data(text(s, 'dataDocument')),
-              ))
+          .map(
+            (s) => Sedinta(
+              complet: text(s, 'complet'),
+              data: _data(text(s, 'data')),
+              ora: text(s, 'ora'),
+              solutie: text(s, 'solutie'),
+              solutieSumar: text(s, 'solutieSumar'),
+              dataPronuntare: _data(text(s, 'dataPronuntare')),
+              document: text(s, 'documentSedinta'),
+              numarDocument: text(s, 'numarDocument'),
+              dataDocument: _data(text(s, 'dataDocument')),
+            ),
+          )
           .toList() ??
       [];
 
-  final caiAtac = e
+  final caiAtac =
+      e
           .getElement('caiAtac')
           ?.childElements
-          .map((c) => CaleAtac(
-                dataDeclarare: _data(text(c, 'dataDeclarare')),
-                parteDeclaratoare: text(c, 'parteDeclaratoare'),
-                tip: text(c, 'tipCaleAtac'),
-              ))
+          .map(
+            (c) => CaleAtac(
+              dataDeclarare: _data(text(c, 'dataDeclarare')),
+              parteDeclaratoare: text(c, 'parteDeclaratoare'),
+              tip: text(c, 'tipCaleAtac'),
+            ),
+          )
           .toList() ??
       [];
 

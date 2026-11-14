@@ -213,6 +213,9 @@ class PartiUrmariteService extends ChangeNotifier {
           dataStart: p.dataStart,
         );
         gasite[p.cheie] = r.dosare;
+      } on PortalOcupatException catch (e) {
+        ultimaEroare = e;
+        break;
       } catch (e) {
         ultimaEroare = e;
       }

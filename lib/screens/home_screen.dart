@@ -1,16 +1,26 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:home_widget/home_widget.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/calendar_sync_service.dart';
 import '../services/culori_service.dart';
 import '../services/monitorizare_service.dart';
 import '../services/parti_urmarite_service.dart';
+import '../services/pro_service.dart';
+import '../services/widget_service.dart';
 import 'calendar_screen.dart';
 import 'cautare_screen.dart';
+import 'dosar_detaliu_screen.dart';
+import 'dosare_selectie_screen.dart';
 import 'instante_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
+import 'widgeturi_screen.dart';
 import '../widgets/meniu_utilitati.dart';
 
 /// Cadrul aplicației: Căutare, Monitorizate, Calendar, Instanțe și Notificări, cu bara de
@@ -58,6 +68,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     MonitorizareService.instance.deschideBiblioteca.addListener(_laNotificare);
     _laNotificare();
     _actualizeaza();
+    BibliotecaService.instance.addListener(_programeazaWidgeturi);
+    ProService.instance.addListener(_programeazaWidgeturi);
+    if (!kIsWeb && Platform.isAndroid) {
+      HomeWidget.initiallyLaunchedFromHomeWidget().then(_dinWidget);
+      _clicuriWidget = HomeWidget.widgetClicked.listen(_dinWidget);
+    }
+  }
+
+  StreamSubscription<Uri?>? _clicuriWidget;
+  Timer? _temporizatorWidgeturi;
+
+  /// Orice schimbare în bibliotecă (citit, adăugat, șters) ajunge și pe
+  /// widgeturi, adunată într-o singură actualizare.
+  void _programeazaWidgeturi() {
+    _temporizatorWidgeturi?.cancel();
+    _temporizatorWidgeturi = Timer(const Duration(seconds: 2), actualizeazaWidgeturi);
+  }
+
+  /// Atingerea unui widget: portaldosare://termene, ://actualizari,
+  /// ://dosar?cheie=… sau ://widgeturi (widgetul blocat).
+  Future<void> _dinWidget(Uri? uri) async {
+    if (uri == null) return;
+    // La pornirea din widget biblioteca poate fi încă necitită.
+    if (uri.host == 'dosar') await BibliotecaService.instance.incarca();
+    if (!mounted) return;
+    final Widget? ecran = switch (uri.host) {
+      'termene' => const DosareSelectieScreen(selectie: SelectieDosare.termene),
+      'actualizari' => const DosareSelectieScreen(selectie: SelectieDosare.actualizari),
+      'widgeturi' => const WidgeturiScreen(),
+      'dosar' => () {
+        final cheie = uri.queryParameters['cheie'];
+        for (final s in BibliotecaService.instance.dosare) {
+          if (s.dosar.cheie == cheie) return DosarDetaliuScreen(dosar: s.dosar);
+        }
+        return null;
+      }(),
+      _ => null,
+    };
+    if (ecran == null) return;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ecran));
   }
 
   /// Apăsările lupei rotunde, ascultate de ecranul Căutare.
@@ -66,6 +117,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _cereriCautare.dispose();
+    _clicuriWidget?.cancel();
+    _temporizatorWidgeturi?.cancel();
+    BibliotecaService.instance.removeListener(_programeazaWidgeturi);
+    ProService.instance.removeListener(_programeazaWidgeturi);
     WidgetsBinding.instance.removeObserver(this);
     MonitorizareService.instance.deschideBiblioteca.removeListener(_laNotificare);
     super.dispose();
@@ -84,7 +139,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await CuloriDosareService.instance.incarca();
       await CalendarSyncService.instance.incarca();
       await PartiUrmariteService.instance.incarca();
-      await MonitorizareService.instance.verificaToate();
+      await ProService.instance.incarca();
+      final monitorizare = MonitorizareService.instance;
+      if (await monitorizare.eTimpulPentruVerificare()) await monitorizare.verificaToate();
       // Termenele noi apărute pe portal ajung și în calendarul ales.
       final sync = CalendarSyncService.instance;
       if (sync.configurat) {

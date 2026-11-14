@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../models/dosar_model.dart';
@@ -11,6 +12,7 @@ import 'iccj_service.dart';
 import 'parti_urmarite_service.dart';
 import 'setari_notificari_service.dart';
 import 'soap_service.dart';
+import 'widget_service.dart';
 
 const _numeTask = 'verificare_dosare';
 const _canalId = 'modificari_dosare';
@@ -89,8 +91,8 @@ class MonitorizareService {
   Future<bool> cerePermisiune() async {
     if (!_suportat) return true;
     await _pornesteNotificari();
-    final android = _notificari.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _notificari
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? true;
   }
 
@@ -119,7 +121,27 @@ class MonitorizareService {
       dosareNoiParti = [];
       debugPrint('Verificarea părților urmărite a eșuat: $e');
     }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
+    // Widgeturile de pe ecran se reîmprospătează odată cu verificarea orară.
+    await actualizeazaWidgeturi(acum: acum);
     return rezultate;
+  }
+
+  static const _cheieUltimaVerificare = 'ultima_verificare_completa';
+
+  /// La deschiderea aplicației verificăm doar dacă ultima verificare
+  /// completă (de aici sau din fundal) e mai veche de [interval]: cu zeci de
+  /// dosare, fiecare deschidere ar trimite zeci de cereri și portalul ne
+  /// limitează (HTTP 429).
+  Future<bool> eTimpulPentruVerificare({
+    Duration interval = const Duration(minutes: 15),
+    DateTime? acum,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final ultima = DateTime.tryParse(prefs.getString(_cheieUltimaVerificare) ?? '');
+    return ultima == null || (acum ?? DateTime.now()).difference(ultima) >= interval;
   }
 
   /// Dosarele noi găsite pe numele părților urmărite la ultima verificare.
@@ -164,6 +186,10 @@ class MonitorizareService {
         final rezultat = await serviciu.cautaDosare(numarDosar: numar);
         proaspete.addAll(rezultat.dosare.where((d) => d.numar == numar));
         verificate.add(numar);
+      } on PortalOcupatException catch (e) {
+        // Portalul ne-a cerut pauză: restul dosarelor la verificarea următoare.
+        ultimaEroare = e;
+        break;
       } catch (e) {
         ultimaEroare = e;
       }
@@ -173,10 +199,7 @@ class MonitorizareService {
       throw ultimaEroare;
     }
 
-    final rezultate = await biblioteca.aplicaActualizari(
-      proaspete,
-      numereVerificate: verificate,
-    );
+    final rezultate = await biblioteca.aplicaActualizari(proaspete, numereVerificate: verificate);
     for (final r in rezultate) {
       await _notifica(r);
     }
