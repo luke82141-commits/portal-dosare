@@ -3,11 +3,15 @@ package ro.legaltech.legal_management_app
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
+import android.widget.RemoteViewsService
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
+import es.antonborri.home_widget.HomeWidgetPlugin
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
@@ -36,20 +40,71 @@ private object W {
 
     fun pro(d: SharedPreferences) = s(d, "pro") == "1"
 
-    /** Un rând de termen: zi, oră, număr dosar, instanță; atingerea deschide dosarul. */
-    fun rand(ctx: Context, v: RemoteViews, d: SharedPreferences, cheie: String, ids: IntArray) {
-        val (idRand, idZi, idOra, idDosar, idInst) = ids
-        val nr = s(d, "${cheie}_dosar")
-        if (nr.isEmpty()) {
-            v.setViewVisibility(idRand, View.GONE)
-            return
+    /**
+     * Leagă lista derulabilă [idLista] de termenele cu prefixul [lista]
+     * („t” = următoarele, „s” = cele din 7 zile). Atingerea unui rând deschide
+     * dosarul: șablonul e aici, fiecare rând își pune adresa (fill-in).
+     */
+    fun lista(ctx: Context, v: RemoteViews, widgetId: Int, idLista: Int, idGol: Int, lista: String) {
+        val adaptor = Intent(ctx, TermeneWidgetService::class.java).apply {
+            putExtra(TermeneWidgetService.LISTA, lista)
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            // Adresă unică pe widget, altfel Android refolosește aceeași fabrică.
+            data = Uri.parse("portaldosare-lista://$lista/$widgetId")
         }
-        v.setViewVisibility(idRand, View.VISIBLE)
-        v.setTextViewText(idZi, s(d, "${cheie}_zi"))
-        text(v, idOra, s(d, "${cheie}_ora"))
-        v.setTextViewText(idDosar, nr)
-        v.setTextViewText(idInst, s(d, "${cheie}_inst"))
-        v.setOnClickPendingIntent(idRand, dosar(ctx, s(d, "${cheie}_cheie")))
+        @Suppress("DEPRECATION")
+        v.setRemoteAdapter(idLista, adaptor)
+        v.setEmptyView(idLista, idGol)
+        val sablon = Intent(ctx, MainActivity::class.java).apply {
+            action = HomeWidgetLaunchIntent.HOME_WIDGET_LAUNCH_ACTION
+        }
+        var flags = PendingIntent.FLAG_UPDATE_CURRENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) flags = flags or PendingIntent.FLAG_MUTABLE
+        v.setPendingIntentTemplate(idLista, PendingIntent.getActivity(ctx, widgetId, sablon, flags))
+    }
+}
+
+/** Furnizează rândurile listelor din widgeturi, din datele scrise de aplicație. */
+class TermeneWidgetService : RemoteViewsService() {
+    companion object {
+        const val LISTA = "lista"
+    }
+
+    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
+        Fabrica(applicationContext, intent.getStringExtra(LISTA) ?: "t")
+
+    private class Fabrica(val ctx: Context, val p: String) : RemoteViewsFactory {
+        private var n = 0
+        private lateinit var d: SharedPreferences
+
+        override fun onCreate() {}
+        override fun onDestroy() {}
+
+        override fun onDataSetChanged() {
+            d = HomeWidgetPlugin.getData(ctx)
+            n = (W.s(d, "${p}_n").toIntOrNull() ?: 0).coerceIn(0, 30)
+            // „s_n” poate număra mai multe termene decât am trimis.
+            while (n > 0 && W.s(d, "${p}${n - 1}_dosar").isEmpty()) n--
+        }
+
+        override fun getCount() = n
+
+        override fun getViewAt(i: Int): RemoteViews {
+            val k = "$p$i"
+            return RemoteViews(ctx.packageName, R.layout.widget_rand).apply {
+                setTextViewText(R.id.r_zi, W.s(d, "${k}_zi"))
+                W.text(this, R.id.r_ora, W.s(d, "${k}_ora"))
+                setTextViewText(R.id.r_dosar, W.s(d, "${k}_dosar"))
+                setTextViewText(R.id.r_inst, W.s(d, "${k}_inst"))
+                val adresa = "portaldosare://dosar?cheie=" + Uri.encode(W.s(d, "${k}_cheie"))
+                setOnClickFillInIntent(R.id.r_rand, Intent().setData(Uri.parse(adresa)))
+            }
+        }
+
+        override fun getLoadingView(): RemoteViews? = null
+        override fun getViewTypeCount() = 1
+        override fun getItemId(i: Int) = i.toLong()
+        override fun hasStableIds() = false
     }
 }
 
@@ -70,6 +125,7 @@ class WidgetMic : HomeWidgetProvider() {
                     W.text(this, R.id.mic_inst, W.s(d, "t0_inst"))
                     setOnClickPendingIntent(R.id.radacina, W.dosar(ctx, W.s(d, "t0_cheie")))
                 }
+                W.text(this, R.id.mic_mai, W.s(d, "mic_mai"))
                 W.text(this, R.id.mic_act, W.s(d, "act_text"))
                 setOnClickPendingIntent(R.id.mic_act, W.deschide(ctx, "actualizari"))
             }
@@ -80,34 +136,22 @@ class WidgetMic : HomeWidgetProvider() {
 
 class WidgetMediu : HomeWidgetProvider() {
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray, d: SharedPreferences) {
-        val randuri = arrayOf(
-            intArrayOf(R.id.m0, R.id.m0_zi, R.id.m0_ora, R.id.m0_dosar, R.id.m0_inst),
-            intArrayOf(R.id.m1, R.id.m1_zi, R.id.m1_ora, R.id.m1_dosar, R.id.m1_inst),
-            intArrayOf(R.id.m2, R.id.m2_zi, R.id.m2_ora, R.id.m2_dosar, R.id.m2_inst),
-        )
         for (id in ids) {
             val v = if (!W.pro(d)) W.blocat(ctx) else RemoteViews(ctx.packageName, R.layout.widget_mediu).apply {
                 setOnClickPendingIntent(R.id.radacina, W.deschide(ctx, "termene"))
-                randuri.forEachIndexed { i, r -> W.rand(ctx, this, d, "t$i", r) }
-                setViewVisibility(R.id.m_gol, if (W.s(d, "t0_dosar").isEmpty()) View.VISIBLE else View.GONE)
+                W.lista(ctx, this, id, R.id.m_lista, R.id.m_gol, "t")
                 W.text(this, R.id.m_act, W.s(d, "act_text"))
                 setOnClickPendingIntent(R.id.m_act, W.deschide(ctx, "actualizari"))
             }
             mgr.updateAppWidget(id, v)
         }
+        @Suppress("DEPRECATION")
+        mgr.notifyAppWidgetViewDataChanged(ids, R.id.m_lista)
     }
 }
 
 class WidgetMare : HomeWidgetProvider() {
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray, d: SharedPreferences) {
-        val randuri = arrayOf(
-            intArrayOf(R.id.g0, R.id.g0_zi, R.id.g0_ora, R.id.g0_dosar, R.id.g0_inst),
-            intArrayOf(R.id.g1, R.id.g1_zi, R.id.g1_ora, R.id.g1_dosar, R.id.g1_inst),
-            intArrayOf(R.id.g2, R.id.g2_zi, R.id.g2_ora, R.id.g2_dosar, R.id.g2_inst),
-            intArrayOf(R.id.g3, R.id.g3_zi, R.id.g3_ora, R.id.g3_dosar, R.id.g3_inst),
-            intArrayOf(R.id.g4, R.id.g4_zi, R.id.g4_ora, R.id.g4_dosar, R.id.g4_inst),
-            intArrayOf(R.id.g5, R.id.g5_zi, R.id.g5_ora, R.id.g5_dosar, R.id.g5_inst),
-        )
         val actualizari = arrayOf(
             intArrayOf(R.id.ga0, R.id.ga0_dosar, R.id.ga0_text),
             intArrayOf(R.id.ga1, R.id.ga1_dosar, R.id.ga1_text),
@@ -115,9 +159,7 @@ class WidgetMare : HomeWidgetProvider() {
         for (id in ids) {
             val v = if (!W.pro(d)) W.blocat(ctx) else RemoteViews(ctx.packageName, R.layout.widget_mare).apply {
                 setOnClickPendingIntent(R.id.radacina, W.deschide(ctx, "termene"))
-                randuri.forEachIndexed { i, r -> W.rand(ctx, this, d, "s$i", r) }
-                setViewVisibility(R.id.g_gol, if (W.s(d, "s0_dosar").isEmpty()) View.VISIBLE else View.GONE)
-                W.text(this, R.id.g_mai_multe, W.s(d, "s_mai_multe"))
+                W.lista(ctx, this, id, R.id.g_lista, R.id.g_gol, "s")
                 W.text(this, R.id.g_act, W.s(d, "act_text"))
                 setOnClickPendingIntent(R.id.g_act, W.deschide(ctx, "actualizari"))
 
@@ -139,5 +181,7 @@ class WidgetMare : HomeWidgetProvider() {
             }
             mgr.updateAppWidget(id, v)
         }
+        @Suppress("DEPRECATION")
+        mgr.notifyAppWidgetViewDataChanged(ids, R.id.g_lista)
     }
 }

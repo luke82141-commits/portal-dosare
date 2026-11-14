@@ -16,9 +16,11 @@ const widgetMediu = 'ro.legaltech.legal_management_app.WidgetMediu';
 const widgetMare = 'ro.legaltech.legal_management_app.WidgetMare';
 const widgeturi = [widgetMic, widgetMediu, widgetMare];
 
-/// Câte rânduri au layout-urile native.
-const randuriUrmatoare = 3;
-const randuriSaptamana = 6;
+/// Câte termene trimitem listelor din widgeturi. Listele native se derulează,
+/// așa că umplu toată înălțimea widgetului, oricât de mare l-ar face
+/// utilizatorul.
+const randuriUrmatoare = 20;
+const randuriSaptamana = 30;
 const randuriActualizari = 2;
 
 const _zile = ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'];
@@ -63,6 +65,7 @@ Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, 
     date['${p}${i}_cheie'] = t?.$1.cheie ?? '';
   }
 
+  date['t_n'] = '${termene.length < randuriUrmatoare ? termene.length : randuriUrmatoare}';
   for (var i = 0; i < randuriUrmatoare; i++) {
     rand('t', i, i < termene.length ? termene[i] : null);
   }
@@ -72,11 +75,14 @@ Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, 
       if (t.$2.data!.difference(ziAzi).inDays < 7) t,
   ];
   date['s_n'] = '${saptamana.length}';
+  // Widgetul mic arată primul termen; dedesubt, câte mai sunt în 7 zile.
+  final altele = saptamana.isEmpty ? 0 : saptamana.length - 1;
+  date['mic_mai'] = altele == 0
+      ? ''
+      : '+ încă ${altele == 1 ? 'un termen' : '$altele termene'} în 7 zile';
   for (var i = 0; i < randuriSaptamana; i++) {
     rand('s', i, i < saptamana.length ? saptamana[i] : null);
   }
-  final ramase = saptamana.length - randuriSaptamana;
-  date['s_mai_multe'] = ramase > 0 ? '+ încă $ramase ${ramase == 1 ? 'termen' : 'termene'}' : '';
 
   final necitite = dosare.fold(0, (n, s) => n + s.necitite);
   date['act_n'] = '$necitite';
