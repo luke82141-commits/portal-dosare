@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,7 +19,11 @@ class CautareScreen extends StatefulWidget {
   /// Deschide fila „Monitorizate” (butonul „Vezi toate”).
   final VoidCallback? onVeziMonitorizate;
 
-  const CautareScreen({super.key, this.onVeziMonitorizate});
+  /// Pornește căutarea din afara ecranului (butonul rotund cu lupa, când bara
+  /// de jos e strânsă): fiecare incrementare înseamnă o apăsare.
+  final ValueListenable<int>? cereriCautare;
+
+  const CautareScreen({super.key, this.onVeziMonitorizate, this.cereriCautare});
 
   @override
   State<CautareScreen> createState() => _CautareScreenState();
@@ -38,10 +43,12 @@ class _CautareScreenState extends State<CautareScreen> {
   void initState() {
     super.initState();
     CautariRecenteService.instance.incarca();
+    widget.cereriCautare?.addListener(_cauta);
   }
 
   @override
   void dispose() {
+    widget.cereriCautare?.removeListener(_cauta);
     _numarController.dispose();
     _obiectController.dispose();
     _parteController.dispose();
@@ -49,6 +56,7 @@ class _CautareScreenState extends State<CautareScreen> {
   }
 
   void _cauta() {
+    FocusScope.of(context).unfocus();
     final criterii = CautareRecenta(
       numar: _numarController.text.trim(),
       obiect: _obiectController.text.trim(),
@@ -59,17 +67,13 @@ class _CautareScreenState extends State<CautareScreen> {
     );
     if (!criterii.areCriteriuPrincipal) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Introdu numărul dosarului, obiectul sau numele unei părți.'),
-        ),
+        const SnackBar(content: Text('Introdu numărul dosarului, obiectul sau numele unei părți.')),
       );
       return;
     }
-    FocusScope.of(context).unfocus();
     CautariRecenteService.instance.adauga(criterii);
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)));
   }
 
   void _reia(CautareRecenta c) {
@@ -115,15 +119,28 @@ class _CautareScreenState extends State<CautareScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        body: ListView(
-          padding: EdgeInsets.zero,
+        // Bara de stare are fundal propriu: la derulare, formularul nu mai
+        // trece pe sub ceas și iconițe.
+        body: Column(
           children: [
-            _antet(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [_recente(), _termene()],
+            Container(color: AppColors.primary, height: MediaQuery.paddingOf(context).top),
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _antet(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [_recente(), _termene()],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -195,14 +212,14 @@ class _CautareScreenState extends State<CautareScreen> {
                     const SizedBox(height: 14),
                     _camp(
                       eticheta: 'Obiectul dosarului',
-                      hint: 'ex. uzucapiune, pretenții (opțional)',
+                      hint: 'ex. uzucapiune, pretenții',
                       icon: Icons.search,
                       controller: _obiectController,
                     ),
                     const SizedBox(height: 14),
                     _camp(
                       eticheta: 'Nume parte',
-                      hint: 'ex. SC Exemplu SRL, Popescu Ion (opțional)',
+                      hint: 'ex. Popescu Ion, Exemplu SRL',
                       icon: Icons.person,
                       controller: _parteController,
                     ),
@@ -309,7 +326,12 @@ class _CautareScreenState extends State<CautareScreen> {
           controller: controller,
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _cauta(),
-          decoration: InputDecoration(hintText: hint, prefixIcon: Icon(icon, size: 20)),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintMaxLines: 1,
+            hintStyle: const TextStyle(overflow: TextOverflow.ellipsis),
+            prefixIcon: Icon(icon, size: 20),
+          ),
         ),
       ],
     );

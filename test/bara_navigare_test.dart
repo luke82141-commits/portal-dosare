@@ -46,6 +46,28 @@ void main() {
     expect(_barVizibila(tester), isTrue);
   });
 
+  testWidgets('Pe Căutare, lupa rotundă pornește căutarea și ascunde tastatura', (tester) async {
+    tester.view.physicalSize = const Size(1080, 1600);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const LegalManagementApp());
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'ex. Popescu Ion, Exemplu SRL'),
+      'Cantacuzino',
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(_barVizibila(tester), isFalse);
+
+    await tester.tap(find.byTooltip('Caută'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Rezultate'), findsOneWidget);
+    expect(FocusManager.instance.primaryFocus?.context?.widget, isNot(isA<EditableText>()));
+  });
+
   testWidgets('Utilități arată uneltele gratuite și pe cele Pro', (tester) async {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();

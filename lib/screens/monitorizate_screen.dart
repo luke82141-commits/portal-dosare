@@ -38,9 +38,7 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
         if (noi > 1) '$noi dosare noi pe numele părților urmărite.',
       ];
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(mesaje.isEmpty ? 'Nicio modificare pe portal.' : mesaje.join(' ')),
-        ),
+        SnackBar(content: Text(mesaje.isEmpty ? 'Nicio modificare pe portal.' : mesaje.join(' '))),
       );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Verificarea a eșuat: $e')));
@@ -81,10 +79,17 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                       children: [
                         Row(
                           children: [
+                            // Pe ecrane înguste titlul se micșorează în loc să
+                            // se rupă pe două rânduri lângă butoane.
                             const Expanded(
-                              child: Text(
-                                'Monitorizate',
-                                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Monitorizate',
+                                  maxLines: 1,
+                                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                                ),
                               ),
                             ),
                             if (dosare.isNotEmpty) ...[
@@ -92,7 +97,9 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                 tooltip: 'Sincronizare Google / iCloud Calendar',
                                 icon: Icons.event_repeat,
                                 onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const SincronizareCalendarScreen()),
+                                  MaterialPageRoute(
+                                    builder: (_) => const SincronizareCalendarScreen(),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -130,7 +137,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                       ? const StareMesaj(
                           icon: Icons.bookmark_border,
                           titlu: 'Niciun dosar monitorizat',
-                          text: 'Deschide un dosar și pornește „Monitorizează dosarul”. '
+                          text:
+                              'Deschide un dosar și pornește „Monitorizează dosarul”. '
                               'Vei primi o notificare la fiecare schimbare apărută pe portal.',
                         )
                       : Column(
@@ -218,9 +226,9 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
           child: _butonRotund(
             tooltip: 'Părți urmărite',
             icon: Icons.person_search,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PartiUrmariteScreen()),
-            ),
+            onPressed: () =>
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const PartiUrmariteScreen())),
           ),
         );
       },
@@ -258,12 +266,7 @@ class _Sumar extends StatelessWidget {
   final Color? fundal;
   final Color culoare;
 
-  const _Sumar(
-    this.valoare,
-    this.eticheta, {
-    this.fundal,
-    this.culoare = AppColors.onSurface,
-  });
+  const _Sumar(this.valoare, this.eticheta, {this.fundal, this.culoare = AppColors.onSurface});
 
   @override
   Widget build(BuildContext context) {
