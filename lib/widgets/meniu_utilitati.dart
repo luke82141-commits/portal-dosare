@@ -4,6 +4,7 @@ import '../screens/backup_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
 import '../screens/setari_notificari_screen.dart';
+import '../screens/statistici_screen.dart';
 import '../screens/sugestie_screen.dart';
 import '../screens/widgeturi_screen.dart';
 import '../theme/app_theme.dart';
@@ -79,6 +80,12 @@ class _MeniuUtilitati extends StatelessWidget {
               onTap: () => _deschide(context, const RapoarteScreen()),
             ),
             _Unealta(
+              icon: Icons.bar_chart,
+              titlu: 'Statistici (Pro)',
+              text: 'Termene, dosare și soluții pe ani, comparate cu anul trecut',
+              onTap: () => _deschide(context, const StatisticiScreen()),
+            ),
+            _Unealta(
               icon: Icons.save_alt,
               titlu: 'Backup',
               text: 'Salvează datele într-un fișier și mută-le pe alt telefon',
@@ -103,12 +110,6 @@ class _MeniuUtilitati extends StatelessWidget {
               ),
             ),
 
-            const _Unealta(
-              icon: Icons.bar_chart,
-              titlu: 'Statistici',
-              text: 'Termene și dosare pe an, soluții: admite, respinge, admite în parte',
-              pro: true,
-            ),
             const _Unealta(
               icon: Icons.table_view_outlined,
               titlu: 'Situația dosarelor în Excel',
