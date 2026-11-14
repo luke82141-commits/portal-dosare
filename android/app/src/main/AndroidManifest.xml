@@ -70,6 +70,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_mare_info" />
         </receiver>
+        <!-- Rândurile listelor derulabile din widgeturile mediu și mare. -->
+        <service
+            android:name=".TermeneWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

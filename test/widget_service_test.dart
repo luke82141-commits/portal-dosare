@@ -56,10 +56,9 @@ void main() {
     expect(date['t0_cheie'], '3/1/2026|TribunalulPRAHOVA');
     expect(date['s_n'], '2');
     expect(date['s2_dosar'], '');
-    expect(date['s_mai_multe'], '');
   });
 
-  test('Peste 6 termene în săptămână apare „+ încă”', () {
+  test('Lista săptămânii are toate termenele; widgetul mic spune câte mai sunt', () {
     final date = dateWidgeturi(
       [
         for (var i = 0; i < 8; i++)
@@ -69,8 +68,10 @@ void main() {
       acum: acum,
     );
     expect(date['s_n'], '8');
-    expect(date['s5_dosar'], isNotEmpty);
-    expect(date['s_mai_multe'], '+ încă 2 termene');
+    expect(date['s7_dosar'], isNotEmpty);
+    expect(date['s8_dosar'], isEmpty);
+    expect(date['t_n'], '8');
+    expect(date['mic_mai'], '+ încă 7 termene în 7 zile');
   });
 
   test('Actualizările: total și cea mai recentă modificare întâi', () {
