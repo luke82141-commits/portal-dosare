@@ -23,13 +23,24 @@ Dosar dosar({
       sedinte: sedinte,
     );
 
-Sedinta sedinta(int luna, int zi, {String solutie = '', String sumar = '', String ora = '09:00'}) =>
+Sedinta sedinta(
+  int luna,
+  int zi, {
+  String solutie = '',
+  String sumar = '',
+  String ora = '09:00',
+  String document = '',
+  String numarDocument = '',
+  int an = 2026,
+}) =>
     Sedinta(
       complet: 'C1',
-      data: DateTime(2026, luna, zi),
+      data: DateTime(an, luna, zi),
       ora: ora,
       solutie: solutie,
       solutieSumar: sumar,
+      document: document,
+      numarDocument: numarDocument,
     );
 
 void main() {
@@ -65,6 +76,33 @@ void main() {
         'Termen nou: 02.04.2026, ora 09:00, complet C1',
         'Stadiu procesual: Fond → Apel',
         'Parte nouă: B (Intervenient)',
+      ]);
+    });
+
+    test('pronunțarea și documentul aceluiași termen vin într-o singură intrare', () {
+      final vechi = dosar(sedinte: [sedinta(11, 13)]);
+      final nou = dosar(sedinte: [
+        sedinta(11, 13,
+            solutie: 'Admite cererea',
+            sumar: 'Obligă pârâta.',
+            document: 'Hotarare',
+            numarDocument: '2909/2026'),
+      ]);
+      final schimbari = comparaDosare(vechi, nou);
+      expect(schimbari, hasLength(1));
+      expect(schimbari.single, startsWith('Termenul din 13.11.2026: Admite cererea — Obligă pârâta. · '));
+      expect(schimbari.single, endsWith('nr. 2909/2026'));
+    });
+
+    test('amânarea și termenul următor vin într-o singură intrare', () {
+      final vechi = dosar(sedinte: [sedinta(11, 12)]);
+      final nou = dosar(sedinte: [
+        sedinta(11, 12, solutie: 'Amână cauza'),
+        sedinta(1, 21, an: 2027, ora: '10:00'),
+      ]);
+      expect(comparaDosare(vechi, nou), [
+        'Pronunțare la termenul din 12.11.2026: Amână cauza → '
+            'termen nou: 21.01.2027, ora 10:00, complet C1',
       ]);
     });
 

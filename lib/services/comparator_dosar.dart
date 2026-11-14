@@ -52,8 +52,24 @@ List<String> comparaDosare(Dosar vechi, Dosar nou) {
   return schimbari;
 }
 
+/// O intrare din lista de schimbări a unui termen. Toate schimbările găsite
+/// la aceeași verificare pentru același termen ajung într-o singură intrare,
+/// ca utilizatorul să primească o notificare, nu câte una pentru fiecare câmp.
+class _IntrareTermen {
+  final DateTime? data;
+  String text;
+
+  /// True dacă intrarea anunță o soluție pronunțată (nouă sau modificată).
+  final bool pronuntare;
+
+  /// True dacă intrarea anunță doar un termen nou, fără soluție.
+  final bool termenNou;
+
+  _IntrareTermen(this.data, this.text, {this.pronuntare = false, this.termenNou = false});
+}
+
 List<String> _comparaSedinte(List<Sedinta> vechi, List<Sedinta> noi) {
-  final schimbari = <String>[];
+  final intrari = <_IntrareTermen>[];
 
   // Ședințele se potrivesc după dată; dacă sunt mai multe în aceeași zi, în
   // ordinea în care apar.
@@ -68,6 +84,11 @@ List<String> _comparaSedinte(List<Sedinta> vechi, List<Sedinta> noi) {
   final gVechi = grupeaza(vechi);
   final gNoi = grupeaza(noi);
 
+  String detaliiTermen(Sedinta n) => [
+        if (n.ora.isNotEmpty) 'ora ${n.ora}',
+        if (n.complet.isNotEmpty) 'complet ${n.complet}',
+      ].join(', ');
+
   for (final entry in gNoi.entries) {
     final perechi = gVechi[entry.key] ?? const <Sedinta>[];
     for (var i = 0; i < entry.value.length; i++) {
@@ -76,42 +97,88 @@ List<String> _comparaSedinte(List<Sedinta> vechi, List<Sedinta> noi) {
 
       if (i >= perechi.length) {
         if (n.arePronuntare) {
-          schimbari.add('Ședință nouă din $ziua: ${_solutie(n)}');
+          final document = n.document.isEmpty
+              ? ''
+              : ' · ${numeDocument(n.document)}'
+                  '${n.numarDocument.isEmpty ? '' : ' nr. ${n.numarDocument}'}';
+          intrari.add(_IntrareTermen(n.data, 'Ședință nouă din $ziua: ${_solutie(n)}$document',
+              pronuntare: true));
         } else {
-          final detalii = [
-            if (n.ora.isNotEmpty) 'ora ${n.ora}',
-            if (n.complet.isNotEmpty) 'complet ${n.complet}',
-          ].join(', ');
-          schimbari.add('Termen nou: $ziua${detalii.isEmpty ? '' : ', $detalii'}');
+          final detalii = detaliiTermen(n);
+          intrari.add(_IntrareTermen(
+              n.data, 'Termen nou: $ziua${detalii.isEmpty ? '' : ', $detalii'}',
+              termenNou: true));
         }
         continue;
       }
 
+      // Fiecare schimbare are o formă lungă (când e singura la acest termen)
+      // și una scurtă (când se adună cu altele în aceeași intrare).
+      final lungi = <String>[];
+      final scurte = <String>[];
+      var pronuntare = false;
+
       final v = perechi[i];
       if (v.solutie != n.solutie || v.solutieSumar != n.solutieSumar) {
         if (!n.arePronuntare) {
-          schimbari.add('Soluția de la termenul din $ziua a fost retrasă de pe portal');
+          lungi.add('Soluția de la termenul din $ziua a fost retrasă de pe portal');
+          scurte.add('soluția a fost retrasă de pe portal');
         } else if (!v.arePronuntare) {
-          schimbari.add('Pronunțare la termenul din $ziua: ${_solutie(n)}');
+          lungi.add('Pronunțare la termenul din $ziua: ${_solutie(n)}');
+          scurte.add(_solutie(n));
+          pronuntare = true;
         } else {
-          schimbari.add('Soluție modificată la termenul din $ziua: ${_solutie(n)}');
+          lungi.add('Soluție modificată la termenul din $ziua: ${_solutie(n)}');
+          scurte.add('soluție modificată: ${_solutie(n)}');
+          pronuntare = true;
         }
       }
       if (v.ora != n.ora) {
-        schimbari.add('Ora termenului din $ziua: '
-            '${v.ora.isEmpty ? '—' : v.ora} → ${n.ora.isEmpty ? '—' : n.ora}');
+        final schimbare = '${v.ora.isEmpty ? '—' : v.ora} → ${n.ora.isEmpty ? '—' : n.ora}';
+        lungi.add('Ora termenului din $ziua: $schimbare');
+        scurte.add('ora $schimbare');
       }
       if (v.complet != n.complet) {
-        schimbari.add('Complet schimbat la termenul din $ziua: '
-            '${v.complet.isEmpty ? '—' : v.complet} → ${n.complet.isEmpty ? '—' : n.complet}');
+        final schimbare =
+            '${v.complet.isEmpty ? '—' : v.complet} → ${n.complet.isEmpty ? '—' : n.complet}';
+        lungi.add('Complet schimbat la termenul din $ziua: $schimbare');
+        scurte.add('complet $schimbare');
       }
       if ((v.document != n.document || v.numarDocument != n.numarDocument) &&
           n.document.isNotEmpty) {
-        schimbari.add('Document la termenul din $ziua: ${numeDocument(n.document)}'
-            '${n.numarDocument.isEmpty ? '' : ' nr. ${n.numarDocument}'}');
+        final document = '${numeDocument(n.document)}'
+            '${n.numarDocument.isEmpty ? '' : ' nr. ${n.numarDocument}'}';
+        lungi.add('Document la termenul din $ziua: $document');
+        scurte.add(document);
       }
+
+      if (lungi.isEmpty) continue;
+      intrari.add(_IntrareTermen(
+        n.data,
+        lungi.length == 1 ? lungi.single : 'Termenul din $ziua: ${scurte.join(' · ')}',
+        pronuntare: pronuntare,
+      ));
     }
   }
+
+  // O amânare aduce de obicei și termenul următor: îl punem în aceeași
+  // intrare cu soluția, nu separat.
+  final pronuntari = intrari.where((e) => e.pronuntare && e.data != null).toList()
+    ..sort((a, b) => a.data!.compareTo(b.data!));
+  if (pronuntari.isNotEmpty) {
+    final ultima = pronuntari.last;
+    final urmatoare = intrari
+        .where((e) => e.termenNou && e.data != null && e.data!.isAfter(ultima.data!))
+        .toList()
+      ..sort((a, b) => a.data!.compareTo(b.data!));
+    if (urmatoare.isNotEmpty) {
+      final termen = urmatoare.first;
+      ultima.text = '${ultima.text} → ${termen.text.replaceFirst('Termen nou: ', 'termen nou: ')}';
+      intrari.remove(termen);
+    }
+  }
+
+  final schimbari = [for (final e in intrari) e.text];
 
   for (final entry in gVechi.entries) {
     final ramase = gNoi[entry.key]?.length ?? 0;
