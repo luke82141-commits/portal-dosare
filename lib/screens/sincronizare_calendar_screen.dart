@@ -221,6 +221,33 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
                 ),
               ],
             ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Simbol în fața termenelor:', style: TextStyle(fontSize: 14)),
+                ),
+                DropdownButton<String>(
+                  value: _sync.simbol,
+                  underline: const SizedBox(),
+                  items: [
+                    for (final s in simboluriTermen)
+                      DropdownMenuItem(
+                        value: s,
+                        child: Text(s.isEmpty ? 'Fără' : s, style: const TextStyle(fontSize: 18)),
+                      ),
+                  ],
+                  onChanged: (s) {
+                    setState(() => _sync.simbol = s!);
+                    _sync.salveaza();
+                  },
+                ),
+              ],
+            ),
+            const Text(
+              'Caută simbolul în aplicația de calendar ca să vezi doar termenele. '
+              'Evenimentele puse deja se actualizează la următoarea sincronizare.',
+              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            ),
           ],
         ),
       ),
