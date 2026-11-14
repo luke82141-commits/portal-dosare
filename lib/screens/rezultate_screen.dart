@@ -7,6 +7,7 @@ import '../services/parti_urmarite_service.dart';
 import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/instante.dart';
+import '../utils/sortare_rezultate.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import '../widgets/parcurs_dosar.dart';
@@ -42,6 +43,15 @@ class _RezultateScreenState extends State<RezultateScreen> {
   bool _seIncarca = true;
   Object? _eroare;
   String? _filtru;
+  SortareRezultate _sortare = SortareRezultate.portal;
+  int? _an;
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -73,6 +83,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
         _dosare = r.dosare;
         _limitaAtinsa = r.limitaAtinsa;
         _filtru = null;
+        _an = null;
       });
     } catch (e) {
       if (mounted) setState(() => _eroare = e);
@@ -156,9 +167,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
       for (final d in _dosare)
         if (d.stadiuProcesual.isNotEmpty) d.stadiuProcesual,
     }.toList();
-    final afisate = _filtru == null
-        ? _dosare
-        : _dosare.where((d) => d.stadiuProcesual == _filtru).toList();
+    final afisate = ordoneazaRezultate(
+      _filtru == null ? _dosare : _dosare.where((d) => d.stadiuProcesual == _filtru).toList(),
+      _sortare,
+      an: _an,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -266,15 +279,24 @@ class _RezultateScreenState extends State<RezultateScreen> {
 
     return RefreshIndicator(
       onRefresh: _cauta,
-      child: ListView.separated(
-        padding: padding,
-        itemCount: afisate.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, i) {
-          if (i == 0) return _rezumat(afisate);
-          final d = afisate[i - 1];
-          return DosarCardWidget(key: ValueKey(d.cheie), dosar: d, cuBiblioteca: true);
-        },
+      // Bara din dreapta se poate trage, util la sute de rezultate.
+      child: Scrollbar(
+        controller: _scroll,
+        thumbVisibility: true,
+        interactive: true,
+        thickness: 6,
+        radius: const Radius.circular(3),
+        child: ListView.separated(
+          controller: _scroll,
+          padding: padding,
+          itemCount: afisate.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, i) {
+            if (i == 0) return _rezumat(afisate);
+            final d = afisate[i - 1];
+            return DosarCardWidget(key: ValueKey(d.cheie), dosar: d, cuBiblioteca: true);
+          },
+        ),
       ),
     );
   }
@@ -334,6 +356,41 @@ class _RezultateScreenState extends State<RezultateScreen> {
     );
   }
 
+  Widget _ordonare() {
+    final ani = aniRezultate(_dosare);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        PopupMenuButton<SortareRezultate>(
+          tooltip: 'Ordonează',
+          initialValue: _sortare,
+          onSelected: (v) => setState(() => _sortare = v),
+          itemBuilder: (_) => [
+            for (final v in SortareRezultate.values)
+              PopupMenuItem(value: v, child: Text(v.eticheta)),
+          ],
+          child: _Meniu(icon: Icons.sort, text: _sortare.eticheta),
+        ),
+        if (ani.length > 1)
+          PopupMenuButton<int>(
+            tooltip: 'Filtrează pe an',
+            initialValue: _an ?? 0,
+            onSelected: (v) => setState(() => _an = v == 0 ? null : v),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 0, child: Text('Toți anii')),
+              for (final a in ani) PopupMenuItem(value: a, child: Text('$a')),
+            ],
+            child: _Meniu(
+              icon: Icons.calendar_today,
+              text: _an == null ? 'Toți anii' : 'Anul $_an',
+              activ: _an != null,
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _rezumat(List<Dosar> afisate) {
     final numar = Row(
       children: [
@@ -350,7 +407,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
         _butonToate(afisate),
       ],
     );
-    if (!_limitaAtinsa) return numar;
+    final cuOrdonare = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [_ordonare(), const SizedBox(height: 4), numar],
+    );
+    if (!_limitaAtinsa) return cuOrdonare;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -376,8 +437,40 @@ class _RezultateScreenState extends State<RezultateScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        numar,
+        cuOrdonare,
       ],
+    );
+  }
+}
+
+/// Eticheta unui meniu de ordonare/filtrare, în stilul pastilelor.
+class _Meniu extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final bool activ;
+  const _Meniu({required this.icon, required this.text, this.activ = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final culoare = activ ? AppColors.primary : AppColors.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: activ ? AppColors.primary : AppColors.outline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: culoare),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: culoare),
+          ),
+          Icon(Icons.arrow_drop_down, size: 18, color: culoare),
+        ],
+      ),
     );
   }
 }
