@@ -8,6 +8,7 @@ import 'package:home_widget/home_widget.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/calendar_sync_service.dart';
+import '../services/client_service.dart';
 import '../services/culori_service.dart';
 import '../services/monitorizare_service.dart';
 import '../services/parti_urmarite_service.dart';
@@ -140,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await CalendarSyncService.instance.incarca();
       await PartiUrmariteService.instance.incarca();
       await ProService.instance.incarca();
+      await ClientService.instance.incarca();
       final monitorizare = MonitorizareService.instance;
       if (await monitorizare.eTimpulPentruVerificare()) await monitorizare.verificaToate();
       // Termenele noi apărute pe portal ajung și în calendarul ales.

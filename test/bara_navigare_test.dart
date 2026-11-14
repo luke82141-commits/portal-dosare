@@ -75,9 +75,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Părți urmărite'), findsOneWidget);
-    expect(find.text('PRO · ÎN CURÂND'), findsOneWidget);
-    expect(find.text('Rapoarte (Pro)'), findsOneWidget);
-    expect(find.text('Statistici (Pro)'), findsOneWidget);
+    expect(find.text('PRO'), findsOneWidget);
+    expect(find.text('Rapoarte'), findsOneWidget);
+    expect(find.text('Statistici'), findsOneWidget);
 
     await tester.tap(find.text('Părți urmărite'));
     await tester.pumpAndSettle();
