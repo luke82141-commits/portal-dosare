@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../screens/backup_screen.dart';
+import '../screens/calculator_termene_screen.dart';
 import '../screens/excel_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
+import '../screens/rezumat_zilnic_screen.dart';
 import '../screens/setari_notificari_screen.dart';
 import '../screens/statistici_screen.dart';
 import '../screens/sugestie_screen.dart';
@@ -91,6 +93,18 @@ class _MeniuUtilitati extends StatelessWidget {
                   color: AppColors.accent,
                 ),
               ),
+            ),
+            _Unealta(
+              icon: Icons.wb_sunny_outlined,
+              titlu: 'Rezumatul zilnic',
+              text: 'Dimineața: termenele zilei, ce s-a schimbat și ce expiră',
+              onTap: () => _deschide(context, const RezumatZilnicScreen()),
+            ),
+            _Unealta(
+              icon: Icons.calculate_outlined,
+              titlu: 'Calculator termene',
+              text: 'Ultima zi pentru apel, recurs, întâmpinare și alte acte',
+              onTap: () => _deschide(context, const CalculatorTermeneScreen()),
             ),
             _Unealta(
               icon: Icons.widgets_outlined,

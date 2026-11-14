@@ -21,6 +21,7 @@ import 'dosare_selectie_screen.dart';
 import 'instante_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
+import 'rezumat_zilnic_screen.dart';
 import 'widgeturi_screen.dart';
 import '../widgets/meniu_utilitati.dart';
 
@@ -67,7 +68,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     MonitorizareService.instance.deschideBiblioteca.addListener(_laNotificare);
+    MonitorizareService.instance.deschideRezumat.addListener(_laRezumat);
     _laNotificare();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _laRezumat());
     _actualizeaza();
     BibliotecaService.instance.addListener(_programeazaWidgeturi);
     ProService.instance.addListener(_programeazaWidgeturi);
@@ -124,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ProService.instance.removeListener(_programeazaWidgeturi);
     WidgetsBinding.instance.removeObserver(this);
     MonitorizareService.instance.deschideBiblioteca.removeListener(_laNotificare);
+    MonitorizareService.instance.deschideRezumat.removeListener(_laRezumat);
     super.dispose();
   }
 
@@ -164,6 +168,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Aplicația deschisă dintr-o notificare sare direct la Notificări.
+  /// Atingerea rezumatului zilnic deschide ecranul lui.
+  void _laRezumat() {
+    final semnal = MonitorizareService.instance.deschideRezumat;
+    if (!semnal.value || !mounted) return;
+    semnal.value = false;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezumatZilnicScreen()));
+  }
+
   void _laNotificare() {
     final semnal = MonitorizareService.instance.deschideBiblioteca;
     if (!semnal.value) return;
