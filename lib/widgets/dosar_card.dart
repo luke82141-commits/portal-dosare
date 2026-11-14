@@ -23,26 +23,32 @@ class DosarCardWidget extends StatelessWidget {
   final DosarSalvat? salvat;
   final bool cuBiblioteca;
 
+  /// Apăsarea lungă (pe Monitorizate deschide selecția mai multor dosare).
+  final VoidCallback? onLongPress;
+
   const DosarCardWidget({
     super.key,
     required this.dosar,
     this.salvat,
     this.cuBiblioteca = false,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
     final necitite = salvat?.necitite ?? 0;
-    final ultimaModificare =
-        necitite > 0 && salvat!.modificari.isNotEmpty ? salvat!.modificari.first : null;
+    final ultimaModificare = necitite > 0 && salvat!.modificari.isNotEmpty
+        ? salvat!.modificari.first
+        : null;
     final instanta = [dosar.instanta, dosar.sectie].where((e) => e.isNotEmpty).join(' · ');
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: dosar)),
-        ),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: dosar))),
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -51,10 +57,7 @@ class DosarCardWidget extends StatelessWidget {
               Row(
                 children: [
                   if (salvat != null)
-                    Transform.translate(
-                      offset: const Offset(-8, 0),
-                      child: BulinaCuloare(dosar),
-                    ),
+                    Transform.translate(offset: const Offset(-8, 0), child: BulinaCuloare(dosar)),
                   Expanded(
                     child: Text(
                       dosar.numar,
@@ -175,8 +178,11 @@ class _ButonBiblioteca extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(salvat ? Icons.bookmark_added : Icons.bookmark_add_outlined,
-                        size: 16, color: culoare),
+                    Icon(
+                      salvat ? Icons.bookmark_added : Icons.bookmark_add_outlined,
+                      size: 16,
+                      color: culoare,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       salvat ? 'În bibliotecă' : 'Adaugă',

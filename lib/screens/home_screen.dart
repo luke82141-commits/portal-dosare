@@ -143,7 +143,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await ProService.instance.incarca();
       await ClientService.instance.incarca();
       final monitorizare = MonitorizareService.instance;
-      if (await monitorizare.eTimpulPentruVerificare()) await monitorizare.verificaToate();
+      // Cu foarte multe dosare, o deschidere la 15 minute ar trimite sute de
+      // cereri: peste plafon verificăm la deschidere cel mult o dată pe oră.
+      final multe = BibliotecaService.instance.dosare.length > plafonDosare;
+      if (await monitorizare.eTimpulPentruVerificare(
+        interval: multe ? const Duration(hours: 1) : const Duration(minutes: 15),
+      )) {
+        await monitorizare.verificaToate();
+      }
       // Termenele noi apărute pe portal ajung și în calendarul ales.
       final sync = CalendarSyncService.instance;
       if (sync.configurat) {

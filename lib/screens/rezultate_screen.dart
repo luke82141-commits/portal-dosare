@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../services/cautari_recente_service.dart';
+import '../services/monitorizare_service.dart';
 import '../services/parti_urmarite_service.dart';
 import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
@@ -321,15 +322,24 @@ class _RezultateScreenState extends State<RezultateScreen> {
       n % 100 >= 20 || (n >= 100 && n % 100 == 0) ? '$n de dosare' : '$n dosare';
 
   /// Pune în bibliotecă toate dosarele afișate (cu filtrul de stadiu aplicat).
+  /// Adăugarea se poate anula din mesajul de jos.
   Future<void> _monitorizeazaToate(List<Dosar> afisate) async {
     final messenger = ScaffoldMessenger.of(context);
-    if (afisate.length > 20) {
+    final biblioteca = BibliotecaService.instance;
+    final noiEstimat = afisate.where((d) => !biblioteca.contine(d.cheie)).length;
+    final total = biblioteca.dosare.length + noiEstimat;
+    final pestePlafon = total > plafonDosare;
+    if (afisate.length > 20 || pestePlafon) {
       final da = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Monitorizezi ${_dosareText(afisate.length)}?'),
-          content: const Text(
-            'Le verificăm pe toate la fiecare oră și primești notificări la orice schimbare.',
+          title: Text('Monitorizezi ${_dosareText(noiEstimat)}?'),
+          content: Text(
+            pestePlafon
+                ? 'Vei urmări în total ${_dosareText(total)}. Peste $plafonDosare de dosare '
+                      'le verificăm de două ori mai rar, ca portalul să nu ne blocheze. '
+                      'Păstrează doar dosarele care te interesează.'
+                : 'Le verificăm automat și primești notificări la orice schimbare.',
           ),
           actions: [
             TextButton(
@@ -345,14 +355,19 @@ class _RezultateScreenState extends State<RezultateScreen> {
       );
       if (da != true) return;
     }
-    final noi = await BibliotecaService.instance.adaugaToate(afisate);
-    final deja = afisate.length - noi;
+    final noi = await biblioteca.adaugaToate(afisate);
+    final deja = afisate.length - noi.length;
+    messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        duration: const Duration(seconds: 8),
         content: Text(
-          '${noi == 1 ? 'Un dosar adăugat' : '${_dosareText(noi)} adăugate'} la monitorizate'
-          '${deja == 0 ? '' : ' ($deja erau deja)'}.',
+          '${noi.length == 1 ? 'Un dosar adăugat' : '${_dosareText(noi.length)} adăugate'} '
+          'la monitorizate${deja == 0 ? '' : ' ($deja erau deja)'}.',
         ),
+        action: noi.isEmpty
+            ? null
+            : SnackBarAction(label: 'Anulează', onPressed: () => biblioteca.stergeToate(noi)),
       ),
     );
   }
