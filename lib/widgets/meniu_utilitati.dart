@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../screens/backup_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
+import '../screens/rapoarte_screen.dart';
 import '../screens/setari_notificari_screen.dart';
 import '../screens/sugestie_screen.dart';
 import '../screens/widgeturi_screen.dart';
@@ -72,6 +73,12 @@ class _MeniuUtilitati extends StatelessWidget {
               onTap: () => _deschide(context, const WidgeturiScreen()),
             ),
             _Unealta(
+              icon: Icons.summarize_outlined,
+              titlu: 'Rapoarte (Pro)',
+              text: 'Săptămânal, lunar și anual, în PDF și Word',
+              onTap: () => _deschide(context, const RapoarteScreen()),
+            ),
+            _Unealta(
               icon: Icons.save_alt,
               titlu: 'Backup',
               text: 'Salvează datele într-un fișier și mută-le pe alt telefon',
@@ -95,12 +102,7 @@ class _MeniuUtilitati extends StatelessWidget {
                 ),
               ),
             ),
-            const _Unealta(
-              icon: Icons.summarize_outlined,
-              titlu: 'Rapoarte',
-              text: 'Termenele pe zi, săptămână, lună și an, cu obiectul dosarelor',
-              pro: true,
-            ),
+
             const _Unealta(
               icon: Icons.bar_chart,
               titlu: 'Statistici',
