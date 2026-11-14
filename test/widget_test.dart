@@ -98,7 +98,7 @@ void main() {
     expect(find.text('Obiectul dosarului'), findsOneWidget);
     expect(find.text('Caută dosar'), findsOneWidget);
 
-    await tester.tap(find.text('Monitorizate'));
+    await tester.tap(find.text('Urmărite'));
     await tester.pumpAndSettle();
     expect(find.text('Niciun dosar monitorizat'), findsOneWidget);
 

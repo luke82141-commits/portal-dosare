@@ -107,7 +107,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   static const _file = [
     (Icons.search, Icons.search, 'Căutare'),
-    (Icons.bookmark_border, Icons.bookmark, 'Monitorizate'),
+    // „Monitorizate” nu încape pe o filă din șase și se rupea în două.
+    (Icons.bookmark_border, Icons.bookmark, 'Urmărite'),
     (Icons.calendar_month_outlined, Icons.calendar_month, 'Calendar'),
     (Icons.account_balance_outlined, Icons.account_balance, 'Instanțe'),
     (Icons.notifications_none, Icons.notifications, 'Notificări'),

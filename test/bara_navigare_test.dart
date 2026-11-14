@@ -54,7 +54,7 @@ void main() {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.widgetWithText(TextField, 'ex. SC Exemplu SRL, Popescu Ion (opțional)'),
+      find.widgetWithText(TextField, 'ex. Popescu Ion, Exemplu SRL'),
       'Cantacuzino',
     );
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
