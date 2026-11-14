@@ -23,13 +23,33 @@ const _canalLinisteId = 'ore_de_liniste';
 /// des de 15 minute și poate întârzia rulările când economisește bateria.
 const frecventaVerificare = Duration(hours: 1);
 
+/// Peste atâtea dosare urmărite verificăm de două ori mai rar: fiecare dosar
+/// înseamnă o cerere la portal, iar portalul ne limitează (HTTP 429).
+const plafonDosare = 200;
+
+/// Cât trece între două verificări automate complete. Instanțele lucrează în
+/// zilele lucrătoare, ziua: atunci verificăm din oră în oră. Noaptea
+/// (21:00–7:00) și în weekend grefele publică rar, așa că verificăm la 4 ore,
+/// nu deloc. Peste [plafonDosare] intervalele se dublează.
+Duration intervalVerificare(DateTime acum, {int dosare = 0}) {
+  final liber = acum.weekday >= DateTime.saturday || acum.hour < 7 || acum.hour >= 21;
+  final baza = Duration(hours: liber ? 4 : 1);
+  return dosare > plafonDosare ? baza * 2 : baza;
+}
+
+/// Programul de verificare, în cuvinte, pentru ecranul Monitorizate.
+String descriereProgramVerificare(int dosare) => dosare > plafonDosare
+    ? 'Verificare automată la 2 ore în zilele lucrătoare, la 8 ore noaptea și în weekend '
+          '(peste $plafonDosare de dosare)'
+    : 'Verificare automată din oră în oră în zilele lucrătoare, la 4 ore noaptea și în weekend';
+
 /// Punctul de intrare al verificării din fundal. Rulează într-un isolate
 /// separat, pornit de Android chiar dacă aplicația este închisă.
 @pragma('vm:entry-point')
 void verificareInFundal() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      await MonitorizareService.instance.verificaToate();
+      await MonitorizareService.instance.verificaToate(programata: true);
       return true;
     } catch (e) {
       debugPrint('Verificarea din fundal a eșuat: $e');
@@ -103,14 +123,25 @@ class MonitorizareService {
   /// După dosare verifică și părțile urmărite; o eroare acolo nu strică
   /// verificarea dosarelor. Ce s-a găsit pentru părți rămâne în
   /// [dosareNoiParti].
+  ///
+  /// [programata] = rularea orară din fundal: portalul e întrebat doar dacă
+  /// a trecut [intervalVerificare] de la ultima verificare completă. Dosarele
+  /// ÎCCJ se verifică oricum în fereastra lor de noapte.
   Future<List<RezultatVerificare>> verificaToate({
     SoapService? soap,
     IccjService? iccj,
     DateTime? acum,
+    bool programata = false,
   }) async {
     final serviciu = soap ?? SoapService();
+    final moment = acum ?? DateTime.now();
     await SetariNotificariService.instance.incarca();
-    final rezultate = await _verificaDosare(serviciu, iccj, acum ?? DateTime.now());
+    if (programata && !await _eDatorata(moment)) {
+      final rezultate = await _verificaDosare(serviciu, iccj, moment, doarIccj: true);
+      await actualizeazaWidgeturi(acum: acum);
+      return rezultate;
+    }
+    final rezultate = await _verificaDosare(serviciu, iccj, moment);
 
     try {
       dosareNoiParti = await PartiUrmariteService.instance.verificaToate(soap: serviciu);
@@ -129,6 +160,15 @@ class MonitorizareService {
   }
 
   static const _cheieUltimaVerificare = 'ultima_verificare_completa';
+
+  /// Rulările din fundal nu cad fix la oră: lăsăm 10 minute de toleranță, ca
+  /// o rulare venită la 59 de minute să nu fie sărită.
+  Future<bool> _eDatorata(DateTime acum) async {
+    final biblioteca = BibliotecaService.instance;
+    await biblioteca.incarca();
+    final interval = intervalVerificare(acum, dosare: biblioteca.dosare.length);
+    return eTimpulPentruVerificare(interval: interval - const Duration(minutes: 10), acum: acum);
+  }
 
   /// La deschiderea aplicației verificăm doar dacă ultima verificare
   /// completă (de aici sau din fundal) e mai veche de [interval]: cu zeci de
@@ -150,8 +190,9 @@ class MonitorizareService {
   Future<List<RezultatVerificare>> _verificaDosare(
     SoapService serviciu,
     IccjService? iccj,
-    DateTime acum,
-  ) async {
+    DateTime acum, {
+    bool doarIccj = false,
+  }) async {
     final biblioteca = BibliotecaService.instance;
     await biblioteca.incarca();
     // Dosarele Înaltei Curți nu sunt pe portal.just.ro: le întreabă serviciul
@@ -160,7 +201,7 @@ class MonitorizareService {
       for (final d in biblioteca.dosare)
         if (d.dosar.institutie == codIccj) d.dosar.numar,
     };
-    final numere = biblioteca.numereUrmarite.difference(numereIccj);
+    final numere = doarIccj ? <String>{} : biblioteca.numereUrmarite.difference(numereIccj);
     if (numere.isEmpty && numereIccj.isEmpty) return [];
 
     final proaspete = <Dosar>[];

@@ -60,10 +60,7 @@ class BibliotecaService extends ChangeNotifier {
 
   Future<void> _salveaza() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _cheieDosare,
-      jsonEncode([for (final d in _dosare) d.toJson()]),
-    );
+    await prefs.setString(_cheieDosare, jsonEncode([for (final d in _dosare) d.toJson()]));
     await prefs.setStringList(_cheieIgnorate, _ignorate.toList());
     notifyListeners();
   }
@@ -78,25 +75,48 @@ class BibliotecaService extends ChangeNotifier {
   }
 
   /// Adaugă dintr-o dată mai multe dosare (o singură salvare pe disc).
-  /// Întoarce câte erau noi; cele deja urmărite rămân neatinse.
-  Future<int> adaugaToate(List<Dosar> dosare) async {
+  /// Întoarce cheile celor noi, ca adăugarea să poată fi anulată; cele deja
+  /// urmărite rămân neatinse.
+  Future<List<String>> adaugaToate(List<Dosar> dosare) async {
     await incarca();
     final acum = DateTime.now();
-    var noi = 0;
+    final noi = <String>[];
     for (final d in dosare.reversed) {
       if (contine(d.cheie)) continue;
       _dosare.insert(0, DosarSalvat(dosar: d, adaugatLa: acum, ultimaVerificare: acum));
       _ignorate.remove(d.cheie);
-      noi++;
+      noi.add(d.cheie);
     }
-    if (noi > 0) await _salveaza();
+    if (noi.isNotEmpty) await _salveaza();
     return noi;
   }
 
   Future<void> sterge(String cheie) async {
+    await stergeToate([cheie]);
+  }
+
+  /// Scoate dintr-o dată mai multe dosare și le întoarce, cu tot istoricul
+  /// lor, ca ștergerea să poată fi anulată cu [restaureaza].
+  Future<List<DosarSalvat>> stergeToate(Iterable<String> chei) async {
     await incarca();
-    _dosare.removeWhere((d) => d.dosar.cheie == cheie);
-    _ignorate.add(cheie);
+    final de = chei.toSet();
+    final scoase = [
+      for (final d in _dosare)
+        if (de.contains(d.dosar.cheie)) d,
+    ];
+    _dosare.removeWhere((d) => de.contains(d.dosar.cheie));
+    _ignorate.addAll(de);
+    await _salveaza();
+    return scoase;
+  }
+
+  /// Pune la loc dosarele scoase cu [stergeToate], în ordinea în care erau.
+  Future<void> restaureaza(List<DosarSalvat> dosare) async {
+    await incarca();
+    for (final d in dosare.reversed) {
+      _ignorate.remove(d.dosar.cheie);
+      if (!contine(d.dosar.cheie)) _dosare.insert(0, d);
+    }
     await _salveaza();
   }
 
@@ -140,7 +160,11 @@ class BibliotecaService extends ChangeNotifier {
       final schimbari = esteIccjInAsteptare(salvat.dosar)
           ? [
               'Datele dosarului au fost aduse de la ÎCCJ'
-                  '${switch (nou.sedinte.length) { 0 => '', 1 => ' (1 termen)', final n => ' ($n termene)' }}',
+                  '${switch (nou.sedinte.length) {
+                    0 => '',
+                    1 => ' (1 termen)',
+                    final n => ' ($n termene)',
+                  }}',
             ]
           : comparaDosare(salvat.dosar, nou);
       _dosare[i] = salvat.copyWith(
@@ -160,7 +184,8 @@ class BibliotecaService extends ChangeNotifier {
       if (!urmarite.contains(d.numar) || contine(d.cheie) || _ignorate.contains(d.cheie)) {
         continue;
       }
-      final text = 'Dosarul a fost înregistrat la o nouă instanță: ${d.instanta}'
+      final text =
+          'Dosarul a fost înregistrat la o nouă instanță: ${d.instanta}'
           '${d.stadiuProcesual.isEmpty ? '' : ' (${d.stadiuProcesual})'}';
       _dosare.insert(
         0,

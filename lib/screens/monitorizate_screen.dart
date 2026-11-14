@@ -10,6 +10,7 @@ import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
 import 'dosare_selectie_screen.dart';
 import 'parti_urmarite_screen.dart';
+import 'selecteaza_monitorizate_screen.dart';
 import 'sincronizare_calendar_screen.dart';
 
 /// Dosarele monitorizate (Figma: „04 · Dosare monitorizate”).
@@ -115,8 +116,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Verificare automată o dată pe oră'
-                          '${verificari.isEmpty ? '' : ' · ultima: ${formateazaDataOra(verificari.last)}'}',
+                          descriereProgramVerificare(dosare.length) +
+                              '${verificari.isEmpty ? '' : ' · ultima: ${formateazaDataOra(verificari.last)}'}',
                           style: const TextStyle(
                             fontSize: 13,
                             height: 1.38,
@@ -169,12 +170,28 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                 ],
                               ),
                             ),
-                            for (final s in dosare) ...[
+                            if (dosare.length > plafonDosare) ...[
                               const SizedBox(height: 12),
+                              AvertizarePlafon(dosare: dosare.length, onAlege: () => _selecteaza()),
+                            ],
+                            if (dosare.length > 1)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: () => _selecteaza(),
+                                  icon: const Icon(Icons.checklist, size: 18),
+                                  label: const Text('Selectează mai multe'),
+                                ),
+                              )
+                            else
+                              const SizedBox(height: 12),
+                            for (final (i, s) in dosare.indexed) ...[
+                              if (i > 0) const SizedBox(height: 12),
                               DosarCardWidget(
                                 key: ValueKey(s.dosar.cheie),
                                 dosar: s.dosar,
                                 salvat: s,
+                                onLongPress: () => _selecteaza(s.dosar.cheie),
                               ),
                             ],
                           ],
@@ -187,6 +204,9 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
       ),
     );
   }
+
+  void _selecteaza([String? cheie]) => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => SelecteazaMonitorizateScreen(cheieInitiala: cheie)));
 
   void _deschide(SelectieDosare selectie) =>
       Navigator.of(context)

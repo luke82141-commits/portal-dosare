@@ -93,4 +93,47 @@ void main() {
     expect(BibliotecaService.instance.dosare.length, 25);
     expect(find.text('25 de dosare adăugate la monitorizate.'), findsOneWidget);
   });
+
+  testWidgets('„Anulează” scoate doar dosarele tocmai adăugate', (tester) async {
+    final dosare = [_dosar('1/105/2026'), _dosar('2/105/2026'), _dosar('3/105/2026')];
+    await BibliotecaService.instance.adauga(dosare[1]);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: RezultateScreen(
+          criterii: CautareRecenta(parte: 'Alfa SRL'),
+          soap: _SoapFals(dosare),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monitorizează toate'));
+    await tester.pumpAndSettle();
+    expect(BibliotecaService.instance.dosare.length, 3);
+
+    await tester.tap(find.text('Anulează'));
+    await tester.pumpAndSettle();
+    expect([for (final s in BibliotecaService.instance.dosare) s.dosar.numar], ['2/105/2026']);
+  });
+
+  testWidgets('Peste plafon avertizează că verificăm mai rar', (tester) async {
+    await BibliotecaService.instance.adaugaToate([
+      for (var i = 1; i <= 199; i++) _dosar('$i/1/2025'),
+    ]);
+    final dosare = [for (var i = 1; i <= 5; i++) _dosar('$i/105/2026')];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: RezultateScreen(
+          criterii: CautareRecenta(obiect: 'pretenții'),
+          soap: _SoapFals(dosare),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monitorizează toate'));
+    await tester.pumpAndSettle();
+    expect(find.text('Monitorizezi 5 dosare?'), findsOneWidget);
+    expect(find.textContaining('Vei urmări în total 204 dosare'), findsOneWidget);
+  });
 }
