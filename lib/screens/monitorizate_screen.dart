@@ -24,6 +24,13 @@ class MonitorizateScreen extends StatefulWidget {
 
 class _MonitorizateScreenState extends State<MonitorizateScreen> {
   bool _verifica = false;
+  final _derulare = ScrollController();
+
+  @override
+  void dispose() {
+    _derulare.dispose();
+    super.dispose();
+  }
 
   /// Numărul de dosare la care utilizatorul a închis avertizarea de plafon.
   /// Ea reapare doar dacă urmărește și mai multe dosare de atât.
@@ -85,146 +92,160 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
           ]..sort();
           final peSaptamana = dosareCuTermenInSaptamana(dosare).length;
 
-          return RefreshIndicator(
-            onRefresh: _verificaAcum,
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          final sus = <Widget>[
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            // Pe ecrane înguste titlul se micșorează în loc să
-                            // se rupă pe două rânduri lângă butoane.
-                            const Expanded(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Monitorizate',
-                                  maxLines: 1,
-                                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                        // Pe ecrane înguste titlul se micșorează în loc să
+                        // se rupă pe două rânduri lângă butoane.
+                        const Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Monitorizate',
+                              maxLines: 1,
+                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                             ),
-                            if (dosare.isNotEmpty) ...[
-                              _butonRotund(
-                                tooltip: 'Sincronizare Google / iCloud Calendar',
-                                icon: Icons.event_repeat,
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const SincronizareCalendarScreen(),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _butonRotund(
-                                tooltip: 'Filtrează dosarele',
-                                icon: Icons.tune,
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const DosareFiltrateScreen()),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            _butonParti(),
-                            const SizedBox(width: 8),
-                            _butonVerificare(),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          descriereProgramVerificare(dosare.length) +
-                              '${verificari.isEmpty ? '' : ' · ultima: ${formateazaDataOra(verificari.last)}'}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.38,
-                            color: AppColors.onSurfaceVariant,
                           ),
                         ),
+                        if (dosare.isNotEmpty) ...[
+                          _butonRotund(
+                            tooltip: 'Sincronizare Google / iCloud Calendar',
+                            icon: Icons.event_repeat,
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const SincronizareCalendarScreen()),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _butonRotund(
+                            tooltip: 'Filtrează dosarele',
+                            icon: Icons.tune,
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).push(MaterialPageRoute(builder: (_) => const DosareFiltrateScreen())),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        _butonParti(),
+                        const SizedBox(width: 8),
+                        _butonVerificare(),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      descriereProgramVerificare(dosare.length) +
+                          '${verificari.isEmpty ? '' : ' · ultima: ${formateazaDataOra(verificari.last)}'}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.38,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: dosare.isEmpty
-                      ? const StareMesaj(
-                          icon: Icons.bookmark_border,
-                          titlu: 'Niciun dosar monitorizat',
-                          text:
-                              'Deschide un dosar și pornește „Monitorizează dosarul”. '
-                              'Vei primi o notificare la fiecare schimbare apărută pe portal.',
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _Sumar(
-                                    '${dosare.length}',
-                                    dosare.length == 1 ? 'dosar urmărit' : 'dosare urmărite',
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _Sumar(
-                                    '${biblioteca.totalNecitite}',
-                                    biblioteca.totalNecitite == 1
-                                        ? 'actualizare nouă'
-                                        : 'actualizări noi',
-                                    fundal: AppColors.successContainer,
-                                    culoare: AppColors.success,
-                                    onTap: () => _deschide(SelectieDosare.actualizari),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _Sumar(
-                                    '$peSaptamana',
-                                    'termene în 7 zile',
-                                    fundal: AppColors.accentContainer,
-                                    culoare: AppColors.accent,
-                                    onTap: () => _deschide(SelectieDosare.termene),
-                                  ),
-                                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: dosare.isEmpty
+                  ? const StareMesaj(
+                      icon: Icons.bookmark_border,
+                      titlu: 'Niciun dosar monitorizat',
+                      text:
+                          'Deschide un dosar și pornește „Monitorizează dosarul”. '
+                          'Vei primi o notificare la fiecare schimbare apărută pe portal.',
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _Sumar(
+                                '${dosare.length}',
+                                dosare.length == 1 ? 'dosar urmărit' : 'dosare urmărite',
                               ),
-                            ),
-                            if (_aratPlafon(dosare.length)) ...[
-                              const SizedBox(height: 12),
-                              AvertizarePlafon(
-                                dosare: dosare.length,
-                                onAlege: () => _selecteaza(),
-                                onInchide: () => _ascundePlafon(dosare.length),
+                              const SizedBox(width: 10),
+                              _Sumar(
+                                '${biblioteca.totalNecitite}',
+                                biblioteca.totalNecitite == 1
+                                    ? 'actualizare nouă'
+                                    : 'actualizări noi',
+                                fundal: AppColors.successContainer,
+                                culoare: AppColors.success,
+                                onTap: () => _deschide(SelectieDosare.actualizari),
+                              ),
+                              const SizedBox(width: 10),
+                              _Sumar(
+                                '$peSaptamana',
+                                'termene în 7 zile',
+                                fundal: AppColors.accentContainer,
+                                culoare: AppColors.accent,
+                                onTap: () => _deschide(SelectieDosare.termene),
                               ),
                             ],
-                            if (dosare.length > 1)
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () => _selecteaza(),
-                                  icon: const Icon(Icons.checklist, size: 18),
-                                  label: const Text('Selectează mai multe'),
-                                ),
-                              )
-                            else
-                              const SizedBox(height: 12),
-                            for (final (i, s) in dosare.indexed) ...[
-                              if (i > 0) const SizedBox(height: 12),
-                              DosarCardWidget(
-                                key: ValueKey(s.dosar.cheie),
-                                dosar: s.dosar,
-                                salvat: s,
-                                onLongPress: () => _selecteaza(s.dosar.cheie),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
-                ),
-              ],
+                        if (_aratPlafon(dosare.length)) ...[
+                          const SizedBox(height: 12),
+                          AvertizarePlafon(
+                            dosare: dosare.length,
+                            onAlege: () => _selecteaza(),
+                            onInchide: () => _ascundePlafon(dosare.length),
+                          ),
+                        ],
+                        if (dosare.length > 1)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () => _selecteaza(),
+                              icon: const Icon(Icons.checklist, size: 18),
+                              label: const Text('Selectează mai multe'),
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 12),
+                      ],
+                    ),
+            ),
+          ];
+
+          // Cardurile se construiesc doar când apar pe ecran: cu sute de
+          // dosare, o listă construită dintr-odată ar merge greu. Bara din
+          // dreapta se trage cu degetul ca să ajungi repede sus sau jos.
+          return RefreshIndicator(
+            onRefresh: _verificaAcum,
+            child: Scrollbar(
+              controller: _derulare,
+              interactive: true,
+              thickness: 8,
+              radius: const Radius.circular(4),
+              child: ListView.builder(
+                controller: _derulare,
+                padding: const EdgeInsets.only(bottom: 24),
+                itemCount: sus.length + dosare.length,
+                itemBuilder: (context, i) {
+                  if (i < sus.length) return sus[i];
+                  final s = dosare[i - sus.length];
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(16, i == sus.length ? 0 : 12, 16, 0),
+                    child: DosarCardWidget(
+                      key: ValueKey(s.dosar.cheie),
+                      dosar: s.dosar,
+                      salvat: s,
+                      onLongPress: () => _selecteaza(s.dosar.cheie),
+                    ),
+                  );
+                },
+              ),
             ),
           );
         },

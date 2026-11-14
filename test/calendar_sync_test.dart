@@ -310,7 +310,14 @@ void main() {
     await tester.pumpWidget(MaterialApp(theme: construiesteTema(), home: const SincronizareCalendarScreen()));
     await tester.pumpAndSettle();
     expect(find.text('Termene'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Alege întâi un calendar.'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Alege întâi un calendar.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Termene'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Termene'));
     await tester.pumpAndSettle();
     expect(sync.calendarId, 'g1');
