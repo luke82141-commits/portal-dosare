@@ -263,7 +263,7 @@ class _CautareScreenState extends State<CautareScreen> {
             onTap: _alegeInstanta,
             onSterge: _institutii.isEmpty ? null : () => setState(() => _institutii = []),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _selector(
             eticheta: 'Înregistrat între',
             valoare: interval,
@@ -276,6 +276,8 @@ class _CautareScreenState extends State<CautareScreen> {
     );
   }
 
+  /// Câmp de ales (instanța, intervalul), în același stil cu câmpurile de
+  /// text: eticheta deasupra, nu în chenar.
   Widget _selector({
     required String eticheta,
     required String valoare,
@@ -283,25 +285,45 @@ class _CautareScreenState extends State<CautareScreen> {
     required VoidCallback onTap,
     VoidCallback? onSterge,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: eticheta,
-          prefixIcon: Icon(icon, size: 20),
-          suffixIcon: onSterge == null
-              ? const Icon(Icons.arrow_drop_down)
-              : IconButton(
-                  tooltip: 'Șterge',
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: onSterge,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _eticheta(eticheta),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, size: 20),
+              suffixIcon: onSterge == null
+                  ? const Icon(Icons.expand_more)
+                  : IconButton(
+                      tooltip: 'Șterge',
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: onSterge,
+                    ),
+            ),
+            child: Text(
+              valoare,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
         ),
-        child: Text(valoare, maxLines: 1, overflow: TextOverflow.ellipsis),
-      ),
+      ],
     );
   }
+
+  static Widget _eticheta(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: AppColors.onSurfaceVariant,
+    ),
+  );
 
   Widget _camp({
     required String eticheta,
@@ -312,14 +334,7 @@ class _CautareScreenState extends State<CautareScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          eticheta,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.onSurfaceVariant,
-          ),
-        ),
+        _eticheta(eticheta),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
