@@ -10,14 +10,19 @@ import '../utils/formatare.dart';
 import 'biblioteca_service.dart';
 import 'iccj_service.dart';
 import 'parti_urmarite_service.dart';
+import 'pro_service.dart';
+import 'rezumat_service.dart';
 import 'setari_notificari_service.dart';
 import 'soap_service.dart';
+import 'termene_procedurale_service.dart';
 import 'widget_service.dart';
 
 const _numeTask = 'verificare_dosare';
 const _canalId = 'modificari_dosare';
 const _canalPartiId = 'dosare_noi_parti';
 const _canalLinisteId = 'ore_de_liniste';
+const _canalRezumatId = 'rezumat_zilnic';
+const payloadRezumat = 'rezumat';
 
 /// Cât de des verifică telefonul portalul, în fundal. Android nu permite mai
 /// des de 15 minute și poate întârzia rulările când economisește bateria.
@@ -72,6 +77,17 @@ class MonitorizareService {
   /// interfața să sară direct la bibliotecă.
   final ValueNotifier<bool> deschideBiblioteca = ValueNotifier(false);
 
+  /// Devine true când aplicația a fost deschisă din rezumatul zilnic.
+  final ValueNotifier<bool> deschideRezumat = ValueNotifier(false);
+
+  void _dinNotificare(String? payload) {
+    if (payload == payloadRezumat) {
+      deschideRezumat.value = true;
+    } else {
+      deschideBiblioteca.value = true;
+    }
+  }
+
   /// Notificările și rularea în fundal sunt configurate doar pentru Android.
   bool get _suportat => !kIsWeb && Platform.isAndroid;
 
@@ -82,7 +98,7 @@ class MonitorizareService {
 
     final lansare = await _notificari.getNotificationAppLaunchDetails();
     if (lansare?.didNotificationLaunchApp ?? false) {
-      deschideBiblioteca.value = true;
+      _dinNotificare(lansare?.notificationResponse?.payload);
     }
 
     await Workmanager().initialize(verificareInFundal);
@@ -101,7 +117,7 @@ class MonitorizareService {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_stat_dosar'),
       ),
-      onDidReceiveNotificationResponse: (_) => deschideBiblioteca.value = true,
+      onDidReceiveNotificationResponse: (r) => _dinNotificare(r.payload),
     );
     _notificariPornite = true;
   }
@@ -139,6 +155,7 @@ class MonitorizareService {
     if (programata && !await _eDatorata(moment)) {
       final rezultate = await _verificaDosare(serviciu, iccj, moment, doarIccj: true);
       await actualizeazaWidgeturi(acum: acum);
+      if (programata) await trimiteRezumatulDacaEOra(moment);
       return rezultate;
     }
     final rezultate = await _verificaDosare(serviciu, iccj, moment);
@@ -156,7 +173,50 @@ class MonitorizareService {
     await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
     // Widgeturile de pe ecran se reîmprospătează odată cu verificarea orară.
     await actualizeazaWidgeturi(acum: acum);
+    if (programata) await trimiteRezumatulDacaEOra(moment);
     return rezultate;
+  }
+
+  /// Rezumatul zilnic (Pro) vine cu prima verificare din fundal de după ora
+  /// aleasă, în zilele lucrătoare. Când nu e nimic de spus, nu trimitem nimic.
+  Future<void> trimiteRezumatulDacaEOra(DateTime acum) async {
+    try {
+      await ProService.instance.incarca();
+      final setari = RezumatService.instance;
+      await setari.incarca();
+      if (!ProService.instance.activ || !setari.eTimpul(acum)) return;
+      await TermeneProceduraleService.instance.incarca();
+      final r = construiesteRezumat(
+        BibliotecaService.instance.dosare,
+        TermeneProceduraleService.instance.termene,
+        acum: acum,
+        dela: setari.actualizariDeLa(acum),
+      );
+      if (!r.gol) await _notificaRezumat(r);
+      await setari.marcheazaTrimis(acum);
+    } catch (e) {
+      debugPrint('Rezumatul zilnic nu a putut fi trimis: $e');
+    }
+  }
+
+  Future<void> _notificaRezumat(Rezumat r) async {
+    if (!_suportat) return;
+    await _pornesteNotificari();
+    final t = textRezumat(r, ziUrm: numeZiUrmatoare(r));
+    await _notificari.show(
+      id: 'rezumat'.hashCode & 0x7fffffff,
+      title: t.titlu,
+      body: t.sumar,
+      notificationDetails: NotificationDetails(
+        android: _detaliiAndroid(
+          _canalRezumatId,
+          'Rezumatul zilnic',
+          'Termenele zilei și actualizările, dimineața',
+          t.linii.join('\n'),
+        ),
+      ),
+      payload: payloadRezumat,
+    );
   }
 
   static const _cheieUltimaVerificare = 'ultima_verificare_completa';
