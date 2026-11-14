@@ -19,7 +19,12 @@ class CalendarTelefon {
   final String cont;
   final Color culoare;
 
-  const CalendarTelefon({required this.id, required this.nume, required this.cont, required this.culoare});
+  const CalendarTelefon({
+    required this.id,
+    required this.nume,
+    required this.cont,
+    required this.culoare,
+  });
 }
 
 /// Un eveniment citit din calendar.
@@ -56,8 +61,9 @@ abstract class CalendareTelefon {
     required Duration amintire,
   });
 
-  /// Schimbă titlul unui eveniment citit înainte cu [evenimente].
-  Future<void> redenumeste(String eventId, String titlu);
+  /// Schimbă titlul și/sau descrierea unui eveniment citit înainte cu
+  /// [evenimente]. Câmpurile null rămân cum sunt.
+  Future<void> actualizeaza(String eventId, {String? titlu, String? descriere});
 }
 
 /// Calendarele reale, prin pachetul eventide (Android: CalendarContract,
@@ -68,9 +74,9 @@ class CalendareEventide implements CalendareTelefon {
 
   @override
   Future<List<CalendarTelefon>> calendare() async => [
-        for (final c in await _e.retrieveCalendars(onlyWritableCalendars: true))
-          CalendarTelefon(id: c.id, nume: c.title, cont: c.account.name, culoare: c.color),
-      ];
+    for (final c in await _e.retrieveCalendars(onlyWritableCalendars: true))
+      CalendarTelefon(id: c.id, nume: c.title, cont: c.account.name, culoare: c.color),
+  ];
 
   @override
   Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async {
@@ -91,9 +97,10 @@ class CalendareEventide implements CalendareTelefon {
   }
 
   @override
-  Future<void> redenumeste(String eventId, String titlu) async {
+  Future<void> actualizeaza(String eventId, {String? titlu, String? descriere}) async {
     final e = _citite[eventId];
-    if (e != null) await _e.updateEvent(e, title: titlu);
+    if (e == null) return;
+    _citite[eventId] = await _e.updateEvent(e, title: titlu, description: descriere);
   }
 
   @override
@@ -165,9 +172,8 @@ String retitlu(String titlu, String simbol) {
   return simbol.isEmpty ? t : '$simbol $t';
 }
 
-List<String> numereDinText(String text) => {
-      for (final m in _numarDosar.allMatches(text)) m.group(1)!,
-    }.toList();
+List<String> numereDinText(String text) =>
+    {for (final m in _numarDosar.allMatches(text)) m.group(1)!}.toList();
 
 /// Eticheta pusă în descrierea fiecărui eveniment creat de aplicație. Cu ea
 /// recunoaștem evenimentele noastre și nu creăm dubluri.
@@ -259,7 +265,11 @@ class CalendarSyncService extends ChangeNotifier {
     if (termene.isEmpty) return const RezultatTrimitere(0, 0);
 
     final ultimul = termene.map((t) => t.$2.data!).reduce((a, b) => a.isAfter(b) ? a : b);
-    final existente = await calendareTelefon.evenimente(id, dela, ultimul.add(const Duration(days: 2)));
+    final existente = await calendareTelefon.evenimente(
+      id,
+      dela,
+      ultimul.add(const Duration(days: 2)),
+    );
     final marcate = <String>{
       for (final e in existente)
         if (e.descriere.indexOf(_marcaj) case final i when i >= 0)
@@ -272,16 +282,26 @@ class CalendarSyncService extends ChangeNotifier {
         for (final n in numereDinText(e.text)) '$n|${cheieZi(e.start)}',
     };
 
-    // Evenimentele puse înainte (cu „Termen ” în față sau cu alt simbol)
-    // primesc titlul de acum. Doar ale noastre, recunoscute după marcaj.
+    // Evenimentele puse înainte primesc titlul de acum (fără „Termen ” în
+    // față, cu simbolul ales) și descrierea de acum (părțile, soluția nouă).
+    // Doar ale noastre, recunoscute după marcaj.
+    final dupaCheie = {for (final (d, s) in termene) cheieTermen(d, s): (d, s)};
     for (final e in existente) {
-      if (!e.descriere.contains(_marcaj)) continue;
-      final nou = retitlu(e.titlu, simbol);
-      if (nou != e.titlu) {
-        try {
-          await calendareTelefon.redenumeste(e.id, nou);
-        } catch (_) {}
-      }
+      final i = e.descriere.indexOf(_marcaj);
+      if (i < 0) continue;
+      final titluNou = retitlu(e.titlu, simbol);
+      final termen = dupaCheie[e.descriere.substring(i + _marcaj.length).split('\n').first.trim()];
+      final descriereNoua = termen == null ? null : descriereEveniment(termen.$1, termen.$2);
+      final schimbaTitlu = titluNou != e.titlu;
+      final schimbaDescriere = descriereNoua != null && descriereNoua != e.descriere;
+      if (!schimbaTitlu && !schimbaDescriere) continue;
+      try {
+        await calendareTelefon.actualizeaza(
+          e.id,
+          titlu: schimbaTitlu ? titluNou : null,
+          descriere: schimbaDescriere ? descriereNoua : null,
+        );
+      } catch (_) {}
     }
 
     var adaugate = 0, sarite = 0;
@@ -298,7 +318,9 @@ class CalendarSyncService extends ChangeNotifier {
         calendarId: id,
         titlu: titluEveniment(d, simbol: simbol),
         start: start,
-        sfarsit: minut == null ? zi.add(const Duration(days: 1)) : start.add(const Duration(hours: 1)),
+        sfarsit: minut == null
+            ? zi.add(const Duration(days: 1))
+            : start.add(const Duration(hours: 1)),
         totaZiua: minut == null,
         descriere: descriereEveniment(d, s),
         locatie: '${d.instanta}, România',
@@ -315,7 +337,10 @@ class CalendarSyncService extends ChangeNotifier {
   /// Caută numere de dosar în evenimentele calendarelor [calendarIds] (cu 3
   /// luni în urmă și un an înainte) și le întoarce pe cele care nu sunt deja
   /// în bibliotecă. Evenimentele create de aplicație sunt ignorate.
-  Future<List<DosarDinCalendar>> cautaInCalendare(Iterable<String> calendarIds, {DateTime? acum}) async {
+  Future<List<DosarDinCalendar>> cautaInCalendare(
+    Iterable<String> calendarIds, {
+    DateTime? acum,
+  }) async {
     final azi = DateUtils.dateOnly(acum ?? DateTime.now());
     final inBiblioteca = {for (final s in BibliotecaService.instance.dosare) s.dosar.numar};
     final gasite = <String, DosarDinCalendar>{};
@@ -333,7 +358,8 @@ class CalendarSyncService extends ChangeNotifier {
         }
       }
     }
-    final l = gasite.values.toList()..sort((a, b) => a.eveniment.start.compareTo(b.eveniment.start));
+    final l = gasite.values.toList()
+      ..sort((a, b) => a.eveniment.start.compareTo(b.eveniment.start));
     return l;
   }
 
@@ -380,18 +406,45 @@ Dosar? alegeInstanta(List<Dosar> dosare, EvenimentCalendar e) {
   for (final d in dosare) {
     if (d.sedinte.any((s) => s.data != null && DateUtils.isSameDay(s.data, zi))) return d;
   }
-  return ([...dosare]..sort((a, b) => (b.data ?? DateTime(0)).compareTo(a.data ?? DateTime(0)))).first;
+  return ([
+    ...dosare,
+  ]..sort((a, b) => (b.data ?? DateTime(0)).compareTo(a.data ?? DateTime(0)))).first;
 }
 
 String descriereEveniment(Dosar d, Sedinta s) => [
-      'Dosar nr. ${d.numar}',
-      d.instanta,
-      if (d.stadiuProcesual.isNotEmpty) 'Stadiu: ${d.stadiuProcesual}',
-      if (d.obiect.isNotEmpty) 'Obiect: ${d.obiect}',
-      if (s.complet.isNotEmpty) 'Complet: ${s.complet}',
-      'Termen: ${formateazaData(s.data)}${s.ora.isEmpty ? '' : ', ora ${s.ora}'}',
-      if (s.solutie.isNotEmpty)
-        'Soluție: ${s.solutie}${s.solutieSumar.isEmpty ? '' : ' — ${s.solutieSumar}'}',
-      '',
-      '$_marcaj${cheieTermen(d, s)}',
-    ].join('\n');
+  'Dosar nr. ${d.numar}',
+  d.instanta,
+  if (d.stadiuProcesual.isNotEmpty) 'Stadiu: ${d.stadiuProcesual}',
+  if (d.obiect.isNotEmpty) 'Obiect: ${d.obiect}',
+  if (s.complet.isNotEmpty) 'Complet: ${s.complet}',
+  'Termen: ${formateazaData(s.data)}${s.ora.isEmpty ? '' : ', ora ${s.ora}'}',
+  if (s.solutie.isNotEmpty)
+    'Soluție: ${s.solutie}${s.solutieSumar.isEmpty ? '' : ' — ${s.solutieSumar}'}',
+  ...rezumatParti(d),
+  '',
+  '$_marcaj${cheieTermen(d, s)}',
+].join('\n');
+
+bool _eInsolventa(Dosar d) {
+  final t = '${d.obiect} ${d.categorie} ${d.sectie}'.toLowerCase();
+  return t.contains('insolven') || t.contains('faliment') || t.contains('reorganizare judiciar');
+}
+
+bool _eDebitor(Parte p) => p.calitate.toLowerCase().contains('debitor');
+
+/// Părțile pentru descrierea din calendar: cel mult [max] rânduri, ca să nu
+/// umple evenimentul. La insolvență debitorul apare mereu, primul.
+List<String> rezumatParti(Dosar d, {int max = 4}) {
+  if (d.parti.isEmpty) return const [];
+  final debitori = _eInsolventa(d) ? d.parti.where(_eDebitor).toList() : const <Parte>[];
+  final restul = d.parti.where((p) => !debitori.contains(p)).toList();
+  final alese = [...debitori, ...restul.take((max - debitori.length).clamp(0, max))];
+  String rand(Parte p) => p.calitate.isEmpty ? p.nume : '${p.calitate}: ${p.nume}';
+  final ramase = d.parti.length - alese.length;
+  return [
+    'Părți:',
+    for (final p in alese) '• ${rand(p)}',
+    if (ramase == 1) '• și încă o parte',
+    if (ramase > 1) '• și încă $ramase părți',
+  ];
+}
