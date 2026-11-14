@@ -55,12 +55,16 @@ abstract class CalendareTelefon {
     required String locatie,
     required Duration amintire,
   });
+
+  /// Schimbă titlul unui eveniment citit înainte cu [evenimente].
+  Future<void> redenumeste(String eventId, String titlu);
 }
 
 /// Calendarele reale, prin pachetul eventide (Android: CalendarContract,
 /// deci și conturile Google; iOS: EventKit, deci și iCloud).
 class CalendareEventide implements CalendareTelefon {
   final Eventide _e = Eventide();
+  final _citite = <String, ETEvent>{};
 
   @override
   Future<List<CalendarTelefon>> calendare() async => [
@@ -69,16 +73,28 @@ class CalendareEventide implements CalendareTelefon {
       ];
 
   @override
-  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async => [
-        for (final e in await _e.retrieveEvents(calendarId: calendarId, startDate: de, endDate: pana))
-          EvenimentCalendar(
-            id: e.id,
-            titlu: e.title,
-            start: e.startDate.toLocal(),
-            descriere: e.description ?? '',
-            locatie: e.location ?? '',
-          ),
-      ];
+  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async {
+    final ev = await _e.retrieveEvents(calendarId: calendarId, startDate: de, endDate: pana);
+    for (final e in ev) {
+      _citite[e.id] = e;
+    }
+    return [
+      for (final e in ev)
+        EvenimentCalendar(
+          id: e.id,
+          titlu: e.title,
+          start: e.startDate.toLocal(),
+          descriere: e.description ?? '',
+          locatie: e.location ?? '',
+        ),
+    ];
+  }
+
+  @override
+  Future<void> redenumeste(String eventId, String titlu) async {
+    final e = _citite[eventId];
+    if (e != null) await _e.updateEvent(e, title: titlu);
+  }
 
   @override
   Future<String> creeaza({
@@ -124,6 +140,12 @@ class RezultatTrimitere {
 /// Numerele de dosar dintr-un text: „14993/299/2025”, „123/3/2026*”,
 /// „55/1/2026/a1”.
 final _numarDosar = RegExp(r'(?<![\d/])(\d{1,6}/\d{1,4}/(?:19|20)\d{2}(?:/a\d+)?\**)(?![\d/])');
+
+const _prefixVechi = 'Termen ';
+
+/// Titlul evenimentului: numărul dosarului întâi, ca să se vadă și în
+/// căsuțele mici din vederea pe lună.
+String titluEveniment(Dosar d) => '${d.numar} · ${d.instanta}';
 
 List<String> numereDinText(String text) => {
       for (final m in _numarDosar.allMatches(text)) m.group(1)!,
@@ -223,6 +245,16 @@ class CalendarSyncService extends ChangeNotifier {
         for (final n in numereDinText(e.text)) '$n|${cheieZi(e.start)}',
     };
 
+    // Evenimentele puse de versiunile vechi încep cu „Termen ”, care ascunde
+    // numărul dosarului în vederea pe lună; îl scoatem.
+    for (final e in existente) {
+      if (e.descriere.contains(_marcaj) && e.titlu.startsWith(_prefixVechi)) {
+        try {
+          await calendareTelefon.redenumeste(e.id, e.titlu.substring(_prefixVechi.length));
+        } catch (_) {}
+      }
+    }
+
     var adaugate = 0, sarite = 0;
     for (final (d, s) in termene) {
       final cheie = cheieTermen(d, s);
@@ -235,7 +267,7 @@ class CalendarSyncService extends ChangeNotifier {
       final start = minut == null ? zi : zi.add(Duration(minutes: minut));
       await calendareTelefon.creeaza(
         calendarId: id,
-        titlu: 'Termen ${d.numar} · ${d.instanta}',
+        titlu: titluEveniment(d),
         start: start,
         sfarsit: minut == null ? zi.add(const Duration(days: 1)) : start.add(const Duration(hours: 1)),
         totaZiua: minut == null,

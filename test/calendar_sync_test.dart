@@ -40,6 +40,17 @@ class _CalendarFals implements CalendareTelefon {
     evenimenteExistente.add(EvenimentCalendar(id: id, titlu: titlu, start: start, descriere: descriere, locatie: locatie));
     return id;
   }
+
+  final redenumite = <String, String>{};
+
+  @override
+  Future<void> redenumeste(String eventId, String titlu) async {
+    redenumite[eventId] = titlu;
+    final i = evenimenteExistente.indexWhere((e) => e.id == eventId);
+    final e = evenimenteExistente[i];
+    evenimenteExistente[i] = EvenimentCalendar(
+        id: e.id, titlu: titlu, start: e.start, descriere: e.descriere, locatie: e.locatie);
+  }
 }
 
 class _SoapFals extends SoapService {
@@ -101,7 +112,7 @@ void main() {
     ]);
     final r = await sync.trimite([d], acum: acum);
     expect(r.adaugate, 2);
-    expect(cal.creat.first['titlu'], 'Termen 14993/299/2025 · Judecătoria Sectorul 1 București');
+    expect(cal.creat.first['titlu'], '14993/299/2025 · Judecătoria Sectorul 1 București');
     expect(cal.creat.first['start'], DateTime(2026, 11, 20, 9, 30));
     expect(cal.creat.first['locatie'], 'Judecătoria Sectorul 1 București, România');
     expect(cal.creat.first['amintire'], const Duration(hours: 1));
@@ -111,6 +122,23 @@ void main() {
     expect(aDouaOara.adaugate, 0);
     expect(aDouaOara.existente, 2);
     expect(cal.creat, hasLength(2));
+  });
+
+  test('evenimentele vechi, care încep cu „Termen”, sunt redenumite', () async {
+    final cal = _CalendarFals();
+    sync.calendareTelefon = cal;
+    final d = _d('14993/299/2025', 'JudecatoriaSECTORUL1BUCURESTI', [_s(DateTime(2026, 11, 20), '09:30')]);
+    await sync.trimite([d], acum: acum);
+    // Cum arăta un eveniment pus de versiunea veche.
+    final e = cal.evenimenteExistente.single;
+    cal.evenimenteExistente[0] = EvenimentCalendar(
+        id: e.id, titlu: 'Termen ${e.titlu}', start: e.start, descriere: e.descriere, locatie: e.locatie);
+    // Și unul pus de mână, care trebuie lăsat în pace.
+    cal.evenimenteExistente.add(EvenimentCalendar(id: 'm', titlu: 'Termen avocat', start: DateTime(2026, 11, 20, 12)));
+
+    final r = await sync.trimite([d], acum: acum);
+    expect(r.adaugate, 0);
+    expect(cal.redenumite, {e.id: '14993/299/2025 · Judecătoria Sectorul 1 București'});
   });
 
   test('un eveniment pus de mână pentru același dosar și zi nu se dublează', () async {
@@ -131,7 +159,7 @@ void main() {
       _d('1/1/2026', 'TribunalulBUCURESTI', [_s(DateTime(2026, 11, 20), '09:00')]),
       _d('2/2/2026', 'TribunalulBUCURESTI', [_s(DateTime(2026, 11, 21), '09:00')]),
     ], acum: acum);
-    expect(cal.creat.single['titlu'], 'Termen 2/2/2026 · Tribunalul București');
+    expect(cal.creat.single['titlu'], '2/2/2026 · Tribunalul București');
   });
 
   test('din calendar se adaugă doar dosarele noi, la instanța pomenită', () async {
