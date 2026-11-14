@@ -12,6 +12,7 @@ import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import 'rezultate_screen.dart';
+import 'sugestie_screen.dart';
 
 /// Ecranul principal de căutare (Figma: „01 · Căutare”).
 class CautareScreen extends StatefulWidget {
@@ -150,14 +151,30 @@ class _CautareScreenState extends State<CautareScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'PORTAL DOSARE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.6,
-                      color: AppColors.accentContainer,
-                    ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'PORTAL DOSARE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.6,
+                            color: AppColors.accentContainer,
+                          ),
+                        ),
+                      ),
+                      // Până la meniul cu „Utilități”, sugestiile se trimit de aici.
+                      IconButton(
+                        tooltip: 'Trimite o sugestie',
+                        visualDensity: VisualDensity.compact,
+                        color: alb,
+                        icon: const Icon(Icons.lightbulb_outline),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SugestieScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   const Text(
