@@ -284,6 +284,44 @@ void main() {
     expect(find.text('Respinge apelul ca nefondat. Definitivă.'), findsWidgets);
   });
 
+  testWidgets('Tap pe o soluție lungă din parcurs o arată întreagă', (tester) async {
+    final lung = 'Admite apelul. ${'Schimbă în parte sentința apelată. ' * 12}Definitivă.';
+    final apel = Dosar(
+      numar: _apel.numar,
+      data: _apel.data,
+      institutie: _apel.institutie,
+      obiect: _apel.obiect,
+      stadiuProcesual: 'Apel',
+      sectie: _apel.sectie,
+      categorie: 'Civil',
+      parti: const [],
+      sedinte: [
+        Sedinta(
+          complet: 'A2',
+          data: DateTime(2026, 10, 20),
+          ora: '10:30',
+          solutie: 'Schimbat în parte',
+          solutieSumar: lung,
+        ),
+      ],
+    );
+    ParcursDosar.soap = () => _SoapFals([_dosar, apel]);
+    await _pompeazaCard(tester);
+    await tester.tap(find.byType(DosarCardWidget));
+    await tester.pumpAndSettle();
+    expect(find.text(lung), findsNothing);
+
+    await tester.ensureVisible(find.text('Arată toată soluția'));
+    await tester.tap(find.text('Soluție: Schimbat în parte'));
+    await tester.pumpAndSettle();
+    expect(find.text(lung), findsOneWidget);
+    expect(find.text('Restrânge'), findsOneWidget);
+
+    await tester.tap(find.text('Restrânge'));
+    await tester.pumpAndSettle();
+    expect(find.text(lung), findsNothing);
+  });
+
   testWidgets('Fără alte instanțe, parcursul nu apare', (tester) async {
     await _pompeazaCard(tester);
     await tester.tap(find.byType(DosarCardWidget));

@@ -4,4 +4,8 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">portalquery.just.ro</domain>
     </domain-config>
+    <!-- Serviciul ÎCCJ (api.scj.ro:97) e tot doar pe HTTP -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">api.scj.ro</domain>
+    </domain-config>
 </network-security-config>

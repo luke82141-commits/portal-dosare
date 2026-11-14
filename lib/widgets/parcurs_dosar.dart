@@ -326,7 +326,9 @@ class _EtapaState extends State<_Etapa> {
   }
 }
 
-class _Solutie extends StatelessWidget {
+/// Bula cu soluția: arată un rezumat; o atingere o extinde la textul întreg,
+/// a doua o restrânge. Apăsarea lungă păstrează opțiunile (copiere, partajare).
+class _Solutie extends StatefulWidget {
   final Sedinta? solutie;
   final Sedinta? termen;
   final Dosar dosar;
@@ -334,10 +336,19 @@ class _Solutie extends StatelessWidget {
   const _Solutie({required this.solutie, required this.termen, required this.dosar});
 
   @override
+  State<_Solutie> createState() => _SolutieState();
+}
+
+class _SolutieState extends State<_Solutie> {
+  static const _limita = 220;
+  bool _extinsa = false;
+
+  @override
   Widget build(BuildContext context) {
-    final s = solutie;
+    final s = widget.solutie;
+    final dosar = widget.dosar;
     if (s == null) {
-      final t = termen;
+      final t = widget.termen;
       return Text(
         t == null
             ? 'Fără soluție publicată'
@@ -355,7 +366,10 @@ class _Solutie extends StatelessWidget {
       if (s.ora.isNotEmpty) 'ora ${s.ora}',
       if (s.complet.isNotEmpty) 'Complet ${s.complet}',
     ].join(' · ');
+    final arataSumar = s.solutieSumar.isNotEmpty && s.solutieSumar != s.solutie;
+    final lunga = arataSumar && s.solutieSumar.length > _limita;
     return InkWell(
+      onTap: lunga ? () => setState(() => _extinsa = !_extinsa) : null,
       onLongPress: () => optiuniSolutie(context, s, dosar: dosar),
       borderRadius: BorderRadius.circular(10),
       child: Container(
@@ -369,9 +383,25 @@ class _Solutie extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Soluție: $titlu', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            if (s.solutieSumar.isNotEmpty && s.solutieSumar != s.solutie) ...[
+            if (arataSumar) ...[
               const SizedBox(height: 4),
-              Text(scurteaza(s.solutieSumar, 220), style: const TextStyle(fontSize: 13, height: 1.35)),
+              // Fără AnimatedSize: etapa e într-un IntrinsicHeight, care nu
+              // urmărește înălțimea în timpul animației.
+              Text(
+                _extinsa ? s.solutieSumar : scurteaza(s.solutieSumar, _limita),
+                style: const TextStyle(fontSize: 13, height: 1.35),
+              ),
+            ],
+            if (lunga) ...[
+              const SizedBox(height: 4),
+              Text(
+                _extinsa ? 'Restrânge' : 'Arată toată soluția',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
             ],
             if (detalii.isNotEmpty) ...[
               const SizedBox(height: 4),

@@ -7,6 +7,7 @@ import 'package:workmanager/workmanager.dart';
 import '../models/dosar_model.dart';
 import '../utils/formatare.dart';
 import 'biblioteca_service.dart';
+import 'iccj_service.dart';
 import 'parti_urmarite_service.dart';
 import 'setari_notificari_service.dart';
 import 'soap_service.dart';
@@ -100,10 +101,14 @@ class MonitorizareService {
   /// După dosare verifică și părțile urmărite; o eroare acolo nu strică
   /// verificarea dosarelor. Ce s-a găsit pentru părți rămâne în
   /// [dosareNoiParti].
-  Future<List<RezultatVerificare>> verificaToate({SoapService? soap}) async {
+  Future<List<RezultatVerificare>> verificaToate({
+    SoapService? soap,
+    IccjService? iccj,
+    DateTime? acum,
+  }) async {
     final serviciu = soap ?? SoapService();
     await SetariNotificariService.instance.incarca();
-    final rezultate = await _verificaDosare(serviciu);
+    final rezultate = await _verificaDosare(serviciu, iccj, acum ?? DateTime.now());
 
     try {
       dosareNoiParti = await PartiUrmariteService.instance.verificaToate(soap: serviciu);
@@ -120,15 +125,38 @@ class MonitorizareService {
   /// Dosarele noi găsite pe numele părților urmărite la ultima verificare.
   List<RezultatParte> dosareNoiParti = [];
 
-  Future<List<RezultatVerificare>> _verificaDosare(SoapService serviciu) async {
+  Future<List<RezultatVerificare>> _verificaDosare(
+    SoapService serviciu,
+    IccjService? iccj,
+    DateTime acum,
+  ) async {
     final biblioteca = BibliotecaService.instance;
     await biblioteca.incarca();
-    final numere = biblioteca.numereUrmarite;
-    if (numere.isEmpty) return [];
+    // Dosarele Înaltei Curți nu sunt pe portal.just.ro: le întreabă serviciul
+    // ÎCCJ, și doar în fereastra lui de noapte.
+    final numereIccj = {
+      for (final d in biblioteca.dosare)
+        if (d.dosar.institutie == codIccj) d.dosar.numar,
+    };
+    final numere = biblioteca.numereUrmarite.difference(numereIccj);
+    if (numere.isEmpty && numereIccj.isEmpty) return [];
 
     final proaspete = <Dosar>[];
     final verificate = <String>{};
     Object? ultimaEroare;
+
+    if (numereIccj.isNotEmpty && IccjService.inFereastra(acum)) {
+      final scj = iccj ?? IccjService();
+      for (final numar in numereIccj) {
+        try {
+          final gasite = await scj.cautaDosar(numar);
+          proaspete.addAll(gasite.where((d) => d.numar == numar));
+          verificate.add(numar);
+        } catch (e) {
+          debugPrint('Verificarea ÎCCJ a eșuat pentru $numar: $e');
+        }
+      }
+    }
 
     // Pe rând, ca să nu aglomerăm portalul.
     for (final numar in numere) {

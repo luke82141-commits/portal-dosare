@@ -5,6 +5,7 @@ import '../screens/parti_urmarite_screen.dart';
 import '../screens/setari_notificari_screen.dart';
 import '../screens/sugestie_screen.dart';
 import '../theme/app_theme.dart';
+import 'dosar_iccj.dart';
 
 /// Foaia „Utilități” din bara de jos: unelte folosite mai rar, ținute în afara
 /// ecranelor principale. Cele marcate Pro vin cu abonamentul.
@@ -35,6 +36,21 @@ class _MeniuUtilitati extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text('Utilități', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ),
+            _Unealta(
+              icon: Icons.account_balance,
+              titlu: 'Dosar la Înalta Curte',
+              text: 'Urmărește un dosar ÎCCJ după număr (actualizat noaptea)',
+              onTap: () {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                navigator.pop();
+                adaugaDosarIccj(navigator.context).then((m) {
+                  if (m == null) return;
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(content: Text(m)));
+                });
+              },
             ),
             _Unealta(
               icon: Icons.person_search,
