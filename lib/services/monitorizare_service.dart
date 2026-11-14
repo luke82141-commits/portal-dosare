@@ -7,10 +7,12 @@ import 'package:workmanager/workmanager.dart';
 import '../models/dosar_model.dart';
 import '../utils/formatare.dart';
 import 'biblioteca_service.dart';
+import 'parti_urmarite_service.dart';
 import 'soap_service.dart';
 
 const _numeTask = 'verificare_dosare';
 const _canalId = 'modificari_dosare';
+const _canalPartiId = 'dosare_noi_parti';
 
 /// Cât de des verifică telefonul portalul, în fundal. Android nu permite mai
 /// des de 15 minute și poate întârzia rulările când economisește bateria.
@@ -65,7 +67,8 @@ class MonitorizareService {
       frequency: frecventaVerificare,
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    );  }
+    );
+  }
 
   Future<void> _pornesteNotificari() async {
     if (_notificariPornite) return;
@@ -91,13 +94,35 @@ class MonitorizareService {
   /// Interoghează portalul pentru fiecare număr de dosar din bibliotecă,
   /// actualizează biblioteca și trimite câte o notificare pentru fiecare dosar
   /// modificat. Aruncă [SoapException] doar dacă nicio interogare nu a reușit.
+  ///
+  /// După dosare verifică și părțile urmărite; o eroare acolo nu strică
+  /// verificarea dosarelor. Ce s-a găsit pentru părți rămâne în
+  /// [dosareNoiParti].
   Future<List<RezultatVerificare>> verificaToate({SoapService? soap}) async {
+    final serviciu = soap ?? SoapService();
+    final rezultate = await _verificaDosare(serviciu);
+
+    try {
+      dosareNoiParti = await PartiUrmariteService.instance.verificaToate(soap: serviciu);
+      for (final r in dosareNoiParti) {
+        await _notificaParte(r);
+      }
+    } catch (e) {
+      dosareNoiParti = [];
+      debugPrint('Verificarea părților urmărite a eșuat: $e');
+    }
+    return rezultate;
+  }
+
+  /// Dosarele noi găsite pe numele părților urmărite la ultima verificare.
+  List<RezultatParte> dosareNoiParti = [];
+
+  Future<List<RezultatVerificare>> _verificaDosare(SoapService serviciu) async {
     final biblioteca = BibliotecaService.instance;
     await biblioteca.incarca();
     final numere = biblioteca.numereUrmarite;
     if (numere.isEmpty) return [];
 
-    final serviciu = soap ?? SoapService();
     final proaspete = <Dosar>[];
     final verificate = <String>{};
     Object? ultimaEroare;
@@ -151,6 +176,39 @@ class MonitorizareService {
           ),
         ),
         payload: r.dosar.cheie,
+      );
+    } catch (e) {
+      debugPrint('Notificarea nu a putut fi afișată: $e');
+    }
+  }
+
+  Future<void> _notificaParte(RezultatParte r) async {
+    if (!_suportat) return;
+    try {
+      await _pornesteNotificari();
+      final linii = [
+        for (final d in r.dosareNoi)
+          [d.numar, d.instanta, d.obiect].where((e) => e.isNotEmpty).join(' · '),
+      ];
+      await _notificari.show(
+        // Un id per parte urmărită, separat de cele ale dosarelor.
+        id: ('parte|${r.parte.cheie}').hashCode & 0x7fffffff,
+        title: linii.length == 1
+            ? 'Dosar nou pe numele ${r.parte.nume}'
+            : '${linii.length} dosare noi pe numele ${r.parte.nume}',
+        body: scurteaza(linii.first, 300),
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _canalPartiId,
+            'Dosare noi pe numele părților',
+            channelDescription:
+                'Anunță dosarele noi apărute pe portal pe numele părților urmărite',
+            importance: Importance.high,
+            priority: Priority.high,
+            styleInformation: BigTextStyleInformation(linii.join('\n')),
+          ),
+        ),
+        payload: 'parte|${r.parte.cheie}',
       );
     } catch (e) {
       debugPrint('Notificarea nu a putut fi afișată: $e');

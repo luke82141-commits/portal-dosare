@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/monitorizare_service.dart';
+import '../services/parti_urmarite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
+import 'parti_urmarite_screen.dart';
 import 'sincronizare_calendar_screen.dart';
 
 /// Dosarele monitorizate (Figma: „04 · Dosare monitorizate”).
@@ -26,16 +28,18 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
     setState(() => _verifica = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final rezultate = await MonitorizareService.instance.verificaToate();
+      final monitorizare = MonitorizareService.instance;
+      final rezultate = await monitorizare.verificaToate();
+      final noi = monitorizare.dosareNoiParti.fold(0, (s, r) => s + r.dosareNoi.length);
+      final mesaje = [
+        if (rezultate.length == 1) 'Un dosar are modificări.',
+        if (rezultate.length > 1) '${rezultate.length} dosare au modificări.',
+        if (noi == 1) 'Un dosar nou pe numele părților urmărite.',
+        if (noi > 1) '$noi dosare noi pe numele părților urmărite.',
+      ];
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            rezultate.isEmpty
-                ? 'Nicio modificare pe portal.'
-                : rezultate.length == 1
-                    ? 'Un dosar are modificări.'
-                    : '${rezultate.length} dosare au modificări.',
-          ),
+          content: Text(mesaje.isEmpty ? 'Nicio modificare pe portal.' : mesaje.join(' ')),
         ),
       );
     } catch (e) {
@@ -101,6 +105,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                               ),
                               const SizedBox(width: 8),
                             ],
+                            _butonParti(),
+                            const SizedBox(width: 8),
                             _butonVerificare(),
                           ],
                         ),
@@ -196,6 +202,28 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
           icon: Icon(icon),
         ),
       ),
+    );
+  }
+
+  /// Deschide părțile urmărite; bulina arată câte dosare noi n-au fost văzute.
+  Widget _butonParti() {
+    return ListenableBuilder(
+      listenable: PartiUrmariteService.instance,
+      builder: (context, _) {
+        final necitite = PartiUrmariteService.instance.totalNecitite;
+        return Badge(
+          isLabelVisible: necitite > 0,
+          label: Text('$necitite'),
+          backgroundColor: AppColors.success,
+          child: _butonRotund(
+            tooltip: 'Părți urmărite',
+            icon: Icons.person_search,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PartiUrmariteScreen()),
+            ),
+          ),
+        );
+      },
     );
   }
 

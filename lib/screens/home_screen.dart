@@ -4,6 +4,7 @@ import '../services/biblioteca_service.dart';
 import '../services/calendar_sync_service.dart';
 import '../services/culori_service.dart';
 import '../services/monitorizare_service.dart';
+import '../services/parti_urmarite_service.dart';
 import 'calendar_screen.dart';
 import 'cautare_screen.dart';
 import 'instante_screen.dart';
@@ -53,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await BibliotecaService.instance.incarca();
       await CuloriDosareService.instance.incarca();
       await CalendarSyncService.instance.incarca();
+      await PartiUrmariteService.instance.incarca();
       await MonitorizareService.instance.verificaToate();
       // Termenele noi apărute pe portal ajung și în calendarul ales.
       final sync = CalendarSyncService.instance;
