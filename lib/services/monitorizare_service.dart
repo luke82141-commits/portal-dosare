@@ -12,6 +12,7 @@ import 'iccj_service.dart';
 import 'parti_urmarite_service.dart';
 import 'setari_notificari_service.dart';
 import 'soap_service.dart';
+import 'widget_service.dart';
 
 const _numeTask = 'verificare_dosare';
 const _canalId = 'modificari_dosare';
@@ -90,8 +91,8 @@ class MonitorizareService {
   Future<bool> cerePermisiune() async {
     if (!_suportat) return true;
     await _pornesteNotificari();
-    final android = _notificari.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _notificari
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? true;
   }
 
@@ -122,6 +123,8 @@ class MonitorizareService {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
+    // Widgeturile de pe ecran se reîmprospătează odată cu verificarea orară.
+    await actualizeazaWidgeturi(acum: acum);
     return rezultate;
   }
 
@@ -196,10 +199,7 @@ class MonitorizareService {
       throw ultimaEroare;
     }
 
-    final rezultate = await biblioteca.aplicaActualizari(
-      proaspete,
-      numereVerificate: verificate,
-    );
+    final rezultate = await biblioteca.aplicaActualizari(proaspete, numereVerificate: verificate);
     for (final r in rezultate) {
       await _notifica(r);
     }

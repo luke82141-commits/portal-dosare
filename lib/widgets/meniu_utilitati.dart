@@ -4,6 +4,7 @@ import '../screens/backup_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/setari_notificari_screen.dart';
 import '../screens/sugestie_screen.dart';
+import '../screens/widgeturi_screen.dart';
 import '../theme/app_theme.dart';
 import 'dosar_iccj.dart';
 
@@ -63,6 +64,12 @@ class _MeniuUtilitati extends StatelessWidget {
               titlu: 'Ore de liniște',
               text: 'Fără sunet noaptea; dosarele importante sună oricând',
               onTap: () => _deschide(context, const SetariNotificariScreen()),
+            ),
+            _Unealta(
+              icon: Icons.widgets_outlined,
+              titlu: 'Widgeturi pe ecran (Pro)',
+              text: 'Termenele și actualizările direct pe ecranul telefonului',
+              onTap: () => _deschide(context, const WidgeturiScreen()),
             ),
             _Unealta(
               icon: Icons.save_alt,

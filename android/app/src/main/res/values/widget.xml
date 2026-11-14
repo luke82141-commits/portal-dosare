@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_fundal">#FFFFFFFF</color>
+    <color name="w_primar">#FF1F3A93</color>
+    <color name="w_text">#FF1B1F2A</color>
+    <color name="w_text2">#FF5F6577</color>
+    <color name="w_auriu">#FFB8892F</color>
+    <color name="w_verde">#FF1E7A46</color>
+    <color name="w_verde_fundal">#FFE3F3E9</color>
+    <color name="w_linie">#FFE4E7EF</color>
+    <color name="w_rand">#FFF3F5FA</color>
+
+    <string name="w_desc_mic">Următorul termen și actualizările noi</string>
+    <string name="w_desc_mediu">Următoarele 3 termene</string>
+    <string name="w_desc_mare">Termenele din 7 zile și ultimele actualizări</string>
+</resources>
