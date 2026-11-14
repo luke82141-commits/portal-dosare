@@ -42,14 +42,20 @@ class _CalendarFals implements CalendareTelefon {
   }
 
   final redenumite = <String, String>{};
+  final redescrise = <String, String>{};
 
   @override
-  Future<void> redenumeste(String eventId, String titlu) async {
-    redenumite[eventId] = titlu;
+  Future<void> actualizeaza(String eventId, {String? titlu, String? descriere}) async {
+    if (titlu != null) redenumite[eventId] = titlu;
+    if (descriere != null) redescrise[eventId] = descriere;
     final i = evenimenteExistente.indexWhere((e) => e.id == eventId);
     final e = evenimenteExistente[i];
     evenimenteExistente[i] = EvenimentCalendar(
-        id: e.id, titlu: titlu, start: e.start, descriere: e.descriere, locatie: e.locatie);
+        id: e.id,
+        titlu: titlu ?? e.titlu,
+        start: e.start,
+        descriere: descriere ?? e.descriere,
+        locatie: e.locatie);
   }
 }
 
@@ -140,6 +146,85 @@ void main() {
     expect(r.adaugate, 2);
     expect(cal.creat.map((e) => e['start']), contains(DateTime(2026, 10, 1, 9)));
     expect((await sync.trimite([d], acum: acum)).adaugate, 0);
+  });
+
+  test('descrierea are părțile: cel mult 4, iar la insolvență debitorul primul', () {
+    Dosar cu(List<Parte> parti, {String obiect = 'pretenții'}) => Dosar(
+          numar: '1/105/2026',
+          data: DateTime(2026, 1, 1),
+          institutie: 'TribunalulPRAHOVA',
+          obiect: obiect,
+          stadiuProcesual: 'Fond',
+          sectie: '',
+          categorie: '',
+          parti: parti,
+          sedinte: const [],
+        );
+    final parti = [
+      for (var i = 1; i <= 6; i++) Parte(nume: 'CREDITOR $i SRL', calitate: 'Creditor'),
+      const Parte(nume: 'ALFA SRL', calitate: 'Debitor'),
+    ];
+    expect(rezumatParti(cu(parti.take(2).toList())), [
+      'Părți:',
+      '• Creditor: CREDITOR 1 SRL',
+      '• Creditor: CREDITOR 2 SRL',
+    ]);
+    expect(rezumatParti(cu(parti)), [
+      'Părți:',
+      '• Creditor: CREDITOR 1 SRL',
+      '• Creditor: CREDITOR 2 SRL',
+      '• Creditor: CREDITOR 3 SRL',
+      '• Creditor: CREDITOR 4 SRL',
+      '• și încă 3 părți',
+    ]);
+    expect(rezumatParti(cu(parti, obiect: 'procedura insolvenței - societăți')), [
+      'Părți:',
+      '• Debitor: ALFA SRL',
+      '• Creditor: CREDITOR 1 SRL',
+      '• Creditor: CREDITOR 2 SRL',
+      '• Creditor: CREDITOR 3 SRL',
+      '• și încă 3 părți',
+    ]);
+    expect(rezumatParti(cu(const [])), isEmpty);
+  });
+
+  test('evenimentele deja trimise primesc descrierea nouă, cu părțile', () async {
+    final cal = _CalendarFals();
+    sync.calendareTelefon = cal;
+    final fara = _d('14993/299/2025', 'JudecatoriaSECTORUL1BUCURESTI', [_s(DateTime(2026, 11, 20), '09:30')]);
+    await sync.trimite([fara], acum: acum);
+    final e = cal.evenimenteExistente.single;
+    expect(e.descriere, isNot(contains('Părți')));
+
+    final cu = Dosar(
+      numar: fara.numar,
+      data: fara.data,
+      institutie: fara.institutie,
+      obiect: fara.obiect,
+      stadiuProcesual: fara.stadiuProcesual,
+      sectie: '',
+      categorie: '',
+      parti: const [Parte(nume: 'POPESCU ION', calitate: 'Reclamant')],
+      sedinte: fara.sedinte,
+    );
+    expect((await sync.trimite([cu], acum: acum)).adaugate, 0);
+    expect(cal.redescrise[e.id], contains('• Reclamant: POPESCU ION'));
+    expect(cal.redenumite, isEmpty);
+
+    cal.redescrise.clear();
+    await sync.trimite([cu], acum: acum);
+    expect(cal.redescrise, isEmpty);
+  });
+
+  test('notițele scrise de mână în eveniment rămân la actualizare', () {
+    const veche = 'Dosar nr. 1/105/2026\nTribunalul Prahova\nObiect: pretenții\n'
+        'Termen: 20.11.2026, ora 09:30\nde adus actele originale\n\n'
+        'ID termen Portal Dosare: x\nsuna clientul';
+    const noua = 'Dosar nr. 1/105/2026\nTribunalul Prahova\nObiect: pretenții\n'
+        'Termen: 20.11.2026, ora 09:30\nPărți:\n• Reclamant: POPESCU ION\n\n'
+        'ID termen Portal Dosare: x';
+    expect(pastreazaNotite(veche, noua), 'de adus actele originale\nsuna clientul\n\n$noua');
+    expect(pastreazaNotite(noua, noua), noua);
   });
 
   test('evenimentele vechi, care încep cu „Termen”, sunt redenumite', () async {
