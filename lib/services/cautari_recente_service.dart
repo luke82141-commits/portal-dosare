@@ -1,28 +1,73 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/formatare.dart';
+import '../utils/instante.dart';
+
 /// O căutare făcută anterior, afișată ca scurtătură pe ecranul de căutare.
+/// Ține toate criteriile, ca să poată fi reluată exact.
 class CautareRecenta {
   final String numar;
   final String obiect;
+  final String parte;
 
-  const CautareRecenta({this.numar = '', this.obiect = ''});
+  /// Codul SOAP al instanței (ex. „TribunalulPRAHOVA”), gol = toate.
+  final String institutie;
 
-  String get eticheta => [numar, obiect].where((e) => e.isNotEmpty).join(' · ');
+  /// Intervalul în care a fost înregistrat dosarul.
+  final DateTime? dataStart;
+  final DateTime? dataStop;
 
-  String _codifica() => '$numar\u0001$obiect';
+  const CautareRecenta({
+    this.numar = '',
+    this.obiect = '',
+    this.parte = '',
+    this.institutie = '',
+    this.dataStart,
+    this.dataStop,
+  });
+
+  /// True dacă are cel puțin un criteriu pe care portalul îl acceptă singur.
+  bool get areCriteriuPrincipal => numar.isNotEmpty || obiect.isNotEmpty || parte.isNotEmpty;
+
+  String get interval => switch ((dataStart, dataStop)) {
+        (null, null) => '',
+        (final a?, null) => 'din ${formateazaData(a)}',
+        (null, final b?) => 'până la ${formateazaData(b)}',
+        (final a?, final b?) => '${formateazaData(a)}–${formateazaData(b)}',
+      };
+
+  String get eticheta => [
+        numar,
+        obiect,
+        parte,
+        if (institutie.isNotEmpty) numeInstanta(institutie),
+        interval,
+      ].where((e) => e.isNotEmpty).join(' · ');
+
+  static String _data(DateTime? d) => d?.toIso8601String() ?? '';
+
+  String _codifica() =>
+      [numar, obiect, parte, institutie, _data(dataStart), _data(dataStop)].join('\u0001');
 
   static CautareRecenta _decodifica(String s) {
     final p = s.split('\u0001');
-    return CautareRecenta(numar: p.first, obiect: p.length > 1 ? p[1] : '');
+    String camp(int i) => p.length > i ? p[i] : '';
+    return CautareRecenta(
+      numar: camp(0),
+      obiect: camp(1),
+      parte: camp(2),
+      institutie: camp(3),
+      dataStart: DateTime.tryParse(camp(4)),
+      dataStop: DateTime.tryParse(camp(5)),
+    );
   }
 
   @override
-  bool operator ==(Object other) =>
-      other is CautareRecenta && other.numar == numar && other.obiect == obiect;
+  bool operator ==(Object other) => other is CautareRecenta && other._codifica() == _codifica();
 
   @override
-  int get hashCode => Object.hash(numar, obiect);
+  int get hashCode => _codifica().hashCode;
 }
 
 /// Ultimele căutări, păstrate pe dispozitiv.

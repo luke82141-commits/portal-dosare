@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/instante_portal.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../services/cautari_recente_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/formatare.dart';
+import '../utils/instante.dart';
 import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
@@ -24,6 +27,12 @@ class CautareScreen extends StatefulWidget {
 class _CautareScreenState extends State<CautareScreen> {
   final _numarController = TextEditingController();
   final _obiectController = TextEditingController();
+  final _parteController = TextEditingController();
+
+  /// Codul SOAP al instanței alese; gol = toate instanțele.
+  String _institutie = '';
+  DateTimeRange? _interval;
+  bool _maiMulte = false;
 
   @override
   void initState() {
@@ -35,29 +44,70 @@ class _CautareScreenState extends State<CautareScreen> {
   void dispose() {
     _numarController.dispose();
     _obiectController.dispose();
+    _parteController.dispose();
     super.dispose();
   }
 
   void _cauta() {
-    final numar = _numarController.text.trim();
-    final obiect = _obiectController.text.trim();
-    if (numar.isEmpty && obiect.isEmpty) {
+    final criterii = CautareRecenta(
+      numar: _numarController.text.trim(),
+      obiect: _obiectController.text.trim(),
+      parte: _parteController.text.trim(),
+      institutie: _institutie,
+      dataStart: _interval?.start,
+      dataStop: _interval?.end,
+    );
+    if (!criterii.areCriteriuPrincipal) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Introdu numărul dosarului sau obiectul.')),
+        const SnackBar(
+          content: Text('Introdu numărul dosarului, obiectul sau numele unei părți.'),
+        ),
       );
       return;
     }
     FocusScope.of(context).unfocus();
-    CautariRecenteService.instance.adauga(CautareRecenta(numar: numar, obiect: obiect));
+    CautariRecenteService.instance.adauga(criterii);
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RezultateScreen(numar: numar, obiect: obiect)),
+      MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)),
     );
   }
 
   void _reia(CautareRecenta c) {
     _numarController.text = c.numar;
     _obiectController.text = c.obiect;
+    _parteController.text = c.parte;
+    setState(() {
+      _institutie = c.institutie;
+      _interval = c.dataStart != null && c.dataStop != null
+          ? DateTimeRange(start: c.dataStart!, end: c.dataStop!)
+          : null;
+      _maiMulte = _maiMulte || c.institutie.isNotEmpty || _interval != null;
+    });
     _cauta();
+  }
+
+  Future<void> _alegeInstanta() async {
+    final aleasa = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.card,
+      builder: (_) => const _FoaieInstante(),
+    );
+    if (aleasa != null) setState(() => _institutie = aleasa);
+  }
+
+  Future<void> _alegeInterval() async {
+    final acum = DateTime.now();
+    final ales = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(1990),
+      lastDate: DateTime(acum.year, acum.month, acum.day),
+      initialDateRange: _interval,
+      helpText: 'Data înregistrării dosarului',
+      saveText: 'Gata',
+    );
+    if (ales != null) setState(() => _interval = ales);
   }
 
   @override
@@ -150,6 +200,14 @@ class _CautareScreenState extends State<CautareScreen> {
                       controller: _obiectController,
                     ),
                     const SizedBox(height: 14),
+                    _camp(
+                      eticheta: 'Nume parte',
+                      hint: 'ex. SC Exemplu SRL, Popescu Ion (opțional)',
+                      icon: Icons.person,
+                      controller: _parteController,
+                    ),
+                    _criteriiSuplimentare(),
+                    const SizedBox(height: 14),
                     FilledButton.icon(
                       onPressed: _cauta,
                       icon: const Icon(Icons.search, size: 20),
@@ -161,6 +219,70 @@ class _CautareScreenState extends State<CautareScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _criteriiSuplimentare() {
+    final instanta = _institutie.isEmpty ? 'Toate instanțele' : numeInstanta(_institutie);
+    final interval = _interval == null
+        ? 'Oricând'
+        : '${formateazaData(_interval!.start)} – ${formateazaData(_interval!.end)}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => setState(() => _maiMulte = !_maiMulte),
+            icon: Icon(_maiMulte ? Icons.expand_less : Icons.expand_more, size: 20),
+            label: const Text('Mai multe criterii'),
+          ),
+        ),
+        if (_maiMulte) ...[
+          _selector(
+            eticheta: 'Instanța',
+            valoare: instanta,
+            icon: Icons.account_balance,
+            onTap: _alegeInstanta,
+            onSterge: _institutie.isEmpty ? null : () => setState(() => _institutie = ''),
+          ),
+          const SizedBox(height: 10),
+          _selector(
+            eticheta: 'Înregistrat între',
+            valoare: interval,
+            icon: Icons.date_range,
+            onTap: _alegeInterval,
+            onSterge: _interval == null ? null : () => setState(() => _interval = null),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _selector({
+    required String eticheta,
+    required String valoare,
+    required IconData icon,
+    required VoidCallback onTap,
+    VoidCallback? onSterge,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: eticheta,
+          prefixIcon: Icon(icon, size: 20),
+          suffixIcon: onSterge == null
+              ? const Icon(Icons.arrow_drop_down)
+              : IconButton(
+                  tooltip: 'Șterge',
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: onSterge,
+                ),
+        ),
+        child: Text(valoare, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }
@@ -257,6 +379,66 @@ class _CautareScreenState extends State<CautareScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Lista instanțelor, cu căutare după nume sau județ. Întoarce codul SOAP.
+class _FoaieInstante extends StatefulWidget {
+  const _FoaieInstante();
+
+  @override
+  State<_FoaieInstante> createState() => _FoaieInstanteState();
+}
+
+class _FoaieInstanteState extends State<_FoaieInstante> {
+  String _text = '';
+
+  static String _simplu(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp('[ăâ]'), 'a')
+      .replaceAll('î', 'i')
+      .replaceAll(RegExp('[șş]'), 's')
+      .replaceAll(RegExp('[țţ]'), 't');
+
+  @override
+  Widget build(BuildContext context) {
+    final cautat = _simplu(_text.trim());
+    final instante = [
+      for (final i in toateInstantele)
+        if (cautat.isEmpty || _simplu('${i.nume} ${i.judet}').contains(cautat)) i,
+    ]..sort((a, b) => a.nume.compareTo(b.nume));
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.8,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: TextField(
+              autofocus: true,
+              onChanged: (t) => setState(() => _text = t),
+              decoration: const InputDecoration(
+                hintText: 'Caută instanța sau județul',
+                prefixIcon: Icon(Icons.search, size: 20),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: instante.length,
+              itemBuilder: (context, i) {
+                final inst = instante[i];
+                return ListTile(
+                  title: Text(inst.nume),
+                  subtitle: Text(inst.judet),
+                  onTap: () => Navigator.of(context).pop(inst.cod),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

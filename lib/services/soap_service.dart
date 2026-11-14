@@ -35,21 +35,36 @@ class SoapService {
 
   SoapService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Caută dosare după număr și/sau obiect. Cel puțin un criteriu e obligatoriu.
+  /// Caută dosare după număr, obiect și/sau numele unei părți. Cel puțin unul
+  /// dintre aceste trei criterii e obligatoriu; [institutie] (codul SOAP al
+  /// instanței, ex. „TribunalulPRAHOVA”) și intervalul [dataStart]–[dataStop]
+  /// (data înregistrării dosarului) doar restrâng rezultatele.
   ///
   /// Căutarea după număr este exactă: portalul întoarce doar dosarele cu
   /// numărul respectiv, de la toate instanțele la care a ajuns dosarul.
   Future<RezultatCautare> cautaDosare({
     String numarDosar = '',
     String obiectDosar = '',
+    String numeParte = '',
+    String institutie = '',
+    DateTime? dataStart,
+    DateTime? dataStop,
   }) async {
     final numar = numarDosar.trim();
     final obiect = obiectDosar.trim();
-    if (numar.isEmpty && obiect.isEmpty) {
+    final parte = numeParte.trim();
+    if (numar.isEmpty && obiect.isEmpty && parte.isEmpty) {
       return const RezultatCautare([], false);
     }
 
-    final envelope = _construiesteCerere(numar: numar, obiect: obiect);
+    final envelope = construiesteCerereCautare(
+      numar: numar,
+      obiect: obiect,
+      parte: parte,
+      institutie: institutie.trim(),
+      dataStart: dataStart,
+      dataStop: dataStop,
+    );
 
     final http.Response response;
     try {
@@ -78,30 +93,43 @@ class SoapService {
     return RezultatCautare(dosare, dosare.length >= limitaServiciu);
   }
 
-  String _construiesteCerere({required String numar, required String obiect}) {
-    String camp(String nume, String valoare) => valoare.isEmpty
-        ? '<$nume xsi:nil="true"/>'
-        : '<$nume>${_escape(valoare)}</$nume>';
-
-    return '<?xml version="1.0" encoding="utf-8"?>'
-        '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
-        'xmlns:xsd="http://www.w3.org/2001/XMLSchema" '
-        'xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
-        '<soap:Body><CautareDosare xmlns="$_ns">'
-        '${camp('numarDosar', numar)}'
-        '${camp('obiectDosar', obiect)}'
-        '<numeParte xsi:nil="true"/>'
-        '<institutie xsi:nil="true"/>'
-        '<dataStart xsi:nil="true"/>'
-        '<dataStop xsi:nil="true"/>'
-        '</CautareDosare></soap:Body></soap:Envelope>';
-  }
-
-  static String _escape(String s) => s
+  static String escape(String s) => s
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
+}
+
+/// Cererea SOAP pentru operația CautareDosare. Câmpurile goale se trimit ca
+/// `xsi:nil`, adică „fără filtru”.
+String construiesteCerereCautare({
+  String numar = '',
+  String obiect = '',
+  String parte = '',
+  String institutie = '',
+  DateTime? dataStart,
+  DateTime? dataStop,
+}) {
+  String camp(String nume, String valoare) => valoare.isEmpty
+      ? '<$nume xsi:nil="true"/>'
+      : '<$nume>${SoapService.escape(valoare)}</$nume>';
+  String zi(DateTime? d) => d == null
+      ? ''
+      : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}'
+          '-${d.day.toString().padLeft(2, '0')}T00:00:00';
+
+  return '<?xml version="1.0" encoding="utf-8"?>'
+      '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
+      'xmlns:xsd="http://www.w3.org/2001/XMLSchema" '
+      'xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+      '<soap:Body><CautareDosare xmlns="${SoapService._ns}">'
+      '${camp('numarDosar', numar)}'
+      '${camp('obiectDosar', obiect)}'
+      '${camp('numeParte', parte)}'
+      '${camp('institutie', institutie)}'
+      '${camp('dataStart', zi(dataStart))}'
+      '${camp('dataStop', zi(dataStop))}'
+      '</CautareDosare></soap:Body></soap:Envelope>';
 }
 
 /// Transformă răspunsul SOAP al operației CautareDosare în lista de dosare.

@@ -47,7 +47,14 @@ class _SoapFals extends SoapService {
   _SoapFals(this.dosare);
 
   @override
-  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+  Future<RezultatCautare> cautaDosare({
+    String numarDosar = '',
+    String obiectDosar = '',
+    String numeParte = '',
+    String institutie = '',
+    DateTime? dataStart,
+    DateTime? dataStop,
+  }) async =>
       RezultatCautare(dosare.where((d) => d.numar == numarDosar).toList(), false);
 }
 
