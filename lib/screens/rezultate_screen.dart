@@ -6,7 +6,6 @@ import '../services/cautari_recente_service.dart';
 import '../services/parti_urmarite_service.dart';
 import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/instante.dart';
 import '../utils/sortare_rezultate.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
@@ -67,11 +66,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
     });
     try {
       final c = widget.criterii;
-      final r = await _soap.cautaDosare(
+      final r = await _soap.cautaDosareLaInstante(
         numarDosar: c.numar,
         obiectDosar: c.obiect,
         numeParte: c.parte,
-        institutie: c.institutie,
+        institutii: c.institutii,
         dataStart: c.dataStart,
         dataStop: c.dataStop,
       );
@@ -99,14 +98,22 @@ class _RezultateScreenState extends State<RezultateScreen> {
     final c = widget.criterii;
     final parti = PartiUrmariteService.instance;
     final messenger = ScaffoldMessenger.of(context);
-    if (parti.urmareste(c.parte, c.institutie)) {
-      await parti.sterge(ParteUrmarita.cheiePentru(c.parte, c.institutie));
+    // La mai multe instanțe, partea se urmărește la fiecare dintre ele.
+    final institutii = c.institutii.isEmpty ? [''] : c.institutii;
+    if (_parteUrmarita(c)) {
+      for (final i in institutii) {
+        await parti.sterge(ParteUrmarita.cheiePentru(c.parte, i));
+      }
       messenger.showSnackBar(SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')));
       return;
     }
     setState(() => _seAdaugaParte = true);
     try {
-      final preaGeneral = await parti.adauga(c.parte, institutie: c.institutie, soap: _soap);
+      var preaGeneral = false;
+      for (final i in institutii) {
+        if (parti.urmareste(c.parte, i)) continue;
+        preaGeneral = await parti.adauga(c.parte, institutie: i, soap: _soap) || preaGeneral;
+      }
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -124,6 +131,13 @@ class _RezultateScreenState extends State<RezultateScreen> {
     }
   }
 
+  bool _parteUrmarita(CautareRecenta c) {
+    final parti = PartiUrmariteService.instance;
+    return c.institutii.isEmpty
+        ? parti.urmareste(c.parte, '')
+        : c.institutii.every((i) => parti.urmareste(c.parte, i));
+  }
+
   Widget _butonParte() {
     return ListenableBuilder(
       listenable: PartiUrmariteService.instance,
@@ -139,7 +153,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
           );
         }
         final c = widget.criterii;
-        final urmarita = PartiUrmariteService.instance.urmareste(c.parte, c.institutie);
+        final urmarita = _parteUrmarita(c);
         return IconButton(
           tooltip: urmarita ? 'Nu mai urmări partea' : 'Urmărește partea',
           icon: Icon(urmarita ? Icons.notifications_active : Icons.notification_add_outlined),
@@ -156,7 +170,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
       if (c.numar.isNotEmpty) 'Număr: ${c.numar}',
       if (c.obiect.isNotEmpty) 'Obiect: „${c.obiect}”',
       if (c.parte.isNotEmpty) 'Parte: „${c.parte}”',
-      if (c.institutie.isNotEmpty) numeInstanta(c.institutie),
+      if (c.institutie.isNotEmpty) c.numeInstante,
       if (c.interval.isNotEmpty) 'Înregistrat ${c.interval}',
     ].join(' · ');
   }

@@ -85,6 +85,46 @@ class SoapService {
     _ultimaCerere = null;
   }
 
+  /// Ca [cautaDosare], dar la mai multe instanțe deodată: portalul primește
+  /// o singură instanță pe cerere, deci întrebăm pe rând fiecare instanță și
+  /// unim rezultatele (fără dubluri). Fără instanțe = toate instanțele.
+  Future<RezultatCautare> cautaDosareLaInstante({
+    String numarDosar = '',
+    String obiectDosar = '',
+    String numeParte = '',
+    List<String> institutii = const [],
+    DateTime? dataStart,
+    DateTime? dataStop,
+  }) async {
+    if (institutii.length <= 1) {
+      return cautaDosare(
+        numarDosar: numarDosar,
+        obiectDosar: obiectDosar,
+        numeParte: numeParte,
+        institutie: institutii.firstOrNull ?? '',
+        dataStart: dataStart,
+        dataStop: dataStop,
+      );
+    }
+    final dosare = <String, Dosar>{};
+    var limita = false;
+    for (final i in institutii) {
+      final r = await cautaDosare(
+        numarDosar: numarDosar,
+        obiectDosar: obiectDosar,
+        numeParte: numeParte,
+        institutie: i,
+        dataStart: dataStart,
+        dataStop: dataStop,
+      );
+      for (final d in r.dosare) {
+        dosare.putIfAbsent(d.cheie, () => d);
+      }
+      limita = limita || r.limitaAtinsa;
+    }
+    return RezultatCautare(dosare.values.toList(), limita);
+  }
+
   /// Caută dosare după număr, obiect și/sau numele unei părți. Cel puțin unul
   /// dintre aceste trei criterii e obligatoriu; [institutie] (codul SOAP al
   /// instanței, ex. „TribunalulPRAHOVA”) și intervalul [dataStart]–[dataStop]
