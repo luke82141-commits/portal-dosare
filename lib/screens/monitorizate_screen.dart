@@ -5,10 +5,10 @@ import '../services/monitorizare_service.dart';
 import '../services/parti_urmarite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
-import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import 'dosare_filtrate_screen.dart';
+import 'dosare_selectie_screen.dart';
 import 'parti_urmarite_screen.dart';
 import 'sincronizare_calendar_screen.dart';
 
@@ -59,11 +59,7 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
             for (final d in dosare)
               if (d.ultimaVerificare != null) d.ultimaVerificare!,
           ]..sort();
-          final azi = DateTime.now();
-          final peSaptamana = dosare.where((d) {
-            final t = urmatorulTermen(d.dosar);
-            return t != null && t.data!.difference(DateUtils.dateOnly(azi)).inDays < 7;
-          }).length;
+          final peSaptamana = dosareCuTermenInSaptamana(dosare).length;
 
           return RefreshIndicator(
             onRefresh: _verificaAcum,
@@ -160,6 +156,7 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                         : 'actualizări noi',
                                     fundal: AppColors.successContainer,
                                     culoare: AppColors.success,
+                                    onTap: () => _deschide(SelectieDosare.actualizari),
                                   ),
                                   const SizedBox(width: 10),
                                   _Sumar(
@@ -167,6 +164,7 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                     'termene în 7 zile',
                                     fundal: AppColors.accentContainer,
                                     culoare: AppColors.accent,
+                                    onTap: () => _deschide(SelectieDosare.termene),
                                   ),
                                 ],
                               ),
@@ -189,6 +187,10 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
       ),
     );
   }
+
+  void _deschide(SelectieDosare selectie) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => DosareSelectieScreen(selectie: selectie)));
 
   Widget _butonRotund({
     required String tooltip,
@@ -265,36 +267,50 @@ class _Sumar extends StatelessWidget {
   final String eticheta;
   final Color? fundal;
   final Color culoare;
+  final VoidCallback? onTap;
 
-  const _Sumar(this.valoare, this.eticheta, {this.fundal, this.culoare = AppColors.onSurface});
+  const _Sumar(
+    this.valoare,
+    this.eticheta, {
+    this.fundal,
+    this.culoare = AppColors.onSurface,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: fundal ?? AppColors.card,
+      child: Material(
+        color: fundal ?? AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(14),
-          border: fundal == null ? Border.all(color: AppColors.outline) : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              valoare,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: culoare),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: fundal == null ? Border.all(color: AppColors.outline) : null,
             ),
-            const SizedBox(height: 2),
-            Text(
-              eticheta,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.25,
-                color: fundal == null ? AppColors.onSurfaceVariant : culoare,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  valoare,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: culoare),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  eticheta,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.25,
+                    color: fundal == null ? AppColors.onSurfaceVariant : culoare,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
