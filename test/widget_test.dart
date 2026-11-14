@@ -107,6 +107,14 @@ void main() {
     expect(find.text('Nicio notificare'), findsOneWidget);
   });
 
+  testWidgets('Calendarele și dialogurile sistemului sunt în română', (tester) async {
+    await tester.pumpWidget(const LegalManagementApp());
+    await tester.pumpAndSettle();
+    final l = MaterialLocalizations.of(tester.element(find.text('Caută dosar')));
+    expect(l.firstDayOfWeekIndex, 1); // săptămâna începe luni
+    expect(l.formatMonthYear(DateTime(2026, 11)).toLowerCase(), contains('noiembrie'));
+  });
+
   testWidgets('Căutarea are numele părții, instanța și intervalul', (tester) async {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
@@ -150,8 +158,18 @@ void main() {
     await tester.tap(find.byType(DosarCardWidget));
     await tester.pumpAndSettle();
     expect(find.text('Detaliu dosar'), findsOneWidget);
+    // Părțile și ședințele sunt restrânse până le atingi.
+    expect(find.text('POPESCU ION'), findsNothing);
+    expect(find.text('Admite cererea de probe.'), findsNothing);
+    await tester.ensureVisible(find.text('Părți'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Părți'));
+    await tester.pumpAndSettle();
     expect(find.text('POPESCU ION'), findsOneWidget);
-    expect(find.text('Amână cauza'), findsOneWidget);
+    await tester.ensureVisible(find.text('Ședințe'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ședințe'));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Admite cererea de probe.'),
       200,

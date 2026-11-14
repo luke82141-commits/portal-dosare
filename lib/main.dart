@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'screens/home_screen.dart';
 import 'services/monitorizare_service.dart';
@@ -30,6 +31,10 @@ class LegalManagementApp extends StatelessWidget {
       scrollBehavior: const FaraIntindere(),
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
+      // Calendarele și dialogurile sistemului în română (zi/lună/an, luni prima).
+      locale: const Locale('ro', 'RO'),
+      supportedLocales: const [Locale('ro', 'RO')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
     );
   }
 }
