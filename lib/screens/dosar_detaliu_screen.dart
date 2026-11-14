@@ -80,6 +80,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                       SectiuneExtensibila(
                         icon: Icons.person,
                         titlu: 'Părți',
+                        deschisInitial: false,
                         numar: dosar.parti.length,
                         copii: dosar.parti.isEmpty
                             ? [const _Gol('Portalul nu afișează părți pentru acest dosar.')]
@@ -89,6 +90,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                       SectiuneExtensibila(
                         icon: Icons.event,
                         titlu: 'Ședințe',
+                        deschisInitial: false,
                         numar: sedinte.length,
                         copii: sedinte.isEmpty
                             ? [const _Gol('Nu există încă ședințe publicate.')]

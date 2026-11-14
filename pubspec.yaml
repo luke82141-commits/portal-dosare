@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Textele widgeturilor Material (calendare, butoane) în română.
+  flutter_localizations:
+    sdk: flutter
 
   # Interogare SOAP portalquery.just.ro
   http: ^1.2.0
