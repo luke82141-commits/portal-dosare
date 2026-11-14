@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/backup_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/setari_notificari_screen.dart';
 import '../screens/sugestie_screen.dart';
@@ -46,6 +47,12 @@ class _MeniuUtilitati extends StatelessWidget {
               titlu: 'Ore de liniște',
               text: 'Fără sunet noaptea; dosarele importante sună oricând',
               onTap: () => _deschide(context, const SetariNotificariScreen()),
+            ),
+            _Unealta(
+              icon: Icons.save_alt,
+              titlu: 'Backup',
+              text: 'Salvează datele într-un fișier și mută-le pe alt telefon',
+              onTap: () => _deschide(context, const BackupScreen()),
             ),
             _Unealta(
               icon: Icons.lightbulb_outline,
