@@ -55,12 +55,16 @@ abstract class CalendareTelefon {
     required String locatie,
     required Duration amintire,
   });
+
+  /// Schimbă titlul unui eveniment citit înainte cu [evenimente].
+  Future<void> redenumeste(String eventId, String titlu);
 }
 
 /// Calendarele reale, prin pachetul eventide (Android: CalendarContract,
 /// deci și conturile Google; iOS: EventKit, deci și iCloud).
 class CalendareEventide implements CalendareTelefon {
   final Eventide _e = Eventide();
+  final _citite = <String, ETEvent>{};
 
   @override
   Future<List<CalendarTelefon>> calendare() async => [
@@ -69,16 +73,28 @@ class CalendareEventide implements CalendareTelefon {
       ];
 
   @override
-  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async => [
-        for (final e in await _e.retrieveEvents(calendarId: calendarId, startDate: de, endDate: pana))
-          EvenimentCalendar(
-            id: e.id,
-            titlu: e.title,
-            start: e.startDate.toLocal(),
-            descriere: e.description ?? '',
-            locatie: e.location ?? '',
-          ),
-      ];
+  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async {
+    final ev = await _e.retrieveEvents(calendarId: calendarId, startDate: de, endDate: pana);
+    for (final e in ev) {
+      _citite[e.id] = e;
+    }
+    return [
+      for (final e in ev)
+        EvenimentCalendar(
+          id: e.id,
+          titlu: e.title,
+          start: e.startDate.toLocal(),
+          descriere: e.description ?? '',
+          locatie: e.location ?? '',
+        ),
+    ];
+  }
+
+  @override
+  Future<void> redenumeste(String eventId, String titlu) async {
+    final e = _citite[eventId];
+    if (e != null) await _e.updateEvent(e, title: titlu);
+  }
 
   @override
   Future<String> creeaza({
@@ -125,6 +141,30 @@ class RezultatTrimitere {
 /// „55/1/2026/a1”.
 final _numarDosar = RegExp(r'(?<![\d/])(\d{1,6}/\d{1,4}/(?:19|20)\d{2}(?:/a\d+)?\**)(?![\d/])');
 
+/// Simbolurile din care se alege semnul pus în fața termenelor, ca să fie
+/// găsite ușor prin căutarea din aplicația de calendar. '' = fără simbol.
+const simboluriTermen = ['🌟', '⚖️', '📌', '🏛️', '📅', '🔔', '❗', ''];
+const simbolImplicit = '🌟';
+
+/// Titlul evenimentului: simbolul ales, apoi numărul dosarului, ca să se vadă
+/// și în căsuțele mici din vederea pe lună.
+String titluEveniment(Dosar d, {String simbol = simbolImplicit}) =>
+    '${simbol.isEmpty ? '' : '$simbol '}${d.numar} · ${d.instanta}';
+
+/// Titlul unui eveniment pus de aplicație, refăcut cu simbolul de acum: scoate
+/// „Termen ” (versiunile vechi) și orice simbol din listă pus înainte.
+String retitlu(String titlu, String simbol) {
+  var t = titlu;
+  if (t.startsWith('Termen ')) t = t.substring(7);
+  for (final s in simboluriTermen) {
+    if (s.isNotEmpty && t.startsWith('$s ')) {
+      t = t.substring(s.length + 1);
+      break;
+    }
+  }
+  return simbol.isEmpty ? t : '$simbol $t';
+}
+
 List<String> numereDinText(String text) => {
       for (final m in _numarDosar.allMatches(text)) m.group(1)!,
     }.toList();
@@ -154,6 +194,7 @@ class CalendarSyncService extends ChangeNotifier {
   String? calendarId;
   String? numeCalendar;
   Duration amintire = const Duration(hours: 1);
+  String simbol = simbolImplicit;
 
   /// Dosarele alese pentru sincronizare (cheile lor). Null = toate.
   Set<String>? dosareAlese;
@@ -169,6 +210,7 @@ class CalendarSyncService extends ChangeNotifier {
     calendarId = j['calendarId'] as String?;
     numeCalendar = j['numeCalendar'] as String?;
     amintire = Duration(minutes: (j['amintireMin'] as int?) ?? 60);
+    simbol = (j['simbol'] as String?) ?? simbolImplicit;
     final alese = j['dosare'] as List?;
     dosareAlese = alese == null ? null : {for (final a in alese) a as String};
     final u = j['ultima'] as String?;
@@ -184,6 +226,7 @@ class CalendarSyncService extends ChangeNotifier {
         'calendarId': calendarId,
         'numeCalendar': numeCalendar,
         'amintireMin': amintire.inMinutes,
+        'simbol': simbol,
         'dosare': dosareAlese?.toList(),
         'ultima': ultimaSincronizare?.toIso8601String(),
       }),
@@ -223,6 +266,18 @@ class CalendarSyncService extends ChangeNotifier {
         for (final n in numereDinText(e.text)) '$n|${cheieZi(e.start)}',
     };
 
+    // Evenimentele puse înainte (cu „Termen ” în față sau cu alt simbol)
+    // primesc titlul de acum. Doar ale noastre, recunoscute după marcaj.
+    for (final e in existente) {
+      if (!e.descriere.contains(_marcaj)) continue;
+      final nou = retitlu(e.titlu, simbol);
+      if (nou != e.titlu) {
+        try {
+          await calendareTelefon.redenumeste(e.id, nou);
+        } catch (_) {}
+      }
+    }
+
     var adaugate = 0, sarite = 0;
     for (final (d, s) in termene) {
       final cheie = cheieTermen(d, s);
@@ -235,7 +290,7 @@ class CalendarSyncService extends ChangeNotifier {
       final start = minut == null ? zi : zi.add(Duration(minutes: minut));
       await calendareTelefon.creeaza(
         calendarId: id,
-        titlu: 'Termen ${d.numar} · ${d.instanta}',
+        titlu: titluEveniment(d, simbol: simbol),
         start: start,
         sfarsit: minut == null ? zi.add(const Duration(days: 1)) : start.add(const Duration(hours: 1)),
         totaZiua: minut == null,
