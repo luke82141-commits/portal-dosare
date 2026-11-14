@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../services/biblioteca_service.dart';
 import '../services/calendar_sync_service.dart';
@@ -10,9 +11,12 @@ import 'cautare_screen.dart';
 import 'instante_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
+import '../widgets/meniu_utilitati.dart';
 
 /// Cadrul aplicației: Căutare, Monitorizate, Calendar, Instanțe și Notificări, cu bara de
-/// navigare jos (Figma: „Bară navigare”).
+/// navigare jos (Figma: „Bară navigare”). La derularea în jos bara se strânge
+/// într-un buton rotund, care o readuce la atingere; la derularea în sus revine
+/// singură. Ultima filă a barei deschide „Utilități”.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -25,6 +29,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const _filaNotificari = 4;
 
   int _tab = 0;
+  bool _baraStransa = false;
+
+  void _strangeBara(bool strans) {
+    if (_baraStransa != strans) setState(() => _baraStransa = strans);
+  }
+
+  bool _laDerulare(UserScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    if (n.direction == ScrollDirection.reverse && n.metrics.extentAfter > 0) {
+      _strangeBara(true);
+    } else if (n.direction == ScrollDirection.forward) {
+      _strangeBara(false);
+    }
+    return false;
+  }
+
+  void _alegeFila(int i) => setState(() {
+    _tab = i;
+    _baraStransa = false;
+  });
 
   @override
   void initState() {
@@ -73,60 +97,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final semnal = MonitorizareService.instance.deschideBiblioteca;
     if (!semnal.value) return;
     semnal.value = false;
-    if (mounted) setState(() => _tab = _filaNotificari);
+    if (mounted) _alegeFila(_filaNotificari);
   }
+
+  static const _file = [
+    (Icons.search, Icons.search, 'Căutare'),
+    (Icons.bookmark_border, Icons.bookmark, 'Monitorizate'),
+    (Icons.calendar_month_outlined, Icons.calendar_month, 'Calendar'),
+    (Icons.account_balance_outlined, Icons.account_balance, 'Instanțe'),
+    (Icons.notifications_none, Icons.notifications, 'Notificări'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          CautareScreen(onVeziMonitorizate: () => setState(() => _tab = _filaMonitorizate)),
-          const MonitorizateScreen(),
-          const CalendarScreen(),
-          const InstanteScreen(),
-          const NotificariScreen(),
-        ],
-      ),
-      bottomNavigationBar: ListenableBuilder(
-        listenable: BibliotecaService.instance,
-        builder: (context, _) {
-          final necitite = BibliotecaService.instance.totalNecitite;
-          Widget clopotel(IconData icon) => Badge(
-                isLabelVisible: necitite > 0,
-                label: Text('$necitite'),
-                child: Icon(icon),
-              );
-          return NavigationBar(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            destinations: [
-              const NavigationDestination(icon: Icon(Icons.search), label: 'Căutare'),
-              const NavigationDestination(
-                icon: Icon(Icons.bookmark_border),
-                selectedIcon: Icon(Icons.bookmark),
-                label: 'Monitorizate',
+    return ListenableBuilder(
+      listenable: BibliotecaService.instance,
+      builder: (context, _) {
+        final necitite = BibliotecaService.instance.totalNecitite;
+        Widget iconita(IconData icon, int fila) => fila == _filaNotificari
+            ? Badge(isLabelVisible: necitite > 0, label: Text('$necitite'), child: Icon(icon))
+            : Icon(icon);
+
+        return Scaffold(
+          body: NotificationListener<UserScrollNotification>(
+            onNotification: _laDerulare,
+            child: IndexedStack(
+              index: _tab,
+              children: [
+                CautareScreen(onVeziMonitorizate: () => _alegeFila(_filaMonitorizate)),
+                const MonitorizateScreen(),
+                const CalendarScreen(),
+                const InstanteScreen(),
+                const NotificariScreen(),
+              ],
+            ),
+          ),
+          // Bara strânsă devine butonul rotund din colț, cu fila curentă.
+          floatingActionButton: AnimatedScale(
+            scale: _baraStransa ? 1 : 0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutBack,
+            child: FloatingActionButton(
+              tooltip: 'Arată bara de navigare',
+              onPressed: _baraStransa ? () => _strangeBara(false) : null,
+              child: iconita(_file[_tab].$2, _tab),
+            ),
+          ),
+          bottomNavigationBar: ClipRect(
+            child: AnimatedAlign(
+              alignment: Alignment.topCenter,
+              heightFactor: _baraStransa ? 0 : 1,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: NavigationBar(
+                selectedIndex: _tab,
+                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+                onDestinationSelected: (i) =>
+                    i == _file.length ? deschideUtilitati(context) : _alegeFila(i),
+                destinations: [
+                  for (final (i, f) in _file.indexed)
+                    NavigationDestination(
+                      icon: iconita(f.$1, i),
+                      selectedIcon: iconita(f.$2, i),
+                      label: f.$3,
+                    ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.widgets_outlined),
+                    label: 'Utilități',
+                  ),
+                ],
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month),
-                label: 'Calendar',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.account_balance_outlined),
-                selectedIcon: Icon(Icons.account_balance),
-                label: 'Instanțe',
-              ),
-              NavigationDestination(
-                icon: clopotel(Icons.notifications_none),
-                selectedIcon: clopotel(Icons.notifications),
-                label: 'Notificări',
-              ),
-            ],
-          );
-        },
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

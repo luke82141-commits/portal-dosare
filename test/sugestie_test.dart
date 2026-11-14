@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:legal_management_app/main.dart';
 import 'package:legal_management_app/screens/sugestie_screen.dart';
@@ -21,13 +22,16 @@ void main() {
     expect(p['body'], endsWith('Sistem: android 15'));
   });
 
-  testWidgets('Din Căutare se deschide „Trimite o sugestie”', (tester) async {
+  testWidgets('Din Utilități se deschide „Trimite o sugestie”', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await BibliotecaService.instance.incarca();
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Trimite o sugestie'));
+    await tester.tap(find.byIcon(Icons.widgets_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Situația dosarelor în Excel'), findsOneWidget);
+    await tester.tap(find.text('Trimite o sugestie'));
     await tester.pumpAndSettle();
     expect(find.text('Trimite pe email'), findsOneWidget);
 
