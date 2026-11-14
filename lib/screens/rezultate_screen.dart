@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/dosar_model.dart';
+import '../services/biblioteca_service.dart';
 import '../services/cautari_recente_service.dart';
 import '../services/parti_urmarite_service.dart';
 import '../services/soap_service.dart';
@@ -89,9 +90,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
     final messenger = ScaffoldMessenger.of(context);
     if (parti.urmareste(c.parte, c.institutie)) {
       await parti.sterge(ParteUrmarita.cheiePentru(c.parte, c.institutie));
-      messenger.showSnackBar(
-        SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')));
       return;
     }
     setState(() => _seAdaugaParte = true);
@@ -102,7 +101,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
           content: Text(
             preaGeneral
                 ? 'Urmărești „${c.parte.trim()}”, dar numele e foarte des întâlnit și portalul '
-                    'întoarce cel mult 1.000 de dosare. Alege o instanță ca alertele să fie sigure.'
+                      'întoarce cel mult 1.000 de dosare. Alege o instanță ca alertele să fie sigure.'
                 : 'Urmărești „${c.parte.trim()}”. Vei primi o notificare la fiecare dosar nou pe acest nume.',
           ),
         ),
@@ -121,7 +120,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
         if (_seAdaugaParte) {
           return const Padding(
             padding: EdgeInsets.all(14),
-            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           );
         }
         final c = widget.criterii;
@@ -174,9 +177,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
               ),
           ],
         ),
-        actions: [
-          if (widget.criterii.parte.trim().isNotEmpty) _butonParte(),
-        ],
+        actions: [if (widget.criterii.parte.trim().isNotEmpty) _butonParte()],
         bottom: !_seIncarca && _eroare == null && stadii.length > 1
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(48),
@@ -233,7 +234,8 @@ class _RezultateScreenState extends State<RezultateScreen> {
             fundal: AppColors.warningContainer,
             culoare: AppColors.warning,
             titlu: 'Portalul nu răspunde',
-            text: 'Nu am putut obține datele de pe portal.just.ro. '
+            text:
+                'Nu am putut obține datele de pe portal.just.ro. '
                 'Dosarele monitorizate rămân disponibile.\n\n$_eroare',
             buton: 'Încearcă din nou',
             butonPrincipal: true,
@@ -252,9 +254,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
             titlu: 'Niciun dosar găsit',
             text: widget.criterii.parte.isNotEmpty
                 ? 'Verifică numele părții exact cum apare pe portal (de ex. denumirea '
-                    'completă a firmei) sau renunță la filtrul de instanță ori de dată.'
+                      'completă a firmei) sau renunță la filtrul de instanță ori de dată.'
                 : 'Verifică numărul (ex. 14993/299/2026) sau încearcă doar după '
-                    'obiectul dosarului.',
+                      'obiectul dosarului.',
             buton: 'Modifică căutarea',
             onButon: () => Navigator.of(context).maybePop(),
           ),
@@ -269,7 +271,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
         itemCount: afisate.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, i) {
-          if (i == 0) return _rezumat(afisate.length);
+          if (i == 0) return _rezumat(afisate);
           final d = afisate[i - 1];
           return DosarCardWidget(key: ValueKey(d.cheie), dosar: d, cuBiblioteca: true);
         },
@@ -277,14 +279,76 @@ class _RezultateScreenState extends State<RezultateScreen> {
     );
   }
 
-  Widget _rezumat(int afisate) {
-    final numar = Text(
-      afisate == 1 ? 'Un dosar găsit' : '$afisate dosare găsite',
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: AppColors.onSurfaceVariant,
+  /// „5 dosare”, „25 de dosare” (de la 20 în sus româna cere „de”).
+  static String _dosareText(int n) =>
+      n % 100 >= 20 || (n >= 100 && n % 100 == 0) ? '$n de dosare' : '$n dosare';
+
+  /// Pune în bibliotecă toate dosarele afișate (cu filtrul de stadiu aplicat).
+  Future<void> _monitorizeazaToate(List<Dosar> afisate) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (afisate.length > 20) {
+      final da = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Monitorizezi ${_dosareText(afisate.length)}?'),
+          content: const Text(
+            'Le verificăm pe toate la fiecare oră și primești notificări la orice schimbare.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Renunță'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Monitorizează'),
+            ),
+          ],
+        ),
+      );
+      if (da != true) return;
+    }
+    final noi = await BibliotecaService.instance.adaugaToate(afisate);
+    final deja = afisate.length - noi;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          '${noi == 1 ? 'Un dosar adăugat' : '${_dosareText(noi)} adăugate'} la monitorizate'
+          '${deja == 0 ? '' : ' ($deja erau deja)'}.',
+        ),
       ),
+    );
+  }
+
+  Widget _butonToate(List<Dosar> afisate) {
+    return ListenableBuilder(
+      listenable: BibliotecaService.instance,
+      builder: (context, _) {
+        final toate = afisate.every((d) => BibliotecaService.instance.contine(d.cheie));
+        return TextButton.icon(
+          onPressed: toate ? null : () => _monitorizeazaToate(afisate),
+          icon: Icon(toate ? Icons.library_add_check : Icons.library_add_outlined, size: 18),
+          label: Text(toate ? 'Toate monitorizate' : 'Monitorizează toate'),
+        );
+      },
+    );
+  }
+
+  Widget _rezumat(List<Dosar> afisate) {
+    final numar = Row(
+      children: [
+        Expanded(
+          child: Text(
+            afisate.length == 1 ? 'Un dosar găsit' : '${afisate.length} dosare găsite',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        _butonToate(afisate),
+      ],
     );
     if (!_limitaAtinsa) return numar;
     return Column(

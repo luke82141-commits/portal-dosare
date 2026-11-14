@@ -77,6 +77,22 @@ class BibliotecaService extends ChangeNotifier {
     await _salveaza();
   }
 
+  /// Adaugă dintr-o dată mai multe dosare (o singură salvare pe disc).
+  /// Întoarce câte erau noi; cele deja urmărite rămân neatinse.
+  Future<int> adaugaToate(List<Dosar> dosare) async {
+    await incarca();
+    final acum = DateTime.now();
+    var noi = 0;
+    for (final d in dosare.reversed) {
+      if (contine(d.cheie)) continue;
+      _dosare.insert(0, DosarSalvat(dosar: d, adaugatLa: acum, ultimaVerificare: acum));
+      _ignorate.remove(d.cheie);
+      noi++;
+    }
+    if (noi > 0) await _salveaza();
+    return noi;
+  }
+
   Future<void> sterge(String cheie) async {
     await incarca();
     _dosare.removeWhere((d) => d.dosar.cheie == cheie);
