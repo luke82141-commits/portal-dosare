@@ -84,7 +84,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await CuloriDosareService.instance.incarca();
       await CalendarSyncService.instance.incarca();
       await PartiUrmariteService.instance.incarca();
-      await MonitorizareService.instance.verificaToate();
+      final monitorizare = MonitorizareService.instance;
+      if (await monitorizare.eTimpulPentruVerificare()) await monitorizare.verificaToate();
       // Termenele noi apărute pe portal ajung și în calendarul ales.
       final sync = CalendarSyncService.instance;
       if (sync.configurat) {

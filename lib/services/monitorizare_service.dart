@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../models/dosar_model.dart';
@@ -119,7 +120,25 @@ class MonitorizareService {
       dosareNoiParti = [];
       debugPrint('Verificarea părților urmărite a eșuat: $e');
     }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
     return rezultate;
+  }
+
+  static const _cheieUltimaVerificare = 'ultima_verificare_completa';
+
+  /// La deschiderea aplicației verificăm doar dacă ultima verificare
+  /// completă (de aici sau din fundal) e mai veche de [interval]: cu zeci de
+  /// dosare, fiecare deschidere ar trimite zeci de cereri și portalul ne
+  /// limitează (HTTP 429).
+  Future<bool> eTimpulPentruVerificare({
+    Duration interval = const Duration(minutes: 15),
+    DateTime? acum,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final ultima = DateTime.tryParse(prefs.getString(_cheieUltimaVerificare) ?? '');
+    return ultima == null || (acum ?? DateTime.now()).difference(ultima) >= interval;
   }
 
   /// Dosarele noi găsite pe numele părților urmărite la ultima verificare.
@@ -164,6 +183,10 @@ class MonitorizareService {
         final rezultat = await serviciu.cautaDosare(numarDosar: numar);
         proaspete.addAll(rezultat.dosare.where((d) => d.numar == numar));
         verificate.add(numar);
+      } on PortalOcupatException catch (e) {
+        // Portalul ne-a cerut pauză: restul dosarelor la verificarea următoare.
+        ultimaEroare = e;
+        break;
       } catch (e) {
         ultimaEroare = e;
       }

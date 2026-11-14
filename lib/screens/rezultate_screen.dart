@@ -246,10 +246,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
             icon: Icons.cloud_off,
             fundal: AppColors.warningContainer,
             culoare: AppColors.warning,
-            titlu: 'Portalul nu răspunde',
-            text:
-                'Nu am putut obține datele de pe portal.just.ro. '
-                'Dosarele monitorizate rămân disponibile.\n\n$_eroare',
+            titlu: _eroare is PortalOcupatException ? 'Portalul e ocupat' : 'Portalul nu răspunde',
+            text: _eroare is PortalOcupatException
+                ? '$_eroare'
+                : 'Nu am putut obține datele de pe portal.just.ro. '
+                      'Dosarele monitorizate rămân disponibile.\n\n$_eroare',
             buton: 'Încearcă din nou',
             butonPrincipal: true,
             onButon: _cauta,
