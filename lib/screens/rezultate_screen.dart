@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/dosar_model.dart';
+import '../services/cautari_recente_service.dart';
 import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/instante.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
 import '../widgets/parcurs_dosar.dart';
@@ -10,13 +12,21 @@ import '../widgets/parcurs_dosar.dart';
 /// Rezultatele unei căutări (Figma: „02 · Rezultate”, „06 · se încarcă”,
 /// „07 · eroare & fără rezultate”).
 class RezultateScreen extends StatefulWidget {
-  final String numar;
-  final String obiect;
+  final CautareRecenta criterii;
 
   /// Se poate înlocui în teste.
   final SoapService? soap;
 
-  const RezultateScreen({super.key, this.numar = '', this.obiect = '', this.soap});
+  RezultateScreen({
+    super.key,
+    String numar = '',
+    String obiect = '',
+    CautareRecenta? criterii,
+    this.soap,
+  }) : criterii = criterii ?? CautareRecenta(numar: numar, obiect: obiect);
+
+  String get numar => criterii.numar;
+  String get obiect => criterii.obiect;
 
   @override
   State<RezultateScreen> createState() => _RezultateScreenState();
@@ -43,7 +53,15 @@ class _RezultateScreenState extends State<RezultateScreen> {
       _eroare = null;
     });
     try {
-      final r = await _soap.cautaDosare(numarDosar: widget.numar, obiectDosar: widget.obiect);
+      final c = widget.criterii;
+      final r = await _soap.cautaDosare(
+        numarDosar: c.numar,
+        obiectDosar: c.obiect,
+        numeParte: c.parte,
+        institutie: c.institutie,
+        dataStart: c.dataStart,
+        dataStop: c.dataStop,
+      );
       // Căutarea după număr aduce toate instanțele dosarului: le păstrăm
       // pentru „Parcursul dosarului” din detaliu.
       if (widget.numar.trim().isNotEmpty) ParcursDosar.memoreaza(r.dosare);
@@ -60,10 +78,16 @@ class _RezultateScreenState extends State<RezultateScreen> {
     }
   }
 
-  String get _subtitlu => [
-        if (widget.numar.isNotEmpty) 'Număr: ${widget.numar}',
-        if (widget.obiect.isNotEmpty) 'Obiect: „${widget.obiect}”',
-      ].join(' · ');
+  String get _subtitlu {
+    final c = widget.criterii;
+    return [
+      if (c.numar.isNotEmpty) 'Număr: ${c.numar}',
+      if (c.obiect.isNotEmpty) 'Obiect: „${c.obiect}”',
+      if (c.parte.isNotEmpty) 'Parte: „${c.parte}”',
+      if (c.institutie.isNotEmpty) numeInstanta(c.institutie),
+      if (c.interval.isNotEmpty) 'Înregistrat ${c.interval}',
+    ].join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +189,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
           StareMesaj(
             icon: Icons.search_off,
             titlu: 'Niciun dosar găsit',
-            text: 'Verifică numărul (ex. 14993/299/2026) sau încearcă doar după '
-                'obiectul dosarului.',
+            text: widget.criterii.parte.isNotEmpty
+                ? 'Verifică numele părții exact cum apare pe portal (de ex. denumirea '
+                    'completă a firmei) sau renunță la filtrul de instanță ori de dată.'
+                : 'Verifică numărul (ex. 14993/299/2026) sau încearcă doar după '
+                    'obiectul dosarului.',
             buton: 'Modifică căutarea',
             onButon: () => Navigator.of(context).maybePop(),
           ),

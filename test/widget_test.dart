@@ -52,7 +52,14 @@ class _SoapFals extends SoapService {
   _SoapFals([List<Dosar>? dosare]) : dosare = dosare ?? [_dosar];
 
   @override
-  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+  Future<RezultatCautare> cautaDosare({
+    String numarDosar = '',
+    String obiectDosar = '',
+    String numeParte = '',
+    String institutie = '',
+    DateTime? dataStart,
+    DateTime? dataStop,
+  }) async =>
       RezultatCautare(dosare, false);
 }
 
@@ -98,6 +105,34 @@ void main() {
     await tester.tap(find.text('Notificări'));
     await tester.pumpAndSettle();
     expect(find.text('Nicio notificare'), findsOneWidget);
+  });
+
+  testWidgets('Căutarea are numele părții, instanța și intervalul', (tester) async {
+    await tester.pumpWidget(const LegalManagementApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Nume parte'), findsOneWidget);
+    expect(find.text('Instanța'), findsNothing);
+
+    await tester.tap(find.text('Mai multe criterii'));
+    await tester.pumpAndSettle();
+    expect(find.text('Instanța'), findsOneWidget);
+    expect(find.text('Toate instanțele'), findsOneWidget);
+    expect(find.text('Înregistrat între'), findsOneWidget);
+
+    await tester.tap(find.text('Toate instanțele'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Caută instanța sau județul'), 'sinaia');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Judecătoria Sinaia'));
+    await tester.pumpAndSettle();
+    expect(find.text('Judecătoria Sinaia'), findsOneWidget);
+
+    // Instanța singură nu ajunge: portalul cere număr, obiect sau parte.
+    await tester.ensureVisible(find.text('Caută dosar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Caută dosar'), warnIfMissed: true);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Introdu numărul dosarului, obiectul sau numele unei părți.'), findsOneWidget);
   });
 
   testWidgets('Cardul e compact: instanța, obiectul și ultima soluție', (tester) async {

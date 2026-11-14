@@ -27,7 +27,14 @@ Dosar _d(String numar, List<Sedinta> sedinte) => Dosar(
 
 class _SoapGol extends SoapService {
   @override
-  Future<RezultatCautare> cautaDosare({String numarDosar = '', String obiectDosar = ''}) async =>
+  Future<RezultatCautare> cautaDosare({
+    String numarDosar = '',
+    String obiectDosar = '',
+    String numeParte = '',
+    String institutie = '',
+    DateTime? dataStart,
+    DateTime? dataStop,
+  }) async =>
       const RezultatCautare([], false);
 }
 
