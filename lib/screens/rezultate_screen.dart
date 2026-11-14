@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/dosar_model.dart';
 import '../services/cautari_recente_service.dart';
+import '../services/parti_urmarite_service.dart';
 import '../services/soap_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/instante.dart';
@@ -45,6 +46,7 @@ class _RezultateScreenState extends State<RezultateScreen> {
   void initState() {
     super.initState();
     _cauta();
+    if (widget.criterii.parte.trim().isNotEmpty) PartiUrmariteService.instance.incarca();
   }
 
   Future<void> _cauta() async {
@@ -76,6 +78,62 @@ class _RezultateScreenState extends State<RezultateScreen> {
     } finally {
       if (mounted) setState(() => _seIncarca = false);
     }
+  }
+
+  bool _seAdaugaParte = false;
+
+  /// Pornește alerta la dosarele noi pe numele părții căutate.
+  Future<void> _urmaresteParte() async {
+    final c = widget.criterii;
+    final parti = PartiUrmariteService.instance;
+    final messenger = ScaffoldMessenger.of(context);
+    if (parti.urmareste(c.parte, c.institutie)) {
+      await parti.sterge(ParteUrmarita.cheiePentru(c.parte, c.institutie));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')),
+      );
+      return;
+    }
+    setState(() => _seAdaugaParte = true);
+    try {
+      final preaGeneral = await parti.adauga(c.parte, institutie: c.institutie, soap: _soap);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            preaGeneral
+                ? 'Urmărești „${c.parte.trim()}”, dar numele e foarte des întâlnit și portalul '
+                    'întoarce cel mult 1.000 de dosare. Alege o instanță ca alertele să fie sigure.'
+                : 'Urmărești „${c.parte.trim()}”. Vei primi o notificare la fiecare dosar nou pe acest nume.',
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Partea nu a putut fi urmărită: $e')));
+    } finally {
+      if (mounted) setState(() => _seAdaugaParte = false);
+    }
+  }
+
+  Widget _butonParte() {
+    return ListenableBuilder(
+      listenable: PartiUrmariteService.instance,
+      builder: (context, _) {
+        if (_seAdaugaParte) {
+          return const Padding(
+            padding: EdgeInsets.all(14),
+            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+        final c = widget.criterii;
+        final urmarita = PartiUrmariteService.instance.urmareste(c.parte, c.institutie);
+        return IconButton(
+          tooltip: urmarita ? 'Nu mai urmări partea' : 'Urmărește partea',
+          icon: Icon(urmarita ? Icons.notifications_active : Icons.notification_add_outlined),
+          color: AppColors.primary,
+          onPressed: _urmaresteParte,
+        );
+      },
+    );
   }
 
   String get _subtitlu {
@@ -116,6 +174,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
               ),
           ],
         ),
+        actions: [
+          if (widget.criterii.parte.trim().isNotEmpty) _butonParte(),
+        ],
         bottom: !_seIncarca && _eroare == null && stadii.length > 1
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(48),
