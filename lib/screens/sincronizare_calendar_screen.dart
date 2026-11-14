@@ -25,6 +25,14 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
   List<DosarDinCalendar>? _gasite;
   final Set<String> _deAdaugat = {};
 
+  static const _istoric = [
+    (0, 'Doar viitoare'),
+    (90, '3 luni'),
+    (180, '6 luni'),
+    (365, '1 an'),
+    (730, '2 ani'),
+  ];
+
   static const _amintiri = [
     (Duration(minutes: 15), '15 minute'),
     (Duration(minutes: 30), '30 de minute'),
@@ -216,6 +224,24 @@ class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen>
                   ],
                   onChanged: (d) {
                     _sync.amintire = d!;
+                    _sync.salveaza();
+                  },
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Trimite și termenele trecute din:', style: TextStyle(fontSize: 14)),
+                ),
+                DropdownButton<int>(
+                  value: _istoric.any((e) => e.$1 == _sync.zileIstoric) ? _sync.zileIstoric : 0,
+                  underline: const SizedBox(),
+                  items: [
+                    for (final (z, t) in _istoric) DropdownMenuItem(value: z, child: Text(t)),
+                  ],
+                  onChanged: (z) {
+                    setState(() => _sync.zileIstoric = z!);
                     _sync.salveaza();
                   },
                 ),

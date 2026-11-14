@@ -196,6 +196,9 @@ class CalendarSyncService extends ChangeNotifier {
   Duration amintire = const Duration(hours: 1);
   String simbol = simbolImplicit;
 
+  /// Câte zile în urmă se trimit și termenele trecute (0 = doar cele viitoare).
+  int zileIstoric = 0;
+
   /// Dosarele alese pentru sincronizare (cheile lor). Null = toate.
   Set<String>? dosareAlese;
   DateTime? ultimaSincronizare;
@@ -211,6 +214,7 @@ class CalendarSyncService extends ChangeNotifier {
     numeCalendar = j['numeCalendar'] as String?;
     amintire = Duration(minutes: (j['amintireMin'] as int?) ?? 60);
     simbol = (j['simbol'] as String?) ?? simbolImplicit;
+    zileIstoric = (j['zileIstoric'] as int?) ?? 0;
     final alese = j['dosare'] as List?;
     dosareAlese = alese == null ? null : {for (final a in alese) a as String};
     final u = j['ultima'] as String?;
@@ -227,6 +231,7 @@ class CalendarSyncService extends ChangeNotifier {
         'numeCalendar': numeCalendar,
         'amintireMin': amintire.inMinutes,
         'simbol': simbol,
+        'zileIstoric': zileIstoric,
         'dosare': dosareAlese?.toList(),
         'ultima': ultimaSincronizare?.toIso8601String(),
       }),
@@ -244,16 +249,17 @@ class CalendarSyncService extends ChangeNotifier {
     if (id == null) return const RezultatTrimitere(0, 0);
     final azi = DateUtils.dateOnly(acum ?? DateTime.now());
 
+    final dela = azi.subtract(Duration(days: zileIstoric));
     final termene = [
       for (final d in dosare)
         if (esteAles(d.cheie))
           for (final s in d.sedinte)
-            if (esteTermenViitor(s, acum: azi)) (d, s),
+            if (esteTermenViitor(s, acum: dela)) (d, s),
     ];
     if (termene.isEmpty) return const RezultatTrimitere(0, 0);
 
     final ultimul = termene.map((t) => t.$2.data!).reduce((a, b) => a.isAfter(b) ? a : b);
-    final existente = await calendareTelefon.evenimente(id, azi, ultimul.add(const Duration(days: 2)));
+    final existente = await calendareTelefon.evenimente(id, dela, ultimul.add(const Duration(days: 2)));
     final marcate = <String>{
       for (final e in existente)
         if (e.descriere.indexOf(_marcaj) case final i when i >= 0)
@@ -384,6 +390,8 @@ String descriereEveniment(Dosar d, Sedinta s) => [
       if (d.obiect.isNotEmpty) 'Obiect: ${d.obiect}',
       if (s.complet.isNotEmpty) 'Complet: ${s.complet}',
       'Termen: ${formateazaData(s.data)}${s.ora.isEmpty ? '' : ', ora ${s.ora}'}',
+      if (s.solutie.isNotEmpty)
+        'Soluție: ${s.solutie}${s.solutieSumar.isEmpty ? '' : ' — ${s.solutieSumar}'}',
       '',
       '$_marcaj${cheieTermen(d, s)}',
     ].join('\n');

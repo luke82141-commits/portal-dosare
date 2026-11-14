@@ -94,7 +94,8 @@ void main() {
       ..calendarId = 'g1'
       ..dosareAlese = null
       ..amintire = const Duration(hours: 1)
-      ..simbol = simbolImplicit;
+      ..simbol = simbolImplicit
+      ..zileIstoric = 0;
   });
 
   test('numerele de dosar se recunosc în text', () {
@@ -123,6 +124,22 @@ void main() {
     expect(aDouaOara.adaugate, 0);
     expect(aDouaOara.existente, 2);
     expect(cal.creat, hasLength(2));
+  });
+
+  test('cu istoric pornit, trimite și termenele trecute din interval', () async {
+    final cal = _CalendarFals();
+    sync
+      ..calendareTelefon = cal
+      ..zileIstoric = 365;
+    final d = _d('14993/299/2025', 'JudecatoriaSECTORUL1BUCURESTI', [
+      _s(DateTime(2026, 11, 20), '09:30'),
+      _s(DateTime(2026, 10, 1), '09:00'),
+      _s(DateTime(2025, 6, 1), '09:00'), // mai vechi de un an
+    ]);
+    final r = await sync.trimite([d], acum: acum);
+    expect(r.adaugate, 2);
+    expect(cal.creat.map((e) => e['start']), contains(DateTime(2026, 10, 1, 9)));
+    expect((await sync.trimite([d], acum: acum)).adaugate, 0);
   });
 
   test('evenimentele vechi, care încep cu „Termen”, sunt redenumite', () async {
