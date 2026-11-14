@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:legal_management_app/models/dosar_model.dart';
+import 'package:legal_management_app/screens/monitorizate_screen.dart';
 import 'package:legal_management_app/screens/selecteaza_monitorizate_screen.dart';
 import 'package:legal_management_app/services/biblioteca_service.dart';
 import 'package:legal_management_app/services/client_service.dart';
@@ -125,5 +126,36 @@ void main() {
     await tester.tap(find.text('Anulează'));
     await tester.pumpAndSettle();
     expect(b.dosare, hasLength(3));
+  });
+
+  testWidgets('Avertizarea de plafon se închide cu X și reapare doar peste acel număr', (
+    tester,
+  ) async {
+    final b = BibliotecaService.instance;
+    await b.adaugaToate([
+      for (var i = 1; i <= plafonDosare + 5; i++) _dosar('$i/105/2026', 'TribunalulPRAHOVA'),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(theme: construiesteTema(), home: const MonitorizateScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Ascunde avertizarea'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsNothing);
+
+    // Rămâne ascunsă și după redeschiderea ecranului.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      MaterialApp(theme: construiesteTema(), home: const MonitorizateScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsNothing);
+
+    // Cu și mai multe dosare, reapare.
+    await b.adauga(_dosar('999/105/2026', 'TribunalulPRAHOVA'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsOneWidget);
   });
 }

@@ -116,6 +116,27 @@ void main() {
     expect([for (final s in BibliotecaService.instance.dosare) s.dosar.numar], ['2/105/2026']);
   });
 
+  testWidgets('Mesajul cu „Anulează” dispare singur după câteva secunde', (tester) async {
+    final dosare = [_dosar('1/105/2026'), _dosar('2/105/2026')];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: RezultateScreen(
+          criterii: CautareRecenta(parte: 'Alfa SRL'),
+          soap: _SoapFals(dosare),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monitorizează toate'));
+    await tester.pumpAndSettle();
+    expect(find.text('Anulează'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 9));
+    await tester.pumpAndSettle();
+    expect(find.text('Anulează'), findsNothing);
+    expect(BibliotecaService.instance.dosare, hasLength(2));
+  });
+
   testWidgets('Peste plafon avertizează că verificăm mai rar', (tester) async {
     await BibliotecaService.instance.adaugaToate([
       for (var i = 1; i <= 199; i++) _dosar('$i/1/2025'),

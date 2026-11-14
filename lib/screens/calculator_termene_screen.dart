@@ -112,6 +112,8 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
     if (!sync.configurat) {
       messenger.showSnackBar(
         SnackBar(
+          persist: false,
+          showCloseIcon: true,
           content: const Text('Alege întâi calendarul în care trimitem termenele.'),
           action: SnackBarAction(
             label: 'Alege',

@@ -117,6 +117,8 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
+        showCloseIcon: true,
         duration: const Duration(seconds: 8),
         content: Text(
           scoase.length == 1
@@ -254,7 +256,11 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
 class AvertizarePlafon extends StatelessWidget {
   final int dosare;
   final VoidCallback? onAlege;
-  const AvertizarePlafon({super.key, required this.dosare, this.onAlege});
+
+  /// X-ul din colț: ascunde avertizarea.
+  final VoidCallback? onInchide;
+
+  const AvertizarePlafon({super.key, required this.dosare, this.onAlege, this.onInchide});
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +268,7 @@ class AvertizarePlafon extends StatelessWidget {
       margin: EdgeInsets.zero,
       color: AppColors.accentContainer,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.fromLTRB(14, 14, onInchide == null ? 14 : 4, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -281,11 +287,26 @@ class AvertizarePlafon extends StatelessWidget {
                   if (onAlege != null)
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: TextButton(onPressed: onAlege, child: const Text('Alege ce scoți')),
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 40),
+                        ),
+                        onPressed: onAlege,
+                        child: const Text('Alege ce scoți'),
+                      ),
                     ),
                 ],
               ),
             ),
+            if (onInchide != null)
+              IconButton(
+                tooltip: 'Ascunde avertizarea',
+                visualDensity: VisualDensity.compact,
+                color: AppColors.onSurfaceVariant,
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: onInchide,
+              ),
           ],
         ),
       ),
