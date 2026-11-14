@@ -291,7 +291,9 @@ class CalendarSyncService extends ChangeNotifier {
       if (i < 0) continue;
       final titluNou = retitlu(e.titlu, simbol);
       final termen = dupaCheie[e.descriere.substring(i + _marcaj.length).split('\n').first.trim()];
-      final descriereNoua = termen == null ? null : descriereEveniment(termen.$1, termen.$2);
+      final descriereNoua = termen == null
+          ? null
+          : pastreazaNotite(e.descriere, descriereEveniment(termen.$1, termen.$2));
       final schimbaTitlu = titluNou != e.titlu;
       final schimbaDescriere = descriereNoua != null && descriereNoua != e.descriere;
       if (!schimbaTitlu && !schimbaDescriere) continue;
@@ -447,4 +449,33 @@ List<String> rezumatParti(Dosar d, {int max = 4}) {
     if (ramase == 1) '• și încă o parte',
     if (ramase > 1) '• și încă $ramase părți',
   ];
+}
+
+/// Rândurile pe care le scrie aplicația în descriere (și cele din versiunile
+/// vechi); orice alt rând e scris de utilizator.
+const _prefixeAplicatie = [
+  'Dosar nr. ',
+  'Stadiu: ',
+  'Obiect: ',
+  'Complet: ',
+  'Termen: ',
+  'Soluție: ',
+  'Părți:',
+  '• ',
+  _marcaj,
+];
+
+/// Descrierea [noua] plus ce a scris utilizatorul în descrierea [veche]
+/// (notițe adăugate de mână în calendar), ca să nu se piardă la actualizare.
+String pastreazaNotite(String veche, String noua) {
+  final aleNoastre = noua.split('\n').toSet();
+  final notite = [
+    for (final r in veche.split('\n'))
+      if (r.trim().isNotEmpty &&
+          !aleNoastre.contains(r) &&
+          !_prefixeAplicatie.any((p) => r.startsWith(p)))
+        r,
+  ];
+  if (notite.isEmpty) return noua;
+  return [...notite, '', noua].join('\n');
 }

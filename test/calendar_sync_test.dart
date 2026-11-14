@@ -216,6 +216,17 @@ void main() {
     expect(cal.redescrise, isEmpty);
   });
 
+  test('notițele scrise de mână în eveniment rămân la actualizare', () {
+    const veche = 'Dosar nr. 1/105/2026\nTribunalul Prahova\nObiect: pretenții\n'
+        'Termen: 20.11.2026, ora 09:30\nde adus actele originale\n\n'
+        'ID termen Portal Dosare: x\nsuna clientul';
+    const noua = 'Dosar nr. 1/105/2026\nTribunalul Prahova\nObiect: pretenții\n'
+        'Termen: 20.11.2026, ora 09:30\nPărți:\n• Reclamant: POPESCU ION\n\n'
+        'ID termen Portal Dosare: x';
+    expect(pastreazaNotite(veche, noua), 'de adus actele originale\nsuna clientul\n\n$noua');
+    expect(pastreazaNotite(noua, noua), noua);
+  });
+
   test('evenimentele vechi, care încep cu „Termen”, sunt redenumite', () async {
     final cal = _CalendarFals();
     sync.calendareTelefon = cal;
