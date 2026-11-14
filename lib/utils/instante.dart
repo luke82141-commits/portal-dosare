@@ -231,6 +231,7 @@ const Map<String, String> _localitati = {
 String numeInstanta(String cod) {
   final c = cod.trim();
   if (c.isEmpty || c.contains(' ')) return c;
+  if (c == 'InaltaCurteDeCasatieSiJustitie') return 'Înalta Curte de Casație și Justiție';
 
   final lower = c.toLowerCase();
   for (final (prefix, tip) in _tipuri) {

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/dosar_model.dart';
 import 'comparator_dosar.dart';
+import 'iccj_service.dart';
 
 /// Schimbările găsite la un dosar în urma unei verificări.
 class RezultatVerificare {
@@ -118,7 +119,14 @@ class BibliotecaService extends ChangeNotifier {
         continue;
       }
 
-      final schimbari = comparaDosare(salvat.dosar, nou);
+      // Un dosar ÎCCJ adăugat ziua primește datele la prima verificare de
+      // noapte: o singură veste, nu câte una pentru fiecare termen.
+      final schimbari = esteIccjInAsteptare(salvat.dosar)
+          ? [
+              'Datele dosarului au fost aduse de la ÎCCJ'
+                  '${switch (nou.sedinte.length) { 0 => '', 1 => ' (1 termen)', final n => ' ($n termene)' }}',
+            ]
+          : comparaDosare(salvat.dosar, nou);
       _dosare[i] = salvat.copyWith(
         dosar: nou,
         ultimaVerificare: moment,
