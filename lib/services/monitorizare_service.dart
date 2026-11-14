@@ -8,11 +8,13 @@ import '../models/dosar_model.dart';
 import '../utils/formatare.dart';
 import 'biblioteca_service.dart';
 import 'parti_urmarite_service.dart';
+import 'setari_notificari_service.dart';
 import 'soap_service.dart';
 
 const _numeTask = 'verificare_dosare';
 const _canalId = 'modificari_dosare';
 const _canalPartiId = 'dosare_noi_parti';
+const _canalLinisteId = 'ore_de_liniste';
 
 /// Cât de des verifică telefonul portalul, în fundal. Android nu permite mai
 /// des de 15 minute și poate întârzia rulările când economisește bateria.
@@ -100,6 +102,7 @@ class MonitorizareService {
   /// [dosareNoiParti].
   Future<List<RezultatVerificare>> verificaToate({SoapService? soap}) async {
     final serviciu = soap ?? SoapService();
+    await SetariNotificariService.instance.incarca();
     final rezultate = await _verificaDosare(serviciu);
 
     try {
@@ -165,14 +168,12 @@ class MonitorizareService {
         title: 'Dosar ${r.dosar.numar} · ${r.dosar.instanta}',
         body: linii.length == 1 ? linii.first : '${linii.length} modificări: ${linii.first}',
         notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
+          android: _detaliiAndroid(
             _canalId,
             'Modificări în dosare',
-            channelDescription:
-                'Anunță schimbările apărute pe portal la dosarele din bibliotecă',
-            importance: Importance.high,
-            priority: Priority.high,
-            styleInformation: BigTextStyleInformation(text),
+            'Anunță schimbările apărute pe portal la dosarele din bibliotecă',
+            text,
+            cheie: r.dosar.cheie,
           ),
         ),
         payload: r.dosar.cheie,
@@ -198,14 +199,11 @@ class MonitorizareService {
             : '${linii.length} dosare noi pe numele ${r.parte.nume}',
         body: scurteaza(linii.first, 300),
         notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
+          android: _detaliiAndroid(
             _canalPartiId,
             'Dosare noi pe numele părților',
-            channelDescription:
-                'Anunță dosarele noi apărute pe portal pe numele părților urmărite',
-            importance: Importance.high,
-            priority: Priority.high,
-            styleInformation: BigTextStyleInformation(linii.join('\n')),
+            'Anunță dosarele noi apărute pe portal pe numele părților urmărite',
+            linii.join('\n'),
           ),
         ),
         payload: 'parte|${r.parte.cheie}',
@@ -213,5 +211,39 @@ class MonitorizareService {
     } catch (e) {
       debugPrint('Notificarea nu a putut fi afișată: $e');
     }
+  }
+
+  /// În orele de liniște notificarea merge pe un canal fără sunet și fără
+  /// vibrație (pe Android, sunetul ține de canal), afară de dosarele
+  /// marcate „sună oricând”.
+  AndroidNotificationDetails _detaliiAndroid(
+    String canal,
+    String nume,
+    String descriere,
+    String text, {
+    String? cheie,
+  }) {
+    final stil = BigTextStyleInformation(text);
+    if (SetariNotificariService.instance.silentioasa(DateTime.now(), cheie: cheie)) {
+      return AndroidNotificationDetails(
+        _canalLinisteId,
+        'Ore de liniște',
+        channelDescription: 'Modificările apărute noaptea, fără sunet și fără vibrație',
+        importance: Importance.low,
+        priority: Priority.low,
+        playSound: false,
+        enableVibration: false,
+        silent: true,
+        styleInformation: stil,
+      );
+    }
+    return AndroidNotificationDetails(
+      canal,
+      nume,
+      channelDescription: descriere,
+      importance: Importance.high,
+      priority: Priority.high,
+      styleInformation: stil,
+    );
   }
 }

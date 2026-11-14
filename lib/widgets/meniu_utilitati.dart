@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/parti_urmarite_screen.dart';
+import '../screens/setari_notificari_screen.dart';
 import '../screens/sugestie_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -39,6 +40,12 @@ class _MeniuUtilitati extends StatelessWidget {
               titlu: 'Părți urmărite',
               text: 'Alertă când apare un dosar nou pe numele unei părți',
               onTap: () => _deschide(context, const PartiUrmariteScreen()),
+            ),
+            _Unealta(
+              icon: Icons.bedtime_outlined,
+              titlu: 'Ore de liniște',
+              text: 'Fără sunet noaptea; dosarele importante sună oricând',
+              onTap: () => _deschide(context, const SetariNotificariScreen()),
             ),
             _Unealta(
               icon: Icons.lightbulb_outline,
