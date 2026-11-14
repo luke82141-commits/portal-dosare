@@ -148,17 +148,20 @@ class RandTermen {
   DateTime get dataHotarare => sedinta.dataPronuntare ?? sedinta.data!;
 
   /// „Hotărâre 388/2026” sau tipul documentului, dacă nu are număr.
-  String get document {
-    final tip = switch (_fara(sedinta.document)) {
-      final d when d.contains('hotarare') => 'Hotărâre',
-      final d when d.contains('sentinta') => 'Sentință',
-      final d when d.contains('decizie') => 'Decizie',
-      final d when d.contains('incheiere') => 'Încheiere',
-      _ => '',
-    };
-    if (sedinta.numarDocument.isEmpty) return tip;
-    return '${tip.isEmpty ? 'Nr.' : tip} ${sedinta.numarDocument}';
-  }
+  String get document => documentSedinta(sedinta);
+}
+
+/// „Hotărâre 388/2026” sau tipul documentului, dacă nu are număr.
+String documentSedinta(Sedinta sedinta) {
+  final tip = switch (_fara(sedinta.document)) {
+    final d when d.contains('hotarare') => 'Hotărâre',
+    final d when d.contains('sentinta') => 'Sentință',
+    final d when d.contains('decizie') => 'Decizie',
+    final d when d.contains('incheiere') => 'Încheiere',
+    _ => '',
+  };
+  if (sedinta.numarDocument.isEmpty) return tip;
+  return '${tip.isEmpty ? 'Nr.' : tip} ${sedinta.numarDocument}';
 }
 
 class RandCaleAtac {

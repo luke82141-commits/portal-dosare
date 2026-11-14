@@ -30,7 +30,9 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.widgets_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Situația dosarelor în Excel'), findsOneWidget);
+    expect(find.text('Situația în Excel'), findsOneWidget);
+    await tester.ensureVisible(find.text('Trimite o sugestie'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Trimite o sugestie'));
     await tester.pumpAndSettle();
     expect(find.text('Trimite pe email'), findsOneWidget);

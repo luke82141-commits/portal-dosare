@@ -33,10 +33,10 @@ class StadiuChip extends StatelessWidget {
 
   /// Pentru dosarele monitorizate cu modificări necitite.
   factory StadiuChip.nou(int numar) => StadiuChip._(
-        numar == 1 ? 'Nou' : '$numar noi',
-        AppColors.successContainer,
-        AppColors.success,
-      );
+    numar == 1 ? 'Nou' : '$numar noi',
+    AppColors.successContainer,
+    AppColors.success,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +186,11 @@ class _SectiuneExtensibilaState extends State<SectiuneExtensibila> {
 class ParteRand extends StatelessWidget {
   final Parte parte;
 
-  const ParteRand({super.key, required this.parte});
+  /// „Clientul meu”: steaua apare doar dacă se poate alege ([onClient]).
+  final bool esteClient;
+  final VoidCallback? onClient;
+
+  const ParteRand({super.key, required this.parte, this.esteClient = false, this.onClient});
 
   @override
   Widget build(BuildContext context) {
@@ -196,13 +200,13 @@ class ParteRand extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: AppColors.surfaceVariant,
+            backgroundColor: esteClient ? AppColors.accentContainer : AppColors.surfaceVariant,
             child: Text(
               initiale(parte.nume),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: esteClient ? AppColors.accent : AppColors.primary,
               ),
             ),
           ),
@@ -215,14 +219,30 @@ class ParteRand extends StatelessWidget {
                   parte.nume.isEmpty ? '—' : parte.nume,
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
-                if (parte.calitate.isNotEmpty)
+                if (parte.calitate.isNotEmpty || esteClient)
                   Text(
-                    parte.calitate,
-                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                    [
+                      if (parte.calitate.isNotEmpty) parte.calitate,
+                      if (esteClient) 'Clientul meu',
+                    ].join(' · '),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: esteClient ? AppColors.accent : AppColors.onSurfaceVariant,
+                      fontWeight: esteClient ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
               ],
             ),
           ),
+          if (onClient != null)
+            IconButton(
+              tooltip: esteClient ? 'Nu mai e clientul meu' : 'Marchează drept clientul meu',
+              icon: Icon(
+                esteClient ? Icons.star : Icons.star_border,
+                color: esteClient ? AppColors.accent : AppColors.onSurfaceVariant,
+              ),
+              onPressed: onClient,
+            ),
         ],
       ),
     );
@@ -249,14 +269,14 @@ class SedintaRand extends StatelessWidget {
     final (String titlu, Color culoareTitlu) = s.arePronuntare
         ? (s.solutie.isNotEmpty ? s.solutie : 'Pronunțat', AppColors.onSurface)
         : viitor
-            ? ('Termen viitor', AppColors.accent)
-            : ('Fără soluție publicată', AppColors.onSurfaceVariant);
+        ? ('Termen viitor', AppColors.accent)
+        : ('Fără soluție publicată', AppColors.onSurfaceVariant);
 
     final detaliu = s.arePronuntare
         ? (s.solutieSumar != s.solutie ? s.solutieSumar : '')
         : viitor
-            ? 'Dosarul se află pe rol. Soluția apare după ședință.'
-            : '';
+        ? 'Dosarul se află pe rol. Soluția apare după ședință.'
+        : '';
 
     final document = [
       numeDocument(s.document),
@@ -413,11 +433,7 @@ class StareMesaj extends StatelessWidget {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.43,
-                color: AppColors.onSurfaceVariant,
-              ),
+              style: const TextStyle(fontSize: 14, height: 1.43, color: AppColors.onSurfaceVariant),
             ),
             if (buton != null) ...[
               const SizedBox(height: 16),
@@ -498,14 +514,14 @@ class CardSchelet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget bara(double latime, [double inaltime = 12]) => Container(
-          width: latime,
-          height: inaltime,
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(6),
-          ),
-        );
+      width: latime,
+      height: inaltime,
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
@@ -555,11 +571,7 @@ class Pastila extends StatelessWidget {
                 child: Text(
                   text,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: culoareText,
-                  ),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: culoareText),
                 ),
               ),
             ],

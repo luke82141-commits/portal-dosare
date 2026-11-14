@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../screens/backup_screen.dart';
+import '../screens/excel_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
 import '../screens/setari_notificari_screen.dart';
+import '../screens/statistici_screen.dart';
 import '../screens/sugestie_screen.dart';
 import '../screens/widgeturi_screen.dart';
 import '../theme/app_theme.dart';
 import 'dosar_iccj.dart';
 
 /// Foaia „Utilități” din bara de jos: unelte folosite mai rar, ținute în afara
-/// ecranelor principale. Cele marcate Pro vin cu abonamentul.
+/// ecranelor principale. Cele de sub „PRO” vin cu abonamentul.
 Future<void> deschideUtilitati(BuildContext context) => showModalBottomSheet<void>(
   context: context,
   showDragHandle: true,
@@ -67,18 +69,6 @@ class _MeniuUtilitati extends StatelessWidget {
               onTap: () => _deschide(context, const SetariNotificariScreen()),
             ),
             _Unealta(
-              icon: Icons.widgets_outlined,
-              titlu: 'Widgeturi pe ecran (Pro)',
-              text: 'Termenele și actualizările direct pe ecranul telefonului',
-              onTap: () => _deschide(context, const WidgeturiScreen()),
-            ),
-            _Unealta(
-              icon: Icons.summarize_outlined,
-              titlu: 'Rapoarte (Pro)',
-              text: 'Săptămânal, lunar și anual, în PDF și Word',
-              onTap: () => _deschide(context, const RapoarteScreen()),
-            ),
-            _Unealta(
               icon: Icons.save_alt,
               titlu: 'Backup',
               text: 'Salvează datele într-un fișier și mută-le pe alt telefon',
@@ -93,7 +83,7 @@ class _MeniuUtilitati extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: Text(
-                'PRO · ÎN CURÂND',
+                'PRO',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -102,24 +92,29 @@ class _MeniuUtilitati extends StatelessWidget {
                 ),
               ),
             ),
-
-            const _Unealta(
+            _Unealta(
+              icon: Icons.widgets_outlined,
+              titlu: 'Widgeturi pe ecran',
+              text: 'Termenele și actualizările direct pe ecranul telefonului',
+              onTap: () => _deschide(context, const WidgeturiScreen()),
+            ),
+            _Unealta(
+              icon: Icons.summarize_outlined,
+              titlu: 'Rapoarte',
+              text: 'Săptămânal, lunar și anual, în PDF și Word',
+              onTap: () => _deschide(context, const RapoarteScreen()),
+            ),
+            _Unealta(
               icon: Icons.bar_chart,
               titlu: 'Statistici',
-              text: 'Termene și dosare pe an, soluții: admite, respinge, admite în parte',
-              pro: true,
+              text: 'Termene, dosare și soluții pe ani, comparate cu anul trecut',
+              onTap: () => _deschide(context, const StatisticiScreen()),
             ),
-            const _Unealta(
+            _Unealta(
               icon: Icons.table_view_outlined,
-              titlu: 'Situația dosarelor în Excel',
-              text: 'Instanță, materie, stadiu, părți, soluții pe fond, apel, recurs',
-              pro: true,
-            ),
-            const _Unealta(
-              icon: Icons.event_note_outlined,
-              titlu: 'Situația termenelor în Excel',
-              text: 'Data, dosarul, părțile, ora, completul, soluția și termenul următor',
-              pro: true,
+              titlu: 'Situația în Excel',
+              text: 'Dosarele și termenele, cu soluțiile pe faze și rezultatul pentru client',
+              onTap: () => _deschide(context, const ExcelScreen()),
             ),
           ],
         ),
@@ -133,25 +128,16 @@ class _Unealta extends StatelessWidget {
   final String titlu;
   final String text;
   final VoidCallback? onTap;
-  final bool pro;
 
-  const _Unealta({
-    required this.icon,
-    required this.titlu,
-    required this.text,
-    this.onTap,
-    this.pro = false,
-  });
+  const _Unealta({required this.icon, required this.titlu, required this.text, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final culoare = pro ? AppColors.onSurfaceVariant : AppColors.primary;
     return ListTile(
-      enabled: !pro,
-      leading: Icon(icon, color: culoare),
+      leading: Icon(icon, color: AppColors.primary),
       title: Text(titlu),
       subtitle: Text(text),
-      trailing: pro ? const Icon(Icons.lock_outline, size: 18) : const Icon(Icons.chevron_right),
+      trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
   }

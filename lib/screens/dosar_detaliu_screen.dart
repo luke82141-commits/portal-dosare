@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 import '../data/instante_portal.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
+import '../services/client_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/ruta.dart';
@@ -77,14 +77,27 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                       const SizedBox(height: 16),
                       _InformatiiGenerale(dosar: dosar),
                       const SizedBox(height: 16),
-                      SectiuneExtensibila(
-                        icon: Icons.person,
-                        titlu: 'Părți',
-                        deschisInitial: false,
-                        numar: dosar.parti.length,
-                        copii: dosar.parti.isEmpty
-                            ? [const _Gol('Portalul nu afișează părți pentru acest dosar.')]
-                            : [for (final p in dosar.parti) ParteRand(parte: p)],
+                      // Steaua „clientul meu” apare la dosarele urmărite.
+                      ListenableBuilder(
+                        listenable: ClientService.instance,
+                        builder: (context, _) => SectiuneExtensibila(
+                          icon: Icons.person,
+                          titlu: 'Părți',
+                          deschisInitial: false,
+                          numar: dosar.parti.length,
+                          copii: dosar.parti.isEmpty
+                              ? [const _Gol('Portalul nu afișează părți pentru acest dosar.')]
+                              : [
+                                  for (final p in dosar.parti)
+                                    ParteRand(
+                                      parte: p,
+                                      esteClient: ClientService.instance.esteClient(dosar.numar, p),
+                                      onClient: salvat == null
+                                          ? null
+                                          : () => ClientService.instance.comuta(dosar.numar, p),
+                                    ),
+                                ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       SectiuneExtensibila(
@@ -110,7 +123,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                       Text(
                         salvat?.ultimaVerificare != null
                             ? 'Ultima verificare: ${formateazaDataOra(salvat!.ultimaVerificare)}'
-                                ' · sursa: portal.just.ro'
+                                  ' · sursa: portal.just.ro'
                             : 'Sursa: portal.just.ro',
                         style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                       ),
@@ -142,8 +155,8 @@ class _Antet extends StatelessWidget {
     ].where((e) => e.$1.isNotEmpty);
 
     void filtreaza(TipFiltru tip) => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar))),
-        );
+      MaterialPageRoute(builder: (_) => DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar))),
+    );
 
     return Container(
       decoration: const BoxDecoration(
@@ -350,7 +363,9 @@ void _arataDosarele(BuildContext context, Dosar curent) {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
-                dosare.length == 1 ? 'Un dosar monitorizat' : '${dosare.length} dosare monitorizate',
+                dosare.length == 1
+                    ? 'Un dosar monitorizat'
+                    : '${dosare.length} dosare monitorizate',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
             ),
@@ -393,9 +408,10 @@ void _arataDosarele(BuildContext context, Dosar curent) {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    [s.dosar.instanta, s.dosar.obiect]
-                                        .where((e) => e.isNotEmpty)
-                                        .join(' · '),
+                                    [
+                                      s.dosar.instanta,
+                                      s.dosar.obiect,
+                                    ].where((e) => e.isNotEmpty).join(' · '),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -477,8 +493,8 @@ class _RutaInstanta extends StatelessWidget {
                         termen == null
                             ? 'Ruta pornește din locația ta.'
                             : 'Termen ${formateazaData(termen.data)}'
-                                '${termen.ora.isEmpty ? '' : ', ora ${termen.ora}'}'
-                                ' · ruta pornește din locația ta.',
+                                  '${termen.ora.isEmpty ? '' : ', ora ${termen.ora}'}'
+                                  ' · ruta pornește din locația ta.',
                         style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                       ),
                     ],
@@ -491,7 +507,8 @@ class _RutaInstanta extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _deschide(context, rutaGoogleMaps(dosar.instanta), 'Google Maps'),
+                    onPressed: () =>
+                        _deschide(context, rutaGoogleMaps(dosar.instanta), 'Google Maps'),
                     icon: const Icon(Icons.map_outlined, size: 18),
                     label: const Text('Google Maps'),
                   ),
@@ -509,9 +526,8 @@ class _RutaInstanta extends StatelessWidget {
             if (instantaDupaCod(dosar.institutie) case final instanta?) ...[
               const SizedBox(height: 10),
               FilledButton.tonalIcon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => InstantaScreen(instanta: instanta)),
-                ),
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => InstantaScreen(instanta: instanta))),
                 icon: const Icon(Icons.contact_phone_outlined, size: 18),
                 label: const Text('Contact și program instanță'),
               ),
