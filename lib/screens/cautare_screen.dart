@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,7 +19,11 @@ class CautareScreen extends StatefulWidget {
   /// Deschide fila „Monitorizate” (butonul „Vezi toate”).
   final VoidCallback? onVeziMonitorizate;
 
-  const CautareScreen({super.key, this.onVeziMonitorizate});
+  /// Pornește căutarea din afara ecranului (butonul rotund cu lupa, când bara
+  /// de jos e strânsă): fiecare incrementare înseamnă o apăsare.
+  final ValueListenable<int>? cereriCautare;
+
+  const CautareScreen({super.key, this.onVeziMonitorizate, this.cereriCautare});
 
   @override
   State<CautareScreen> createState() => _CautareScreenState();
@@ -38,10 +43,12 @@ class _CautareScreenState extends State<CautareScreen> {
   void initState() {
     super.initState();
     CautariRecenteService.instance.incarca();
+    widget.cereriCautare?.addListener(_cauta);
   }
 
   @override
   void dispose() {
+    widget.cereriCautare?.removeListener(_cauta);
     _numarController.dispose();
     _obiectController.dispose();
     _parteController.dispose();
@@ -49,6 +56,7 @@ class _CautareScreenState extends State<CautareScreen> {
   }
 
   void _cauta() {
+    FocusScope.of(context).unfocus();
     final criterii = CautareRecenta(
       numar: _numarController.text.trim(),
       obiect: _obiectController.text.trim(),
@@ -65,7 +73,6 @@ class _CautareScreenState extends State<CautareScreen> {
       );
       return;
     }
-    FocusScope.of(context).unfocus();
     CautariRecenteService.instance.adauga(criterii);
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)),

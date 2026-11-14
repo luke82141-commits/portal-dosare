@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  static const _filaCautare = 0;
   static const _filaMonitorizate = 1;
   static const _filaNotificari = 4;
 
@@ -59,8 +60,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _actualizeaza();
   }
 
+  /// Apăsările lupei rotunde, ascultate de ecranul Căutare.
+  final _cereriCautare = ValueNotifier<int>(0);
+
   @override
   void dispose() {
+    _cereriCautare.dispose();
     WidgetsBinding.instance.removeObserver(this);
     MonitorizareService.instance.deschideBiblioteca.removeListener(_laNotificare);
     super.dispose();
@@ -124,7 +129,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: IndexedStack(
               index: _tab,
               children: [
-                CautareScreen(onVeziMonitorizate: () => _alegeFila(_filaMonitorizate)),
+                CautareScreen(
+                  onVeziMonitorizate: () => _alegeFila(_filaMonitorizate),
+                  cereriCautare: _cereriCautare,
+                ),
                 const MonitorizateScreen(),
                 const CalendarScreen(),
                 const InstanteScreen(),
@@ -137,9 +145,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             scale: _baraStransa ? 1 : 0,
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutBack,
+            // Pe fila Căutare lupa chiar caută (și ascunde tastatura); pe
+            // celelalte readuce bara de navigare.
             child: FloatingActionButton(
-              tooltip: 'Arată bara de navigare',
-              onPressed: _baraStransa ? () => _strangeBara(false) : null,
+              tooltip: _tab == _filaCautare ? 'Caută' : 'Arată bara de navigare',
+              onPressed: !_baraStransa
+                  ? null
+                  : _tab == _filaCautare
+                  ? () => _cereriCautare.value++
+                  : () => _strangeBara(false),
               child: iconita(_file[_tab].$2, _tab),
             ),
           ),
