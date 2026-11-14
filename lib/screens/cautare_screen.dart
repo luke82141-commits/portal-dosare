@@ -8,7 +8,6 @@ import '../services/biblioteca_service.dart';
 import '../services/cautari_recente_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
-import '../utils/instante.dart';
 import '../utils/termene.dart';
 import '../widgets/dosar_card.dart';
 import '../widgets/elemente.dart';
@@ -34,8 +33,8 @@ class _CautareScreenState extends State<CautareScreen> {
   final _obiectController = TextEditingController();
   final _parteController = TextEditingController();
 
-  /// Codul SOAP al instanței alese; gol = toate instanțele.
-  String _institutie = '';
+  /// Codurile SOAP ale instanțelor alese, în ordinea alegerii; gol = toate.
+  List<String> _institutii = [];
   DateTimeRange? _interval;
   bool _maiMulte = false;
 
@@ -61,7 +60,7 @@ class _CautareScreenState extends State<CautareScreen> {
       numar: _numarController.text.trim(),
       obiect: _obiectController.text.trim(),
       parte: _parteController.text.trim(),
-      institutie: _institutie,
+      institutie: _institutii.join(','),
       dataStart: _interval?.start,
       dataStop: _interval?.end,
     );
@@ -81,7 +80,7 @@ class _CautareScreenState extends State<CautareScreen> {
     _obiectController.text = c.obiect;
     _parteController.text = c.parte;
     setState(() {
-      _institutie = c.institutie;
+      _institutii = c.institutii;
       _interval = c.dataStart != null && c.dataStop != null
           ? DateTimeRange(start: c.dataStart!, end: c.dataStop!)
           : null;
@@ -91,14 +90,14 @@ class _CautareScreenState extends State<CautareScreen> {
   }
 
   Future<void> _alegeInstanta() async {
-    final aleasa = await showModalBottomSheet<String>(
+    final alese = await showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.card,
-      builder: (_) => const _FoaieInstante(),
+      builder: (_) => _FoaieInstante(alese: _institutii),
     );
-    if (aleasa != null) setState(() => _institutie = aleasa);
+    if (alese != null) setState(() => _institutii = alese);
   }
 
   Future<void> _alegeInterval() async {
@@ -241,7 +240,7 @@ class _CautareScreenState extends State<CautareScreen> {
   }
 
   Widget _criteriiSuplimentare() {
-    final instanta = _institutie.isEmpty ? 'Toate instanțele' : numeInstanta(_institutie);
+    final instanta = _institutii.isEmpty ? 'Toate instanțele' : descrieInstante(_institutii);
     final interval = _interval == null
         ? 'Oricând'
         : '${formateazaData(_interval!.start)} – ${formateazaData(_interval!.end)}';
@@ -258,11 +257,11 @@ class _CautareScreenState extends State<CautareScreen> {
         ),
         if (_maiMulte) ...[
           _selector(
-            eticheta: 'Instanța',
+            eticheta: _institutii.length > 1 ? 'Instanțele' : 'Instanța',
             valoare: instanta,
             icon: Icons.account_balance,
             onTap: _alegeInstanta,
-            onSterge: _institutie.isEmpty ? null : () => setState(() => _institutie = ''),
+            onSterge: _institutii.isEmpty ? null : () => setState(() => _institutii = []),
           ),
           const SizedBox(height: 10),
           _selector(
@@ -406,8 +405,11 @@ class _CautareScreenState extends State<CautareScreen> {
 }
 
 /// Lista instanțelor, cu căutare după nume sau județ. Întoarce codul SOAP.
+/// Alegerea instanțelor: oricâte, bifate pe rând sau tot județul deodată
+/// (ex. „prahova” → „Bifează toate”).
 class _FoaieInstante extends StatefulWidget {
-  const _FoaieInstante();
+  final List<String> alese;
+  const _FoaieInstante({required this.alese});
 
   @override
   State<_FoaieInstante> createState() => _FoaieInstanteState();
@@ -415,6 +417,7 @@ class _FoaieInstante extends StatefulWidget {
 
 class _FoaieInstanteState extends State<_FoaieInstante> {
   String _text = '';
+  late final List<String> _alese = [...widget.alese];
 
   static String _simplu(String s) => s
       .toLowerCase()
@@ -423,6 +426,10 @@ class _FoaieInstanteState extends State<_FoaieInstante> {
       .replaceAll(RegExp('[șş]'), 's')
       .replaceAll(RegExp('[țţ]'), 't');
 
+  void _comuta(String cod) => setState(() {
+    if (!_alese.remove(cod)) _alese.add(cod);
+  });
+
   @override
   Widget build(BuildContext context) {
     final cautat = _simplu(_text.trim());
@@ -430,33 +437,84 @@ class _FoaieInstanteState extends State<_FoaieInstante> {
       for (final i in toateInstantele)
         if (cautat.isEmpty || _simplu('${i.nume} ${i.judet}').contains(cautat)) i,
     ]..sort((a, b) => a.nume.compareTo(b.nume));
+    // Cele bifate stau sus, ca să se vadă ce ai ales.
+    instante.sort((a, b) {
+      final x = _alese.contains(a.cod) ? 0 : 1, y = _alese.contains(b.cod) ? 0 : 1;
+      return x - y;
+    });
+    final toateBifate = instante.isNotEmpty && instante.every((i) => _alese.contains(i.cod));
 
     return SizedBox(
-      height: MediaQuery.sizeOf(context).height * 0.8,
+      height: MediaQuery.sizeOf(context).height * 0.85,
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: TextField(
-              autofocus: true,
               onChanged: (t) => setState(() => _text = t),
               decoration: const InputDecoration(
                 hintText: 'Caută instanța sau județul',
+                hintMaxLines: 1,
                 prefixIcon: Icon(Icons.search, size: 20),
               ),
             ),
           ),
+          if (cautat.isNotEmpty && instante.length > 1 && instante.length <= 30)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: TextButton.icon(
+                  onPressed: () => setState(() {
+                    for (final i in instante) {
+                      if (toateBifate) {
+                        _alese.remove(i.cod);
+                      } else if (!_alese.contains(i.cod)) {
+                        _alese.add(i.cod);
+                      }
+                    }
+                  }),
+                  icon: Icon(toateBifate ? Icons.remove_done : Icons.done_all, size: 20),
+                  label: Text(
+                    toateBifate
+                        ? 'Debifează cele ${instante.length}'
+                        : 'Bifează toate cele ${instante.length}',
+                  ),
+                ),
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: instante.length,
               itemBuilder: (context, i) {
                 final inst = instante[i];
-                return ListTile(
+                return CheckboxListTile(
+                  value: _alese.contains(inst.cod),
+                  onChanged: (_) => _comuta(inst.cod),
                   title: Text(inst.nume),
                   subtitle: Text(inst.judet),
-                  onTap: () => Navigator.of(context).pop(inst.cod),
+                  controlAffinity: ListTileControlAffinity.leading,
                 );
               },
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: _alese.isEmpty ? null : () => setState(_alese.clear),
+                    child: const Text('Toate instanțele'),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(_alese),
+                    child: Text(_alese.isEmpty ? 'Gata' : 'Gata (${_alese.length})'),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

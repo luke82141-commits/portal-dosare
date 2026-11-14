@@ -39,13 +39,13 @@ final _dosar = Dosar(
 );
 
 Future<void> _pompeazaCard(WidgetTester tester) => tester.pumpWidget(
-      MaterialApp(
-        theme: construiesteTema(),
-        home: Scaffold(
-          body: SingleChildScrollView(child: DosarCardWidget(dosar: _dosar)),
-        ),
-      ),
-    );
+  MaterialApp(
+    theme: construiesteTema(),
+    home: Scaffold(
+      body: SingleChildScrollView(child: DosarCardWidget(dosar: _dosar)),
+    ),
+  ),
+);
 
 class _SoapFals extends SoapService {
   final List<Dosar> dosare;
@@ -59,8 +59,7 @@ class _SoapFals extends SoapService {
     String institutie = '',
     DateTime? dataStart,
     DateTime? dataStop,
-  }) async =>
-      RezultatCautare(dosare, false);
+  }) async => RezultatCautare(dosare, false);
 }
 
 final _apel = Dosar(
@@ -132,6 +131,8 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Caută instanța sau județul'), 'sinaia');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Judecătoria Sinaia'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gata (1)'));
     await tester.pumpAndSettle();
     expect(find.text('Judecătoria Sinaia'), findsOneWidget);
 
@@ -255,10 +256,12 @@ void main() {
   });
 
   testWidgets('Din rezultate dosarul se adaugă și se scoate din bibliotecă', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: construiesteTema(),
-      home: RezultateScreen(numar: '468/310/2026', soap: _SoapFals()),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: RezultateScreen(numar: '468/310/2026', soap: _SoapFals()),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Adaugă'), findsOneWidget);
 
@@ -350,7 +353,12 @@ void main() {
 
   testWidgets('În apel, fără fondul pe portal, spune ce lipsește', (tester) async {
     ParcursDosar.soap = () => _SoapFals([_apel]);
-    await tester.pumpWidget(MaterialApp(theme: construiesteTema(), home: DosarDetaliuScreen(dosar: _apel)));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: DosarDetaliuScreen(dosar: _apel),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Parcursul dosarului'), findsNothing);
     expect(find.textContaining('apare doar la Tribunalul Prahova'), findsOneWidget);

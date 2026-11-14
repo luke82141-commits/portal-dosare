@@ -11,7 +11,8 @@ class CautareRecenta {
   final String obiect;
   final String parte;
 
-  /// Codul SOAP al instanței (ex. „TribunalulPRAHOVA”), gol = toate.
+  /// Codurile SOAP ale instanțelor (ex. „TribunalulPRAHOVA”), despărțite
+  /// prin virgulă; gol = toate.
   final String institutie;
 
   /// Intervalul în care a fost înregistrat dosarul.
@@ -27,23 +28,33 @@ class CautareRecenta {
     this.dataStop,
   });
 
+  /// Instanțele alese, în ordinea alegerii.
+  List<String> get institutii => [
+    for (final c in institutie.split(','))
+      if (c.trim().isNotEmpty) c.trim(),
+  ];
+
+  /// „Tribunalul Prahova”, „Tribunalul Prahova și Judecătoria Ploiești” sau
+  /// „Tribunalul Prahova și încă 3 instanțe”; gol = toate.
+  String get numeInstante => descrieInstante(institutii);
+
   /// True dacă are cel puțin un criteriu pe care portalul îl acceptă singur.
   bool get areCriteriuPrincipal => numar.isNotEmpty || obiect.isNotEmpty || parte.isNotEmpty;
 
   String get interval => switch ((dataStart, dataStop)) {
-        (null, null) => '',
-        (final a?, null) => 'din ${formateazaData(a)}',
-        (null, final b?) => 'până la ${formateazaData(b)}',
-        (final a?, final b?) => '${formateazaData(a)}–${formateazaData(b)}',
-      };
+    (null, null) => '',
+    (final a?, null) => 'din ${formateazaData(a)}',
+    (null, final b?) => 'până la ${formateazaData(b)}',
+    (final a?, final b?) => '${formateazaData(a)}–${formateazaData(b)}',
+  };
 
   String get eticheta => [
-        numar,
-        obiect,
-        parte,
-        if (institutie.isNotEmpty) numeInstanta(institutie),
-        interval,
-      ].where((e) => e.isNotEmpty).join(' · ');
+    numar,
+    obiect,
+    parte,
+    if (institutie.isNotEmpty) numeInstante,
+    interval,
+  ].where((e) => e.isNotEmpty).join(' · ');
 
   static String _data(DateTime? d) => d?.toIso8601String() ?? '';
 
@@ -69,6 +80,13 @@ class CautareRecenta {
   @override
   int get hashCode => _codifica().hashCode;
 }
+
+String descrieInstante(List<String> coduri) => switch (coduri.length) {
+  0 => '',
+  1 => numeInstanta(coduri[0]),
+  2 => '${numeInstanta(coduri[0])} și ${numeInstanta(coduri[1])}',
+  _ => '${numeInstanta(coduri[0])} și încă ${coduri.length - 1} instanțe',
+};
 
 /// Ultimele căutări, păstrate pe dispozitiv.
 class CautariRecenteService extends ChangeNotifier {
