@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/biblioteca_service.dart';
 import '../services/monitorizare_service.dart';
@@ -23,6 +24,28 @@ class MonitorizateScreen extends StatefulWidget {
 
 class _MonitorizateScreenState extends State<MonitorizateScreen> {
   bool _verifica = false;
+
+  /// Numărul de dosare la care utilizatorul a închis avertizarea de plafon.
+  /// Ea reapare doar dacă urmărește și mai multe dosare de atât.
+  int? _plafonAscunsLa;
+  static const _cheiePlafonAscuns = 'avertizare_plafon_ascunsa_la';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _plafonAscunsLa = p.getInt(_cheiePlafonAscuns));
+    });
+  }
+
+  Future<void> _ascundePlafon(int dosare) async {
+    setState(() => _plafonAscunsLa = dosare);
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(_cheiePlafonAscuns, dosare);
+  }
+
+  bool _aratPlafon(int dosare) =>
+      dosare > plafonDosare && (_plafonAscunsLa == null || dosare > _plafonAscunsLa!);
 
   Future<void> _verificaAcum() async {
     if (_verifica) return;
@@ -170,9 +193,13 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                 ],
                               ),
                             ),
-                            if (dosare.length > plafonDosare) ...[
+                            if (_aratPlafon(dosare.length)) ...[
                               const SizedBox(height: 12),
-                              AvertizarePlafon(dosare: dosare.length, onAlege: () => _selecteaza()),
+                              AvertizarePlafon(
+                                dosare: dosare.length,
+                                onAlege: () => _selecteaza(),
+                                onInchide: () => _ascundePlafon(dosare.length),
+                              ),
                             ],
                             if (dosare.length > 1)
                               Align(

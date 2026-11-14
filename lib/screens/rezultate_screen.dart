@@ -360,6 +360,8 @@ class _RezultateScreenState extends State<RezultateScreen> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
+        showCloseIcon: true,
         duration: const Duration(seconds: 8),
         content: Text(
           '${noi.length == 1 ? 'Un dosar adăugat' : '${_dosareText(noi.length)} adăugate'} '
