@@ -10,6 +10,7 @@ import '../services/act_export.dart';
 import '../services/act_structura.dart';
 import '../services/forma_consolidata.dart';
 import '../services/legislatie_service.dart';
+import '../services/trimitere.dart';
 import '../theme/app_theme.dart';
 
 /// Un act normativ, așezat ca o lege: titluri și capitole centrate, articole
@@ -42,6 +43,7 @@ class ActNormativScreen extends StatefulWidget {
     String titlu = '',
     LegislatieService? service,
     FormaConsolidataService? formaService,
+    String? articolInitial,
   }) => ActNormativScreen(
     act: ActNormativ(
       tipAct: '',
@@ -54,6 +56,7 @@ class ActNormativScreen extends StatefulWidget {
     ),
     service: service,
     formaService: formaService,
+    articolInitial: articolInitial,
   );
 
   @override
@@ -112,7 +115,9 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     ActeSalvateService.instance.incarca();
     _incarcaMarime();
     _structureaza();
-    _incarcaLaZi();
+    _incarcaLaZi().whenComplete(() {
+      if (mounted && _aprobare == null) _cautaAprobarea();
+    });
   }
 
   @override
@@ -197,16 +202,28 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     );
   }
 
-  /// Actul care a aprobat regulamentul / norma: din nota de sub antet.
+  /// Actul care a aprobat regulamentul / norma: din nota de sub antet sau,
+  /// la actele vechi fără notă, găsit prin căutare.
   AprobareAct? get _aprobare =>
       _actAfisat.aprobatPrin ??
       _act.aprobatPrin ??
-      (_forma == null ? null : aprobareDinText(_forma!.textSimplu));
+      (_forma == null ? null : aprobareDinText(_forma!.textSimplu)) ??
+      _aprobareCautata;
+
+  AprobareAct? _aprobareCautata;
+
+  Future<void> _cautaAprobarea() async {
+    if (!seAproba(_act) || _act.aprobatPrin != null) return;
+    final a = await (widget.service ?? LegislatieService.instance).aprobareAct(
+      _act,
+    );
+    if (a != null && mounted) setState(() => _aprobareCautata = a);
+  }
 
   /// Linkul notei „Aprobat prin …” din forma consolidată, dacă există.
   String? get _idAprobare {
     final f = _forma;
-    if (f == null) return null;
+    if (f == null) return _aprobareCautata?.idAct;
     for (final b in f.blocuri.take(5)) {
       if (b.tip == TipBloc.nota &&
           b.text.toLowerCase().contains('aprobat') &&
@@ -214,10 +231,10 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
         return b.legaturi.first.idAct;
       }
     }
-    return null;
+    return _aprobareCautata?.idAct;
   }
 
-  void _deschideActDupaId(String id, [String titlu = '']) {
+  void _deschideActDupaId(String id, [String titlu = '', String? articol]) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ActNormativScreen.dupaId(
@@ -225,7 +242,33 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
           titlu: titlu,
           service: widget.service,
           formaService: widget.formaService,
+          articolInitial: articol,
         ),
+      ),
+    );
+  }
+
+  /// Atingerea unei trimiteri: o fereastră mică cu ce spune prevederea, cu
+  /// opțiunea de a deschide tot actul.
+  void _previzualizeazaTrimitere(String id, String textLink, String inainte) {
+    final t = trimitereDin(textLink, inainte);
+    final acelasiAct =
+        _forma != null && idDinLink(_act.linkHtml) == id && t != null;
+    showDialog<void>(
+      context: context,
+      builder: (_) => _FereastraTrimitere(
+        textLink: textLink,
+        trimitere: t,
+        forma: acelasiAct ? Future.value(_forma) : _fs.forma(id),
+        marime: _marime,
+        onDeschide: () {
+          Navigator.of(context).pop();
+          _deschideActDupaId(
+            id,
+            textLink,
+            t != null && RegExp(r'^\d').hasMatch(t.articol) ? t.articol : null,
+          );
+        },
       ),
     );
   }
@@ -700,7 +743,7 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
                     onArticol: b.tip == TipBloc.articol
                         ? () => _actiuniArticol(k)
                         : null,
-                    onLegatura: _deschideActDupaId,
+                    onLegatura: _previzualizeazaTrimitere,
                   );
                 },
               ),
@@ -1418,7 +1461,9 @@ class _VizualBloc extends StatefulWidget {
   final bool curent;
   final bool evidentiat;
   final VoidCallback? onArticol;
-  final void Function(String id, String titlu)? onLegatura;
+
+  /// Id-ul actului, textul linkului și textul de dinaintea lui.
+  final void Function(String id, String titlu, String inainte)? onLegatura;
 
   const _VizualBloc({
     required this.bloc,
@@ -1452,11 +1497,22 @@ class _VizualBlocState extends State<_VizualBloc> {
     super.dispose();
   }
 
-  TapGestureRecognizer _atingere(String id, String titlu) {
+  TapGestureRecognizer _atingere(String id, String titlu, String inainte) {
     final r = TapGestureRecognizer()
-      ..onTap = () => widget.onLegatura?.call(id, titlu);
+      ..onTap = () => widget.onLegatura?.call(id, titlu, inainte);
     _atingeri.add(r);
     return r;
+  }
+
+  /// Textul original al linkului către actul [id] („Punctul 3, Articolul III
+  /// din ORDONANȚA DE URGENȚĂ nr. 80 …”), ca fereastra să arate prevederea.
+  String? _textLegatura(String id) {
+    for (final l in bloc.legaturi) {
+      if (l.idAct == id && l.end <= bloc.text.length) {
+        return bloc.text.substring(l.start, l.end);
+      }
+    }
+    return null;
   }
 
   /// Textul cu trimiterile către alte acte subliniate și deschizibile; la
@@ -1486,7 +1542,11 @@ class _VizualBlocState extends State<_VizualBloc> {
         TextSpan(
           text: t,
           style: stilLegatura,
-          recognizer: _atingere(l.idAct, t),
+          recognizer: _atingere(
+            l.idAct,
+            t,
+            text.substring(l.start < 60 ? 0 : l.start - 60, l.start),
+          ),
         ),
       );
       start = l.end;
@@ -1587,7 +1647,11 @@ class _VizualBlocState extends State<_VizualBloc> {
                                 ),
                           recognizer: mod.idAct == null
                               ? null
-                              : _atingere(mod.idAct!, act),
+                              : _atingere(
+                                  mod.idAct!,
+                                  _textLegatura(mod.idAct!) ?? act,
+                                  '',
+                                ),
                         ),
                       ],
                     ),
@@ -1897,3 +1961,180 @@ class _CuprinsState extends State<_Cuprins> {
     );
   }
 }
+
+/// Fereastra cu prevederea la care trimite un link: articolul (sau doar
+/// alineatul / litera) din forma la zi a actului, ca pe portal.
+class _FereastraTrimitere extends StatelessWidget {
+  final String textLink;
+  final Trimitere? trimitere;
+  final Future<FormaConsolidata?> forma;
+  final double marime;
+  final VoidCallback onDeschide;
+
+  const _FereastraTrimitere({
+    required this.textLink,
+    required this.trimitere,
+    required this.forma,
+    required this.marime,
+    required this.onDeschide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final inaltime = MediaQuery.sizeOf(context).height * 0.62;
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: inaltime),
+        child: FutureBuilder<FormaConsolidata?>(
+          future: forma,
+          builder: (context, snap) {
+            final f = snap.data;
+            final blocuri = f == null || trimitere == null
+                ? const <BlocAct>[]
+                : blocuriTrimitere(f.blocuri, trimitere!);
+            final cale = blocuri.isEmpty
+                ? ''
+                : caleArticol(f!.blocuri, blocuri.first);
+            final titluAct = f == null
+                ? textLink
+                : titluCurat(
+                    [f.titlu, f.descriere].where((x) => x.isNotEmpty).join(' '),
+                  );
+            Widget corp;
+            if (snap.connectionState != ConnectionState.done) {
+              corp = const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            } else if (blocuri.isNotEmpty) {
+              final exact = trimitereExacta(blocuri, trimitere!);
+              corp = Flexible(
+                child: SelectionArea(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    children: [
+                      if (!exact)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10, bottom: 2),
+                          child: Text(
+                            '${_majuscula(trimitere!.eticheta.replaceFirst(RegExp(r'^Art\. \S+ '), ''))} nu mai există în forma la zi; mai jos e tot articolul.',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      for (final b in blocuri)
+                        _VizualBloc(
+                          bloc: b,
+                          marime: marime * 0.92,
+                          termen: '',
+                          curent: false,
+                          evidentiat: false,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            } else {
+              corp = Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Text(
+                  snap.hasError || (f == null && trimitere != null)
+                      ? 'Nu am putut încărca textul. Deschide actul ca să-l citești.'
+                      : trimitere == null
+                      ? 'Trimiterea este la tot actul.'
+                      : 'Nu am găsit ${trimitere!.eticheta.toLowerCase()} în forma la zi a actului.',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 6, 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              titluAct,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            if (trimitere != null || cale.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                [
+                                  if (cale.isNotEmpty) cale,
+                                  if (trimitere != null) trimitere!.eticheta,
+                                ].join(' › '),
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Închide',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                corp,
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 4,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Închide'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: onDeschide,
+                        icon: const Icon(Icons.open_in_new, size: 18),
+                        label: const Text('Deschide actul'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+String _majuscula(String s) =>
+    s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
