@@ -624,57 +624,59 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       ),
       body: blocuri == null
           ? const Center(child: CircularProgressIndicator())
-          : ScrollablePositionedList.builder(
-              itemScrollController: _lista,
-              itemPositionsListener: _pozitii,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              itemCount: blocuri.length + 1,
-              itemBuilder: (context, i) {
-                if (i == 0)
-                  return _AntetAct(
-                    act: _actAfisat,
-                    goala:
-                        blocuri.isEmpty &&
-                        _numeCod == null &&
-                        _forma == null &&
-                        !_seIncarcaLaZi,
-                    onPortal: _deschidePortal,
-                    stare: _CardStare(
-                      stare: _stare,
-                      forma: _forma,
-                      seIncarca: _seIncarcaLaZi,
-                      eroare: _eroareLaZi && idDinLink(_act.linkHtml) != null,
-                      formaInitiala: _formaInitiala,
-                      nrIstoric: _nrIstoric,
-                      onComuta: _comutaForma,
-                      onIstoric: _deschideIstoric,
-                      onDeschideAct: _deschideActDupaId,
-                    ),
-                    cod: _numeCod == null
-                        ? null
-                        : _CardCod(
-                            nume: _numeCod!,
-                            seCauta: _cautCod,
-                            gasit: _cod != null,
-                            onDeschide: _deschideCod,
-                          ),
+          : SelectionArea(
+              child: ScrollablePositionedList.builder(
+                itemScrollController: _lista,
+                itemPositionsListener: _pozitii,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                itemCount: blocuri.length + 1,
+                itemBuilder: (context, i) {
+                  if (i == 0)
+                    return _AntetAct(
+                      act: _actAfisat,
+                      goala:
+                          blocuri.isEmpty &&
+                          _numeCod == null &&
+                          _forma == null &&
+                          !_seIncarcaLaZi,
+                      onPortal: _deschidePortal,
+                      stare: _CardStare(
+                        stare: _stare,
+                        forma: _forma,
+                        seIncarca: _seIncarcaLaZi,
+                        eroare: _eroareLaZi && idDinLink(_act.linkHtml) != null,
+                        formaInitiala: _formaInitiala,
+                        nrIstoric: _nrIstoric,
+                        onComuta: _comutaForma,
+                        onIstoric: _deschideIstoric,
+                        onDeschideAct: _deschideActDupaId,
+                      ),
+                      cod: _numeCod == null
+                          ? null
+                          : _CardCod(
+                              nume: _numeCod!,
+                              seCauta: _cautCod,
+                              gasit: _cod != null,
+                              onDeschide: _deschideCod,
+                            ),
+                    );
+                  final k = i - 1;
+                  final b = blocuri[k];
+                  final potrivireCurenta =
+                      _potriviri.isNotEmpty && _potriviri[_curent] == k;
+                  return _VizualBloc(
+                    bloc: b,
+                    marime: _marime,
+                    termen: _cautareDeschisa ? _cauta.text : '',
+                    curent: potrivireCurenta,
+                    evidentiat: _articolEvidentiat == k,
+                    onArticol: b.tip == TipBloc.articol
+                        ? () => _actiuniArticol(k)
+                        : null,
+                    onLegatura: _deschideActDupaId,
                   );
-                final k = i - 1;
-                final b = blocuri[k];
-                final potrivireCurenta =
-                    _potriviri.isNotEmpty && _potriviri[_curent] == k;
-                return _VizualBloc(
-                  bloc: b,
-                  marime: _marime,
-                  termen: _cautareDeschisa ? _cauta.text : '',
-                  curent: potrivireCurenta,
-                  evidentiat: _articolEvidentiat == k,
-                  onArticol: b.tip == TipBloc.articol
-                      ? () => _actiuniArticol(k)
-                      : null,
-                  onLegatura: _deschideActDupaId,
-                );
-              },
+                },
+              ),
             ),
     );
   }
@@ -891,7 +893,7 @@ class _AntetAct extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          SelectableText(
+          Text(
             titluCurat(act.titlu.isEmpty ? act.denumireScurta : act.titlu),
             textAlign: TextAlign.center,
             style: const TextStyle(
