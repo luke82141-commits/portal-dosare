@@ -21,17 +21,74 @@ class BlocAct {
   /// blocurile de structură e articolul următor sau null.
   final String? articol;
 
+  /// La notele „(la 30-06-2021, ... a fost modificat de ...)” din forma
+  /// consolidată: ce s-a schimbat, când și prin ce act.
+  final Modificare? modificare;
+
+  /// Textul a fost schimbat față de forma inițială (albastru pe portal).
+  final bool actualizat;
+
+  /// Trimiteri către alte acte, în [text]: pot fi deschise în aplicație.
+  final List<Legatura> legaturi;
+
   const BlocAct(
     this.tip, {
     this.eticheta = '',
     this.titlu = '',
     this.text = '',
     this.articol,
+    this.modificare,
+    this.actualizat = false,
+    this.legaturi = const [],
   });
+
+  /// „Abrogat.”, „Abrogată.”: elementul nu mai e în vigoare.
+  bool get abrogat => RegExp(
+    r'^\(?abrogat[ăa]?\.?\)?$',
+    caseSensitive: false,
+  ).hasMatch(text.trim());
 
   /// Tot textul blocului, pentru căutare și copiere.
   String get textComplet =>
       [eticheta, titlu, text].where((s) => s.isNotEmpty).join(' ');
+}
+
+enum TipModificare { modificat, completat, abrogat, altul }
+
+/// „(la 30-06-2021, Alineatul (2) din Articolul 10 a fost abrogat de
+/// Punctul 5, Articolul III din OUG nr. 80/2021)”.
+class Modificare {
+  final DateTime? data;
+  final TipModificare tip;
+
+  /// Cum scrie portalul: „modificat”, „completat”, „abrogat”, „înlocuită”.
+  final String verb;
+
+  /// „Alineatul (2) din Articolul 10”.
+  final String element;
+
+  /// Actul care a făcut schimbarea, așa cum e scris pe portal.
+  final String act;
+
+  /// Id-ul actului de pe legislatie.just.ro, dacă e dat.
+  final String? idAct;
+
+  const Modificare({
+    this.data,
+    required this.tip,
+    this.verb = '',
+    required this.element,
+    required this.act,
+    this.idAct,
+  });
+}
+
+/// O trimitere din text către alt act: caracterele [start, end) din text.
+class Legatura {
+  final int start;
+  final int end;
+  final String idAct;
+  const Legatura(this.start, this.end, this.idAct);
 }
 
 final _reStructura = RegExp(
