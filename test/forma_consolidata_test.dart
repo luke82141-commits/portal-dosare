@@ -261,7 +261,7 @@ void main() {
     await tester.runAsync(() async {
       for (
         var i = 0;
-        i < 50 && find.textContaining('consolidat la').evaluate().isEmpty;
+        i < 50 && find.textContaining('ultima modificare').evaluate().isEmpty;
         i++
       ) {
         await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -270,8 +270,10 @@ void main() {
     });
     await tester.pump();
     expect(find.text('În vigoare'), findsOneWidget);
-    expect(find.textContaining('consolidat la 08.05.2026'), findsOneWidget);
+    expect(find.textContaining('ultima modificare: 08.05.2026'), findsOneWidget);
     expect(find.textContaining('Istoric ('), findsOneWidget);
+    // Textul legii se poate selecta și copia.
+    expect(find.byType(SelectionArea), findsOneWidget);
 
     await tester.tap(find.text('Forma inițială'));
     await tester.pump();
