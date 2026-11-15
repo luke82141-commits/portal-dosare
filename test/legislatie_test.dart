@@ -454,7 +454,9 @@ void main() {
         if (r.headers['SOAPAction']!.contains('GetToken')) {
           return http.Response(_raspunsToken, 200);
         }
-        if (r.body.contains('<d:SearchTitlu>incendiilor</d:SearchTitlu>')) {
+        if (r.body.contains(
+          '<d:SearchTitlu>incendi* aparare*</d:SearchTitlu>',
+        )) {
           return http.Response.bytes(
             _utf8(
               _raspunsCautare([
@@ -841,6 +843,81 @@ void main() {
   });
 
   group('serviciul', () {
+    test('rădăcini cu „*” pentru căutarea în orice formă', () {
+      expect(interogarePrefixe('regulament receptii'), 'regulament* recept*');
+      expect(interogarePrefixe('codul urbanismului'), 'cod* urbanism*');
+      expect(
+        interogarePrefixe('legea apararea impotriva incendiilor'),
+        'aparare* impotriv* incendi*',
+      );
+      expect(interogarePrefixe('ordinea publica AND or'), 'ordine* public*');
+      expect(interogarePrefixe('de la'), '');
+      expect(varianteFaraUnCuvant('regulament* recept*'), [
+        'regulament*',
+        'recept*',
+      ]);
+    });
+
+    test('„regulament receptii” găsește Regulamentul de recepție', () async {
+      final cereri = <String>[];
+      final client = MockClient((r) async {
+        if (r.headers['SOAPAction']!.contains('GetToken'))
+          return http.Response(_raspunsToken, 200);
+        cereri.add(r.body);
+        if (r.body.contains(
+          '<d:SearchTitlu>regulament* recept*</d:SearchTitlu>',
+        )) {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(
+                  numar: '1323',
+                  id: '1',
+                  titlu: 'ORDIN nr. 1.323 din 2026 pentru aprobarea Regulamentului de recepţie şi înscriere în cadastru',
+                ),
+                _lege(
+                  numar: '273',
+                  id: '2',
+                  titlu: 'HOTĂRÂRE nr. 273 din 14 iunie 1994 privind aprobarea Regulamentului de recepţie a lucrărilor de construcţii',
+                ),
+              ]),
+            ),
+            200,
+          );
+        }
+        return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+      });
+      final p = await LegislatieService.cuClient(client)
+          .cauta(const CerereLegislatie(text: 'regulament receptii'));
+      expect(p.acte.map((a) => a.numar).toSet(), {'1323', '273'});
+    });
+
+    test('fără titluri cu toate cuvintele, încearcă fără câte unul', () async {
+      final titluri = <String>[];
+      final client = MockClient((r) async {
+        if (r.headers['SOAPAction']!.contains('GetToken'))
+          return http.Response(_raspunsToken, 200);
+        final m = RegExp(r'<d:SearchTitlu>(.*?)</d:SearchTitlu>')
+            .firstMatch(r.body);
+        if (m != null) titluri.add(m.group(1)!);
+        if (m?.group(1) == 'incend*') {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(numar: '307', titlu: 'LEGE nr. 307 privind incendiilor'),
+              ]),
+            ),
+            200,
+          );
+        }
+        return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+      });
+      final p = await LegislatieService.cuClient(client)
+          .cauta(const CerereLegislatie(text: 'incendii xyzw'));
+      expect(p.acte.single.numar, '307');
+      expect(titluri.first, 'incend* xyzw*');
+    });
+
     test(
       'cere token o dată, apoi caută; cererea identică vine din memorie',
       () async {
@@ -869,14 +946,10 @@ void main() {
         if (r.headers['SOAPAction']!.contains('GetToken'))
           return http.Response(_raspunsToken, 200);
         cereri.add(r.body);
-        if (r.body.contains('<d:SearchTitlu>urbanismului</d:SearchTitlu>')) {
+        if (r.body.contains('<d:SearchTitlu>cod* urbanism*</d:SearchTitlu>')) {
           return http.Response.bytes(
             _utf8(
               _raspunsCautare([
-                _lege(
-                  numar: '7',
-                  titlu: 'HOTĂRÂRE privind certificatul de urbanism',
-                ),
                 _lege(
                   numar: '169',
                   titlu: 'CODUL amenajării teritoriului, urbanismului şi construcţiilor',
