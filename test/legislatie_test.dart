@@ -303,6 +303,50 @@ void main() {
     test('fără potrivire', () => expect(fragmentDinAct(text, 'divorț'), isNull));
   });
 
+  group('titlul din card', () {
+    ActNormativ act(String tip, String nr, String titlu) =>
+        parseazaRaspunsCautare(_raspunsCautare([_lege(tip: tip, numar: nr, titlu: titlu)])).single;
+
+    test('codul: nume scurt, data și „republicat” dedesubt', () {
+      final t = titluPrezentare(
+        act('LEGE', '287', 'CODUL CIVIL din 17 iulie 2009 (**republicat**)'),
+      );
+      expect(t.principal, 'Codul civil');
+      expect(t.secundar, 'din 17 iulie 2009 · republicat');
+    });
+
+    test('legea: fără tip și număr repetate', () {
+      final t = titluPrezentare(
+        act(
+          'LEGE',
+          '7',
+          'LEGE nr. 7 din 13 martie 1996 a cadastrului și a publicității imobiliare',
+        ),
+      );
+      expect(t.principal, 'Legea cadastrului și a publicității imobiliare');
+      expect(t.secundar, 'din 13 martie 1996');
+    });
+
+    test('OUG și hotărâre', () {
+      expect(
+        titluPrezentare(
+          act(
+            'ORDONANTA DE URGENTA',
+            '195',
+            'ORDONANȚĂ DE URGENȚĂ nr. 195 din 12 decembrie 2002 privind circulația pe drumurile publice',
+          ),
+        ).principal,
+        'Codul rutier',
+      );
+      expect(
+        titluPrezentare(
+          act('HOTARARE', '700', 'HOTĂRÂRE nr. 700 din 4 iulie 2012 pentru modificarea normelor'),
+        ).principal,
+        'Hotărârea pentru modificarea normelor',
+      );
+    });
+  });
+
   group('sugestii', () {
     test('„codul civ” propune Codul civil primul, apoi procedura civilă', () {
       final s = sugestii('codul civ');

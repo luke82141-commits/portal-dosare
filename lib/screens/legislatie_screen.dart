@@ -869,6 +869,7 @@ class _CardAct extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = act.dataVigoare;
     final fragment = fragmentDinAct(act.text, termen);
+    final titlu = titluPrezentare(act);
     final (culoare, fundal) = culoriTip(act.tipAct);
     final meta = [
       if (act.emitent.isNotEmpty) act.emitent,
@@ -919,23 +920,25 @@ class _CardAct extends StatelessWidget {
                     const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text.rich(
-                  TextSpan(
-                    children: _evidentiaza(
-                      titluCurat(act.titlu.isEmpty ? act.denumireScurta : act.titlu),
-                      termen,
-                    ),
-                  ),
+                  TextSpan(children: _evidentiaza(titlu.principal, termen)),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.35,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.onSurface,
                   ),
                 ),
+                if (titlu.secundar.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    titlu.secundar,
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
                 if (fragment != null) ...[
                   const SizedBox(height: 10),
                   Container(

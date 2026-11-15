@@ -914,3 +914,65 @@ class ActeSalvateService extends ChangeNotifier {
 /// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”).
 String titluCurat(String titlu) =>
     titlu.replaceAll(RegExp(r'\*+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+/// Titlul arătat în cardul de rezultat, fără majusculele și fără repetarea
+/// tipului și numărului (care sunt deja în eticheta colorată):
+/// „LEGE nr. 7 din 13 martie 1996 a cadastrului...” devine
+/// „Legea cadastrului...” cu „din 13 martie 1996” dedesubt;
+/// „CODUL CIVIL din 17 iulie 2009 (**republicat**)” devine „Codul civil”
+/// cu „din 17 iulie 2009 · republicat”.
+({String principal, String secundar}) titluPrezentare(ActNormativ a) {
+  var t = titluCurat(a.titlu);
+  if (t.isEmpty) return (principal: a.denumireScurta, secundar: '');
+
+  final note = <String>[];
+  t = t.replaceAllMapped(RegExp(r'\s*\(([^)]{3,40})\)\s*$'), (m) {
+    note.add(m[1]!.toLowerCase());
+    return '';
+  });
+
+  String? data;
+  final d = RegExp(r'\bdin (\d{1,2} [a-zA-ZăâîșțşţĂÂÎȘȚ]+ \d{4})\b').firstMatch(t);
+  if (d != null) {
+    data = 'din ${d[1]!.toLowerCase()}';
+    t = (t.substring(0, d.start) + t.substring(d.end)).replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  // Tipul și numărul de la început.
+  final tip = RegExp(
+    r'^(LEGEA?|ORDONAN[ȚŢT][AĂ] DE URGEN[ȚŢT][AĂ]|ORDONAN[ȚŢT][AĂ]|HOT[AĂ]R[ÂA]REA?|DECRETUL|DECRET|ORDINUL|ORDIN|DECIZIA|DECIZIE)'
+    r'(\s+nr\.?\s*[\w./-]+)?\s*',
+    caseSensitive: false,
+  ).firstMatch(t);
+  var principal = t;
+  if (tip != null && tip.end < t.length) {
+    var rest = t.substring(tip.end).trim();
+    rest = rest.replaceFirst(RegExp(r'^a\s+', caseSensitive: false), '');
+    final articulat = switch (fataDiacritice(tip[1]!).toUpperCase()) {
+      final x when x.startsWith('ORDONANTA DE') => 'Ordonanța de urgență',
+      final x when x.startsWith('ORDONANTA') => 'Ordonanța',
+      final x when x.startsWith('HOTAR') => 'Hotărârea',
+      final x when x.startsWith('DECRET') => 'Decretul',
+      final x when x.startsWith('ORDIN') => 'Ordinul',
+      final x when x.startsWith('DECIZI') => 'Decizia',
+      _ => 'Legea',
+    };
+    principal = '$articulat $rest';
+  } else if (t == t.toUpperCase()) {
+    final mic = t.toLowerCase();
+    principal = mic.isEmpty ? t : mic[0].toUpperCase() + mic.substring(1);
+  }
+
+  // Actele cunoscute își păstrează numele scurt („Codul civil”).
+  for (final c in acteCunoscute) {
+    if (c.numar.isNotEmpty &&
+        c.numar == a.numar.trim() &&
+        c.an == a.an &&
+        c.nume.startsWith('Codul')) {
+      principal = c.nume;
+    }
+  }
+  if (principal.length > 1) principal = principal[0].toUpperCase() + principal.substring(1);
+
+  return (principal: principal, secundar: [?data, ...note].join(' · '));
+}
