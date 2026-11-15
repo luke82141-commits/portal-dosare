@@ -281,7 +281,7 @@ void main() {
     test('textul real de pe portal: „+”, denumiri și alineate lipite', () {
       const real =
           'Aplicarea legii penale în timp\n+\nArticolul 3 Activitatea legii penale Legea penală se '
-          'aplică infracţiunilor săvârșite în timpul cât ea se află în vigoare.\n+\n'
+          'aplică infracţiunilor săvârșite în timpul cât ea se află în vigoare. ...\n+\n'
           'Articolul 4 Aplicarea legii penale de dezincriminare Legea penală nu se aplică '
           'faptelor săvârșite sub legea veche, dacă nu mai sunt prevăzute de legea nouă. În acest '
           'caz, executarea pedepselor, a măsurilor educative și a măsurilor de siguranţă, '
@@ -289,11 +289,12 @@ void main() {
           'judecătorești privitoare la aceste fapte încetează prin intrarea în vigoare a legii noi.\n+\n'
           'Articolul 5 Aplicarea legii penale mai favorabile până la judecarea definitivă a cauzei '
           '(1) În cazul în care au intervenit una sau mai multe legi penale, se aplică legea mai '
-          'favorabilă. (2) Dispoziţiile alin. (1) se aplică și actelor normative următoare: '
+          'favorabilă. ... (2) Dispoziţiile alin. (1) se aplică și actelor normative următoare: '
           'a) declarate neconstituţionale; b) aprobate cu modificări.\n+\n'
           'Articolul 6 Prezenta lege intră în vigoare la data publicării în Monitorul Oficial.';
       final r = structureazaAct(real);
       expect(r.where((x) => x.textComplet == '+'), isEmpty);
+      expect(r.where((x) => x.text.contains('...')), isEmpty);
       final art = r.where((x) => x.tip == TipBloc.articol).toList();
       expect(art.map((x) => x.eticheta), [
         'Art. 3',
@@ -498,6 +499,93 @@ void main() {
         expect(acteCunoscutePotrivite('codul urbanismului').first.numar, '169');
       },
     );
+
+    test('legea care aprobă un cod: antet scos și codul găsit separat', () {
+      const titlu =
+          'LEGE nr. 169 din 5 august 2026 privind Codul amenajării teritoriului, '
+          'urbanismului și construcţiilor EMITENT Parlamentul PUBLICAT ÎN Monitorul Oficial '
+          'nr. 661 din 10 august 2026';
+      final lege = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(
+            numar: '169',
+            titlu: titlu,
+            text:
+                'LEGE nr. 169 din 5 august 2026 privind Codul amenajării teritoriului, '
+                'urbanismului și construcțiilor EMITENT PARLAMENTUL ROMÂNIEI Publicat în '
+                'MONITORUL OFICIAL nr. 661 din 10 august 2026 CODUL AMENAJĂRII TERITORIULUI, '
+                'URBANISMULUI ȘI CONSTRUCȚIILOR',
+          ),
+        ]),
+      ).single;
+      expect(lege.titlu, endsWith('construcţiilor'));
+      expect(
+        lege.text,
+        'CODUL AMENAJĂRII TERITORIULUI, URBANISMULUI ȘI CONSTRUCȚIILOR',
+      );
+      final nume = numeCodAnexat(lege)!;
+      expect(nume, startsWith('Codul amenajării teritoriului'));
+      final rezultate = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(numar: '169', titlu: titlu),
+          _lege(numar: '1', titlu: 'HOTĂRÂRE privind certificatul de urbanism'),
+          _lege(
+            numar: '0',
+            tip: 'COD',
+            titlu: 'CODUL amenajării teritoriului, urbanismului şi construcţiilor din 5 august 2026',
+          ),
+        ]),
+      );
+      expect(alegeCodAnexat(rezultate, lege, nume)?.tipAct, 'COD');
+      expect(numeCodAnexat(rezultate[1]), isNull);
+    });
+
+    test('„legea 307” fără an: tipul și numărul, din toți anii', () {
+      final d = CerereLegislatie.dinText('legea 307');
+      expect(d.cerere.numar, '307');
+      expect(d.cerere.an, isNull);
+      expect(d.tip, 'LEGE');
+      final s = sugestii('legea 307').first;
+      expect(s.titlu, 'Lege nr. 307');
+      expect(s.deschideDirect, isFalse);
+      expect(
+        CerereLegislatie.dinText('codul civil 2').cerere.text,
+        'codul civil 2',
+      );
+    });
+
+    test('„legea 307 2006” și „legea 307 din 2006” sunt număr și an', () {
+      for (final x in [
+        'legea 307 2006',
+        'Legea nr. 307 din 2006',
+        'legea 307/2006',
+      ]) {
+        final d = CerereLegislatie.dinText(x);
+        expect(d.cerere.numar, '307', reason: x);
+        expect(d.cerere.an, 2006, reason: x);
+        expect(d.tip, 'LEGE', reason: x);
+      }
+    });
+
+    test('filtrul de tip se uită și la titlu', () {
+      final acte = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(
+            tip: 'ACT',
+            numar: '307',
+            titlu: 'LEGE nr. 307 din 12 iulie 2006 privind apărarea',
+          ),
+        ]),
+      );
+      expect(
+        aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'LEGE'})),
+        hasLength(1),
+      );
+      expect(
+        aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'HOTARARE'})),
+        isEmpty,
+      );
+    });
 
     test('potrivirea exactă', () {
       final acte = parseazaRaspunsCautare(

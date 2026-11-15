@@ -85,6 +85,14 @@ String _preproceseaza(String text) {
       .replaceAll('\r\n', '\n')
       .split('\n')
       .map((l) => l.replaceFirst(RegExp(r'^\s*\+(\s+|$)'), ''))
+      // După fiecare paragraf portalul pune „...” (marcajul pentru istoric).
+      .map(
+        (l) => l.replaceAllMapped(
+          RegExp(r'([.;:!?])[ \t\u00a0]*(?:\.\.\.|…)(?=\s|$)'),
+          (m) => m[1]!,
+        ),
+      )
+      .map((l) => l.replaceFirst(RegExp(r'^\s*(?:\.\.\.|…)\s*$'), ''))
       .where((l) => l.trim().isNotEmpty)
       .join('\n');
   final dupaArticole = faraPlus.replaceAllMapped(

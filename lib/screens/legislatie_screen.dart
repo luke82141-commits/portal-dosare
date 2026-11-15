@@ -38,7 +38,8 @@ const _cheieRecente = 'legislatie_cautari_recente';
 class _LegislatieScreenState extends State<LegislatieScreen> {
   final _text = TextEditingController();
   final _focus = FocusNode();
-  late final LegislatieService _service = widget.service ?? LegislatieService.instance;
+  late final LegislatieService _service =
+      widget.service ?? LegislatieService.instance;
 
   bool _doarTitlu = false;
   FiltreLegislatie _filtre = const FiltreLegislatie();
@@ -64,7 +65,8 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     final c = widget.cerereInitiala;
     if (c != null) {
       _text.text = widget.etichetaInitiala ?? _textPentru(c);
-      if (widget.tipInitial != null) _filtre = FiltreLegislatie(tipuri: {widget.tipInitial!});
+      if (widget.tipInitial != null)
+        _filtre = FiltreLegislatie(tipuri: {widget.tipInitial!});
       WidgetsBinding.instance.addPostFrameCallback((_) => _porneste(c));
     }
   }
@@ -77,14 +79,16 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
   }
 
   String _textPentru(CerereLegislatie c) {
-    if (c.numar.isNotEmpty) return c.an == null ? c.numar : '${c.numar}/${c.an}';
+    if (c.numar.isNotEmpty)
+      return c.an == null ? c.numar : '${c.numar}/${c.an}';
     return c.text.isNotEmpty ? c.text : c.titlu;
   }
 
   Future<void> _incarcaRecente() async {
     try {
       final p = await SharedPreferences.getInstance();
-      if (mounted) setState(() => _recente = p.getStringList(_cheieRecente) ?? []);
+      if (mounted)
+        setState(() => _recente = p.getStringList(_cheieRecente) ?? []);
     } catch (_) {}
   }
 
@@ -120,7 +124,8 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
       (s) => s.fel == FelSugestie.numar || s.fel == FelSugestie.actCunoscut,
     );
     final (:rest, :articol) = extrageArticol(intrare);
-    if (directa.isNotEmpty && (directa.first.fel == FelSugestie.numar || rest.length >= 4)) {
+    if (directa.isNotEmpty &&
+        (directa.first.fel == FelSugestie.numar || rest.length >= 4)) {
       _aplica(directa.first, intrare);
       return;
     }
@@ -129,7 +134,9 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         _doarTitlu ? FelSugestie.titlu : FelSugestie.text,
         rest,
         '',
-        _doarTitlu ? CerereLegislatie(titlu: rest) : CerereLegislatie(text: rest),
+        _doarTitlu
+            ? CerereLegislatie(titlu: rest)
+            : CerereLegislatie(text: rest),
         articol: articol,
       ),
       intrare,
@@ -138,7 +145,8 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
 
   void _aplica(SugestieLegislatie s, [String? deSalvat]) {
     FocusScope.of(context).unfocus();
-    final eticheta = deSalvat ?? s.titlu.replaceAll('„', '').replaceAll('”', '');
+    final eticheta =
+        deSalvat ?? s.titlu.replaceAll('„', '').replaceAll('”', '');
     _text.text = eticheta;
     setState(() {
       _filtre = FiltreLegislatie(
@@ -192,20 +200,33 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     } finally {
       if (mounted) setState(() => _seIncarca = false);
     }
+    // „Legea 307” fără an: serviciul întoarce actele cu numărul 307 de toate
+    // tipurile; dacă filtrul le ascunde pe toate, mai aducem câteva pagini.
+    if (mounted &&
+        cerere == _cerere &&
+        _eroare == null &&
+        _maiSunt &&
+        _pagina < 5 &&
+        aplicaFiltre(_acte, _filtre).isEmpty) {
+      await _incarcaPagina();
+    }
   }
 
   /// Deschide actul; din rezultatele căutării în text, direct la articolul
   /// în care apare termenul.
-  void _deschide(ActNormativ a, {String? laArticol}) => Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => ActNormativScreen(act: a, articolInitial: _articol ?? laArticol),
-    ),
-  );
+  void _deschide(ActNormativ a, {String? laArticol}) =>
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              ActNormativScreen(act: a, articolInitial: _articol ?? laArticol),
+        ),
+      );
 
   List<ActNormativ> _vizibile() {
     final filtrate = aplicaFiltre(_acte, _filtre);
     final c = _cerere;
-    if (_filtre.ordine != OrdineLegislatie.relevanta || c == null) return filtrate;
+    if (_filtre.ordine != OrdineLegislatie.relevanta || c == null)
+      return filtrate;
     final q = c.text.isNotEmpty ? c.text : c.titlu;
     return q.isEmpty ? filtrate : ordoneazaDupaRelevanta(filtrate, q);
   }
@@ -252,7 +273,11 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
               'Sursa: Portalul Legislativ al Ministerului Justiției (legislatie.just.ro). '
               'Textele au caracter informativ; forma oficială este cea publicată în Monitorul Oficial.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, height: 1.45, color: AppColors.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.45,
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -263,7 +288,12 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
   List<Widget> _continut(List<ActNormativ> vizibile) {
     if (_cerere == null) return _ecranInitial();
     if (_seIncarca && _acte.isEmpty) {
-      return const [_IncarcareLegislatie(), SizedBox(height: 12), CardSchelet(), CardSchelet()];
+      return const [
+        _IncarcareLegislatie(),
+        SizedBox(height: 12),
+        CardSchelet(),
+        CardSchelet(),
+      ];
     }
     if (_eroare != null && _acte.isEmpty) {
       return [
@@ -281,8 +311,7 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         const StareMesaj(
           icon: Icons.search_off,
           titlu: 'Niciun act găsit',
-          text:
-              'Încearcă alte cuvinte, doar numărul și anul (ex. 287/2009) sau caută în tot textul.',
+          text: 'Încearcă alte cuvinte, doar numărul și anul (ex. 287/2009) sau caută în tot textul.',
         ),
       ];
     }
@@ -299,7 +328,8 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           ),
           _MeniuOrdine(
             ordine: _filtre.ordine,
-            onSchimbat: (o) => setState(() => _filtre = _filtre.copyWith(ordine: o)),
+            onSchimbat: (o) =>
+                setState(() => _filtre = _filtre.copyWith(ordine: o)),
           ),
         ],
       ),
@@ -308,7 +338,10 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             '$ascunse ${ascunse == 1 ? 'act ascuns' : 'acte ascunse'} de filtre',
-            style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
         ),
       const SizedBox(height: 4),
@@ -319,16 +352,21 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           termen: c.text.isNotEmpty ? c.text : c.titlu,
           onTap: () => _deschide(
             a,
-            laArticol: c.text.isNotEmpty ? fragmentDinAct(a.text, c.text)?.nrArticol : null,
+            laArticol: c.text.isNotEmpty
+                ? fragmentDinAct(a.text, c.text)?.nrArticol
+                : null,
           ),
         ),
       if (vizibile.isEmpty)
         StareMesaj(
           icon: Icons.filter_alt_off_outlined,
           titlu: 'Filtrele ascund toate actele',
-          text: 'Am găsit ${_acte.length} acte, dar niciunul nu se potrivește filtrelor alese.',
+          text:
+              'Am găsit ${_acte.length} acte, dar niciunul nu se potrivește filtrelor alese.',
           buton: 'Șterge filtrele',
-          onButon: () => setState(() => _filtre = FiltreLegislatie(ordine: _filtre.ordine)),
+          onButon: () => setState(
+            () => _filtre = FiltreLegislatie(ordine: _filtre.ordine),
+          ),
         ),
       if (_eroare != null)
         Padding(
@@ -442,7 +480,10 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
               for (final a in coduri)
                 SizedBox(
                   width: latime,
-                  child: _TileCod(act: a, onTap: () => _aplica(_sugestieAct(a))),
+                  child: _TileCod(
+                    act: a,
+                    onTap: () => _aplica(_sugestieAct(a)),
+                  ),
                 ),
             ],
           );
@@ -461,7 +502,11 @@ class _TitluSectiune extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 10, left: 2),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: AppColors.onSurface,
+      ),
     ),
   );
 }
@@ -515,7 +560,9 @@ class _CasetaCautare extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: focus.hasFocus ? AppColors.primary : AppColors.outline),
+        border: Border.all(
+          color: focus.hasFocus ? AppColors.primary : AppColors.outline,
+        ),
       ),
       child: Column(
         children: [
@@ -552,14 +599,30 @@ class _CasetaCautare extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
             child: Row(
               children: [
-                const Text(
-                  'Caută în',
-                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                // Pe ecrane înguste (sau cu text mărit) se micșorează, nu ies din cadru.
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Caută în',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          mod('Tot textul', false),
+                          mod('Titluri', true),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 6),
-                mod('Tot textul', false),
-                mod('Titluri', true),
-                const Spacer(),
                 IconButton.filled(
                   tooltip: 'Caută',
                   onPressed: onCauta,
@@ -635,7 +698,10 @@ class _RandLista extends StatelessWidget {
                       subtitlu,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],
@@ -652,12 +718,15 @@ class _RandLista extends StatelessWidget {
 /// Culoarea fiecărui tip de act, ca să se recunoască dintr-o privire.
 (Color, Color) culoriTip(String tip) {
   final t = fataDiacritice(tip).toUpperCase();
-  if (t.startsWith('ORDONANTA')) return (AppColors.accent, AppColors.accentContainer);
-  if (t.startsWith('HOTAR')) return (AppColors.success, AppColors.successContainer);
+  if (t.startsWith('ORDONANTA'))
+    return (AppColors.accent, AppColors.accentContainer);
+  if (t.startsWith('HOTAR'))
+    return (AppColors.success, AppColors.successContainer);
   if (t.startsWith('ORDIN') || t.startsWith('DECIZI') || t.startsWith('NORM')) {
     return (AppColors.warning, AppColors.warningContainer);
   }
-  if (t.startsWith('CONSTITU')) return (AppColors.onPrimaryContainer, AppColors.primaryContainer);
+  if (t.startsWith('CONSTITU'))
+    return (AppColors.onPrimaryContainer, AppColors.primaryContainer);
   return (AppColors.primary, AppColors.primaryContainer);
 }
 
@@ -688,10 +757,17 @@ class _TileCod extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(color: fundal, borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(
+                  color: fundal,
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Text(
                   act.numar.isEmpty ? '1991' : '${act.numar}/${act.an}',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: culoare),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: culoare,
+                  ),
                 ),
               ),
               const Spacer(),
@@ -699,7 +775,11 @@ class _TileCod extends StatelessWidget {
                 act.nume,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, height: 1.25, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -716,7 +796,11 @@ class _Sugestii extends StatelessWidget {
   final String interogare;
   final void Function(SugestieLegislatie) onAlege;
 
-  const _Sugestii({required this.lista, required this.interogare, required this.onAlege});
+  const _Sugestii({
+    required this.lista,
+    required this.interogare,
+    required this.onAlege,
+  });
 
   IconData _icon(FelSugestie f) => switch (f) {
     FelSugestie.actCunoscut => Icons.menu_book_rounded,
@@ -752,10 +836,16 @@ class _Sugestii extends StatelessWidget {
                     ? AppColors.surfaceVariant
                     : AppColors.primaryContainer,
                 titlu: s.titlu,
-                titluBogat: TextSpan(children: _evidentiaza(s.titlu, interogare)),
+                titluBogat: TextSpan(
+                  children: _evidentiaza(s.titlu, interogare),
+                ),
                 subtitlu: s.subtitlu,
                 dreapta: s.deschideDirect
-                    ? const Icon(Icons.north_east, size: 18, color: AppColors.onSurfaceVariant)
+                    ? const Icon(
+                        Icons.north_east,
+                        size: 18,
+                        color: AppColors.onSurfaceVariant,
+                      )
                     : null,
                 onTap: () => onAlege(s),
               ),
@@ -768,13 +858,18 @@ class _Sugestii extends StatelessWidget {
 }
 
 /// Literele scrise apar îngroșate în sugestie („Codul civil”).
-List<TextSpan> _evidentiaza(String text, String interogare, {bool cuvantIntreg = false}) {
+List<TextSpan> _evidentiaza(
+  String text,
+  String interogare, {
+  bool cuvantIntreg = false,
+}) {
   final cuvinte = fataDiacritice(interogare.toLowerCase())
       .split(RegExp(r'\s+'))
       .where((c) => c.length >= 2)
       .toList();
   final baza = fataDiacritice(text.toLowerCase());
-  if (cuvinte.isEmpty || baza.length != text.length) return [TextSpan(text: text)];
+  if (cuvinte.isEmpty || baza.length != text.length)
+    return [TextSpan(text: text)];
   final marcat = List.filled(text.length, false);
   for (final c in cuvinte) {
     var start = 0;
@@ -784,7 +879,8 @@ List<TextSpan> _evidentiaza(String text, String interogare, {bool cuvantIntreg =
       var sf = i + c.length;
       // În fragmente evidențiem cuvântul întreg („Uzucapiunea”, nu „Uzucapiune”+„a”).
       if (cuvantIntreg) {
-        while (sf < text.length && RegExp(r'[\wăâîșțşţĂÂÎȘȚŞŢ]').hasMatch(text[sf])) {
+        while (sf < text.length &&
+            RegExp(r'[\wăâîșțşţĂÂÎȘȚŞŢ]').hasMatch(text[sf])) {
           sf++;
         }
       }
@@ -811,7 +907,10 @@ List<TextSpan> _evidentiaza(String text, String interogare, {bool cuvantIntreg =
                       color: AppColors.onSurface,
                       backgroundColor: AppColors.accentContainer,
                     )
-                  : const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary))
+                  : const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ))
             : const TextStyle(fontWeight: FontWeight.w400),
       ),
     );
@@ -863,7 +962,12 @@ class _CardAct extends StatelessWidget {
   final String termen;
   final VoidCallback onTap;
 
-  const _CardAct({required this.act, required this.onTap, this.articol, this.termen = ''});
+  const _CardAct({
+    required this.act,
+    required this.onTap,
+    this.articol,
+    this.termen = '',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -895,14 +999,21 @@ class _CardAct extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: fundal,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         act.denumireScurta,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: culoare),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: culoare,
+                        ),
                       ),
                     ),
                     if (articol != null) ...[
@@ -917,7 +1028,11 @@ class _CardAct extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -936,7 +1051,10 @@ class _CardAct extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     titlu.secundar,
-                    style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ],
                 if (fragment != null) ...[
@@ -979,9 +1097,15 @@ class _CardAct extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              if (fragment.inceputTaiat) const TextSpan(text: '… '),
-                              ..._evidentiaza(fragment.text, termen, cuvantIntreg: true),
-                              if (fragment.sfarsitTaiat) const TextSpan(text: ' …'),
+                              if (fragment.inceputTaiat)
+                                const TextSpan(text: '… '),
+                              ..._evidentiaza(
+                                fragment.text,
+                                termen,
+                                cuvantIntreg: true,
+                              ),
+                              if (fragment.sfarsitTaiat)
+                                const TextSpan(text: ' …'),
                             ],
                           ),
                           maxLines: 3,
@@ -1038,7 +1162,8 @@ class _MeniuOrdine extends StatelessWidget {
       initialValue: ordine,
       onSelected: onSchimbat,
       itemBuilder: (_) => [
-        for (final e in _etichete.entries) PopupMenuItem(value: e.key, child: Text(e.value)),
+        for (final e in _etichete.entries)
+          PopupMenuItem(value: e.key, child: Text(e.value)),
       ],
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1065,7 +1190,11 @@ class _BaraFiltre extends StatelessWidget {
   final List<String> emitenti;
   final ValueChanged<FiltreLegislatie> onSchimbat;
 
-  const _BaraFiltre({required this.filtre, required this.emitenti, required this.onSchimbat});
+  const _BaraFiltre({
+    required this.filtre,
+    required this.emitenti,
+    required this.onSchimbat,
+  });
 
   String get _textTip {
     if (filtre.tipuri.isEmpty) return 'Tip act';
@@ -1102,7 +1231,10 @@ class _BaraFiltre extends StatelessWidget {
             activ: filtre.anDe != null || filtre.anPana != null,
             onTap: () async {
               final r = await _alegeAni(context, filtre.anDe, filtre.anPana);
-              if (r != null) onSchimbat(filtre.copyWith(anDe: () => r.$1, anPana: () => r.$2));
+              if (r != null)
+                onSchimbat(
+                  filtre.copyWith(anDe: () => r.$1, anPana: () => r.$2),
+                );
             },
           ),
           const SizedBox(width: 8),
@@ -1142,7 +1274,10 @@ Future<Set<String>?> _alegeTipuri(BuildContext context, Set<String> curente) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Tip act', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'Tip act',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -1152,7 +1287,8 @@ Future<Set<String>?> _alegeTipuri(BuildContext context, Set<String> curente) {
                     FilterChip(
                       label: Text(etichetaTip(t)),
                       selected: ales.contains(t),
-                      onSelected: (v) => setState(() => v ? ales.add(t) : ales.remove(t)),
+                      onSelected: (v) =>
+                          setState(() => v ? ales.add(t) : ales.remove(t)),
                     ),
                 ],
               ),
@@ -1191,13 +1327,21 @@ Future<(int?, int?)?> _alegeAni(BuildContext context, int? de, int? pana) {
     showDragHandle: true,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Anul actului', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Anul actului',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1213,7 +1357,9 @@ Future<(int?, int?)?> _alegeAni(BuildContext context, int? de, int? pana) {
                   child: TextField(
                     controller: cPana,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Până în anul'),
+                    decoration: const InputDecoration(
+                      labelText: 'Până în anul',
+                    ),
                   ),
                 ),
               ],
@@ -1227,7 +1373,8 @@ Future<(int?, int?)?> _alegeAni(BuildContext context, int? de, int? pana) {
                 ),
                 const Spacer(),
                 FilledButton(
-                  onPressed: () => Navigator.pop(context, (an(cDe.text), an(cPana.text))),
+                  onPressed: () =>
+                      Navigator.pop(context, (an(cDe.text), an(cPana.text))),
                   child: const Text('Aplică'),
                 ),
               ],
@@ -1239,32 +1386,49 @@ Future<(int?, int?)?> _alegeAni(BuildContext context, int? de, int? pana) {
   );
 }
 
-Future<String?> _alegeEmitent(BuildContext context, String curent, List<String> sugestii) {
+Future<String?> _alegeEmitent(
+  BuildContext context,
+  String curent,
+  List<String> sugestii,
+) {
   final c = TextEditingController(text: curent);
   return showModalBottomSheet<String>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        16 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Emitent', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Emitent',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: c,
               autofocus: sugestii.isEmpty,
-              decoration: const InputDecoration(hintText: 'Ex.: Parlamentul, Guvernul, ANAF'),
+              decoration: const InputDecoration(
+                hintText: 'Ex.: Parlamentul, Guvernul, ANAF',
+              ),
               onSubmitted: (v) => Navigator.pop(context, v.trim()),
             ),
             if (sugestii.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text(
                 'Din rezultate',
-                style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
               Wrap(
