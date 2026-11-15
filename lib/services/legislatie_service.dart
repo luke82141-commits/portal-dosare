@@ -480,67 +480,53 @@ class LegislatieService {
       return _cautaDupaNumar(cerere);
     }
     final expresie = cerere.text.isNotEmpty ? cerere.text : cerere.titlu;
-    final cuvinte = pagina <= 1 && cerere.an == null
-        ? cuvinteCheie(expresie)
-        : const <String>[];
-    // Un singur cuvânt căutat deja în titluri nu are ce completa.
-    final singurCuvantInTitlu =
-        cerere.titlu.isNotEmpty && radaciniCautare(expresie).length <= 1;
-    if (cuvinte.isEmpty || singurCuvantInTitlu)
-      return _cautaPagina(cerere, pagina);
+    final prefixe = cerere.an == null ? interogarePrefixe(expresie) : '';
+    if (prefixe.isEmpty) return _cautaPagina(cerere, pagina);
 
-    PaginaLegislatie? principala;
+    // Serviciul caută fraza exactă, cuvânt întreg: „regulament receptii” nu
+    // găsește „Regulamentul de recepție”. Cu „regulament* recept*” însă
+    // caută fiecare rădăcină separat, în orice ordine (verificat 15.11.2026).
+    // Titlurile cu toate rădăcinile vin primele; fraza exactă completează.
+    final dinTitluri = <ActNormativ>[];
+    var maiSunt = false;
     Object? eroare;
     try {
-      principala = await _cautaPagina(cerere, pagina);
+      final paginiPrefix = pagina <= 1 ? [1, 2] : [pagina + 1];
+      for (final p in paginiPrefix) {
+        final r = await _cautaPagina(CerereLegislatie(titlu: prefixe), p);
+        dinTitluri.addAll(r.acte);
+        maiSunt = r.maiSunt;
+        if (!r.maiSunt) break;
+      }
+      // Niciun titlu cu toate cuvintele: încercăm fără câte unul.
+      if (pagina <= 1 && dinTitluri.isEmpty) {
+        for (final varianta in varianteFaraUnCuvant(prefixe)) {
+          final r = await _cautaPagina(CerereLegislatie(titlu: varianta), 1);
+          dinTitluri.addAll(r.acte);
+          if (dinTitluri.length >= 10) break;
+        }
+      }
     } catch (e) {
       eroare = e;
     }
-    // Cuvintele cheie, în orice ordine: aducem titlurile care conțin fiecare
-    // cuvânt rar și le păstrăm pe cele care au cele mai multe dintre
-    // cuvintele căutate; ordinea finală o dă relevanța.
-    final radacini = radaciniCautare(expresie);
-    final minim = radacini.length <= 2
-        ? radacini.length
-        : (radacini.length * 0.6).ceil();
-    int potriviri(ActNormativ a) {
-      final t = _norm(a.titlu);
-      return radacini.where(t.contains).length;
-    }
-
-    final dinTitluri = <ActNormativ>[];
-    final vazuteTitluri = <String>{};
-    try {
-      final incercari = <String>{
-        ...cuvinte,
-        for (final c in cuvinte) radacinaCuvant(fataDiacritice(c)),
-      };
-      for (final cuvant in incercari) {
-        for (var p = 1; p <= 2; p++) {
-          final r = await _cautaPagina(CerereLegislatie(titlu: cuvant), p);
-          dinTitluri.addAll(
-            r.acte.where(
-              (a) => potriviri(a) >= minim && vazuteTitluri.add(a.cheie),
-            ),
-          );
-          if (!r.maiSunt) break;
-        }
-        final complete = dinTitluri
-            .where((a) => potriviri(a) == radacini.length)
-            .length;
-        if (complete >= 3) break;
+    PaginaLegislatie? principala;
+    if (pagina <= 1) {
+      try {
+        principala = await _cautaPagina(cerere, 1);
+      } catch (e) {
+        eroare ??= e;
       }
-    } catch (_) {
-      // Căutarea suplimentară e un bonus; dacă pică, rămâne cea principală.
     }
-    if (principala == null && dinTitluri.isEmpty) throw eroare!;
-    dinTitluri.sort((x, y) => potriviri(y).compareTo(potriviri(x)));
+    if (dinTitluri.isEmpty && principala == null) throw eroare!;
     final vazute = <String>{};
     final acte = [
       ...dinTitluri,
       ...?principala?.acte,
     ].where((a) => vazute.add(a.cheie)).toList();
-    return PaginaLegislatie(acte, principala?.maiSunt ?? false);
+    return PaginaLegislatie(
+      ordoneazaDupaRelevanta(acte, expresie),
+      maiSunt || (principala?.maiSunt ?? false),
+    );
   }
 
   /// „Legea 307/2006”, „legea 307”: întâi după titlu („LEGE nr. 307 din”),
@@ -1224,6 +1210,85 @@ List<String> radaciniCautare(String interogare) => _norm(interogare)
 bool titluContineToate(String titlu, List<String> radacini) {
   final t = _norm(titlu);
   return radacini.isNotEmpty && radacini.every(t.contains);
+}
+
+/// Cuvinte care, scrise singure, strică interogarea serviciului (Solr).
+const _cuvinteDeLegatura = {
+  'si',
+  'de',
+  'la',
+  'in',
+  'din',
+  'pentru',
+  'privind',
+  'cu',
+  'al',
+  'ale',
+  'ai',
+  'pe',
+  'nr',
+  'art',
+  'privire',
+  'unor',
+  'prin',
+  'sau',
+  'care',
+};
+const _tipuriScrise = {
+  'lege',
+  'legea',
+  'legii',
+  'legi',
+  'l',
+  'hg',
+  'og',
+  'oug',
+  'hotarare',
+  'hotararea',
+  'hotararii',
+  'hotarire',
+  'hotarirea',
+  'ordonanta',
+  'ordonantei',
+  'decret',
+  'decretul',
+  'ordin',
+  'ordinul',
+  'decizie',
+  'decizia',
+};
+const _operatori = {'and', 'or', 'not', 'near', 'to'};
+
+/// „regulament receptii” → „regulament* recept*”: rădăcina fiecărui cuvânt
+/// care contează, cu „*” la final, ca serviciul să găsească orice formă,
+/// în orice ordine. Numerele rămân întregi. Gol când nu e nimic de căutat.
+String interogarePrefixe(String interogare) {
+  final termeni = <String>[];
+  for (final c in _norm(interogare).replaceAll('/', ' ').split(' ')) {
+    if (c.isEmpty || _operatori.contains(c)) continue;
+    if (RegExp(r'^\d+$').hasMatch(c)) {
+      if (!termeni.contains(c)) termeni.add(c);
+      continue;
+    }
+    if (c.length < 3 || _cuvinteDeLegatura.contains(c)) continue;
+    // Tipul actului e scris altfel în titlu („LEGE”, „HOTĂRÂRE”).
+    if (_tipuriScrise.contains(c)) continue;
+    final r = c.startsWith('cod') ? 'cod*' : '${radacinaCuvant(c)}*';
+    if (!termeni.contains(r)) termeni.add(r);
+  }
+  return termeni.take(6).join(' ');
+}
+
+/// „a* b* c*” → „b* c*”, „a* c*”, „a* b*”: întâi fără cuvântul cel mai scurt,
+/// care e de obicei cel mai puțin specific.
+List<String> varianteFaraUnCuvant(String prefixe) {
+  final t = prefixe.split(' ');
+  if (t.length < 2) return const [];
+  final ordine = List.generate(t.length, (i) => i)
+    ..sort((x, y) => t[x].length.compareTo(t[y].length));
+  return [
+    for (final i in ordine) [...t.sublist(0, i), ...t.sublist(i + 1)].join(' '),
+  ];
 }
 
 /// Cuvintele căutate separat în titluri când căutarea are mai multe cuvinte:
