@@ -75,7 +75,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Părți urmărite'), findsOneWidget);
-    expect(find.text('PRO'), findsOneWidget);
+    expect(find.text('PRO  ·  gratuit în perioada de lansare', findRichText: true), findsOneWidget);
     expect(find.text('Rapoarte'), findsOneWidget);
     expect(find.text('Statistici'), findsOneWidget);
 

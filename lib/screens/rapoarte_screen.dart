@@ -225,11 +225,6 @@ class _Blocat extends StatelessWidget {
               'Rapoarte săptămânale, lunare și anuale, în PDF și Word.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => ProService.instance.seteaza(true),
-              child: const Text('Activează Pro (test)'),
-            ),
           ],
         ),
       ),

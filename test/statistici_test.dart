@@ -96,7 +96,7 @@ void main() {
   });
 
   testWidgets('Ecranul arată cifrele și graficele', (tester) async {
-    SharedPreferences.setMockInitialValues({'pro_activ': true});
+    SharedPreferences.setMockInitialValues({});
     final b = BibliotecaService.instance;
     await b.incarca();
     for (final s in _dosare) {

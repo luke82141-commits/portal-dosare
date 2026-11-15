@@ -9,7 +9,7 @@ import '../services/widget_service.dart';
 import '../theme/app_theme.dart';
 
 /// „Widgeturi pe ecran”: cele trei mărimi, butoane de adăugare și, până la
-/// abonament, comutatorul de test pentru Pro.
+/// abonament, eticheta Pro din perioada de lansare.
 class WidgeturiScreen extends StatefulWidget {
   const WidgeturiScreen({super.key});
 
@@ -104,20 +104,14 @@ class _WidgeturiScreenState extends State<WidgeturiScreen> {
                       : null,
                 ),
               const Divider(height: 32),
-              SwitchListTile(
-                secondary: const Icon(Icons.workspace_premium_outlined, color: AppColors.accent),
-                title: const Text('Pro activ (test)'),
+              ListTile(
+                leading: const Icon(Icons.workspace_premium_outlined, color: AppColors.accent),
+                title: const Text(ProService.etichetaLansare),
                 subtitle: Text(
                   pro
-                      ? 'Widgeturile arată datele dosarelor.'
-                      : 'Fără Pro, widgeturile arată „Disponibil în Portal Dosare Pro”. '
-                            'Comutatorul ține locul abonamentului până la lansare.',
+                      ? 'Widgeturile arată datele dosarelor. Mai târziu vor face parte din abonamentul Pro.'
+                      : 'Widgeturile fac parte din Portal Dosare Pro. Fără abonament arată „Disponibil în Portal Dosare Pro”.',
                 ),
-                value: pro,
-                onChanged: (v) async {
-                  await ProService.instance.seteaza(v);
-                  await actualizeazaWidgeturi();
-                },
               ),
             ],
           );
