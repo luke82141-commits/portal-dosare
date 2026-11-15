@@ -41,14 +41,8 @@ void main() {
     await BibliotecaService.instance.incarca();
   });
 
-  testWidgets('„Monitorizează toate” pune în bibliotecă toate rezultatele', (
-    tester,
-  ) async {
-    final dosare = [
-      _dosar('1/105/2026'),
-      _dosar('2/105/2026'),
-      _dosar('3/105/2026'),
-    ];
+  testWidgets('„Monitorizează toate” pune în bibliotecă toate rezultatele', (tester) async {
+    final dosare = [_dosar('1/105/2026'), _dosar('2/105/2026'), _dosar('3/105/2026')];
     await BibliotecaService.instance.adauga(dosare[1]);
 
     await tester.pumpWidget(
@@ -68,10 +62,7 @@ void main() {
     final b = BibliotecaService.instance;
     expect(b.dosare.length, 3);
     expect(b.dosare.first.dosar.numar, '1/105/2026');
-    expect(
-      find.text('2 dosare adăugate la monitorizate (1 erau deja).'),
-      findsOneWidget,
-    );
+    expect(find.text('2 dosare adăugate la monitorizate (1 erau deja).'), findsOneWidget);
     expect(find.text('Toate monitorizate'), findsOneWidget);
   });
 
@@ -103,14 +94,8 @@ void main() {
     expect(find.text('25 de dosare adăugate la monitorizate.'), findsOneWidget);
   });
 
-  testWidgets('„Anulează” scoate doar dosarele tocmai adăugate', (
-    tester,
-  ) async {
-    final dosare = [
-      _dosar('1/105/2026'),
-      _dosar('2/105/2026'),
-      _dosar('3/105/2026'),
-    ];
+  testWidgets('„Anulează” scoate doar dosarele tocmai adăugate', (tester) async {
+    final dosare = [_dosar('1/105/2026'), _dosar('2/105/2026'), _dosar('3/105/2026')];
     await BibliotecaService.instance.adauga(dosare[1]);
     await tester.pumpWidget(
       MaterialApp(
@@ -128,15 +113,10 @@ void main() {
 
     await tester.tap(find.text('Anulează'));
     await tester.pumpAndSettle();
-    expect(
-      [for (final s in BibliotecaService.instance.dosare) s.dosar.numar],
-      ['2/105/2026'],
-    );
+    expect([for (final s in BibliotecaService.instance.dosare) s.dosar.numar], ['2/105/2026']);
   });
 
-  testWidgets('Mesajul cu „Anulează” dispare singur după câteva secunde', (
-    tester,
-  ) async {
+  testWidgets('Mesajul cu „Anulează” dispare singur după câteva secunde', (tester) async {
     final dosare = [_dosar('1/105/2026'), _dosar('2/105/2026')];
     await tester.pumpWidget(
       MaterialApp(
@@ -175,9 +155,6 @@ void main() {
     await tester.tap(find.text('Monitorizează toate'));
     await tester.pumpAndSettle();
     expect(find.text('Monitorizezi 5 dosare?'), findsOneWidget);
-    expect(
-      find.textContaining('Vei urmări în total 204 dosare'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Vei urmări în total 204 dosare'), findsOneWidget);
   });
 }

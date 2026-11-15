@@ -19,20 +19,7 @@ const _culoriSolutii = {
 const _anCurent = Color(0xFF2A78D6);
 const _anTrecut = Color(0xFFC9CDD6);
 
-const _luniScurte = [
-  'I',
-  'F',
-  'M',
-  'A',
-  'M',
-  'I',
-  'I',
-  'A',
-  'S',
-  'O',
-  'N',
-  'D',
-];
+const _luniScurte = ['I', 'F', 'M', 'A', 'M', 'I', 'I', 'A', 'S', 'O', 'N', 'D'];
 
 /// „Statistici” (Pro): dosarele urmărite pe un an, comparate cu anul trecut.
 class StatisticiScreen extends StatefulWidget {
@@ -59,16 +46,10 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Statistici')),
       body: ListenableBuilder(
-        listenable: Listenable.merge([
-          ProService.instance,
-          BibliotecaService.instance,
-        ]),
+        listenable: Listenable.merge([ProService.instance, BibliotecaService.instance]),
         builder: (context, _) {
           if (!ProService.instance.activ) return const _Blocat();
-          final s = calculeazaStatistici(
-            BibliotecaService.instance.dosare,
-            _an,
-          );
+          final s = calculeazaStatistici(BibliotecaService.instance.dosare, _an);
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
@@ -89,9 +70,7 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
                   IconButton(
                     tooltip: 'Anul următor',
                     icon: const Icon(Icons.chevron_right),
-                    onPressed: _an >= DateTime.now().year + 1
-                        ? null
-                        : () => setState(() => _an++),
+                    onPressed: _an >= DateTime.now().year + 1 ? null : () => setState(() => _an++),
                   ),
                 ],
               ),
@@ -107,25 +86,14 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
                   _Cifra(
                     eticheta: 'Termene de judecată',
                     valoare: s.totalTermene,
-                    detaliu: variatie(
-                      s.totalTermene,
-                      s.totalTermeneAnTrecut,
-                      _an - 1,
-                    ),
+                    detaliu: variatie(s.totalTermene, s.totalTermeneAnTrecut, _an - 1),
                   ),
                   _Cifra(
                     eticheta: 'Dosare înregistrate',
                     valoare: s.totalDosare,
-                    detaliu: variatie(
-                      s.totalDosare,
-                      s.totalDosareAnTrecut,
-                      _an - 1,
-                    ),
+                    detaliu: variatie(s.totalDosare, s.totalDosareAnTrecut, _an - 1),
                   ),
-                  _Cifra(
-                    eticheta: 'Hotărâri pronunțate',
-                    valoare: s.totalHotarari,
-                  ),
+                  _Cifra(eticheta: 'Hotărâri pronunțate', valoare: s.totalHotarari),
                   _Cifra(
                     eticheta: 'Termene amânate',
                     valoare: s.amanari,
@@ -143,26 +111,17 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
                   children: [
                     SegmentedButton<_Masura>(
                       segments: const [
-                        ButtonSegment(
-                          value: _Masura.termene,
-                          label: Text('Termene'),
-                        ),
-                        ButtonSegment(
-                          value: _Masura.dosare,
-                          label: Text('Dosare noi'),
-                        ),
+                        ButtonSegment(value: _Masura.termene, label: Text('Termene')),
+                        ButtonSegment(value: _Masura.dosare, label: Text('Dosare noi')),
                       ],
                       selected: {_masura},
                       showSelectedIcon: false,
-                      onSelectionChanged: (m) =>
-                          setState(() => _masura = m.first),
+                      onSelectionChanged: (m) => setState(() => _masura = m.first),
                     ),
                     const SizedBox(height: 16),
                     _GraficLuni(
                       an: _an,
-                      curent: _masura == _Masura.termene
-                          ? s.termene
-                          : s.dosareInregistrate,
+                      curent: _masura == _Masura.termene ? s.termene : s.dosareInregistrate,
                       trecut: _masura == _Masura.termene
                           ? s.termeneAnTrecut
                           : s.dosareInregistrateAnTrecut,
@@ -215,9 +174,7 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
                                   Expanded(
                                     child: Text(
                                       e.key,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                   Text(
@@ -244,21 +201,14 @@ class _StatisticiScreenState extends State<StatisticiScreen> {
                     : Column(
                         children: [
                           for (final (nume, n) in s.instante)
-                            _RandInstanta(
-                              nume: nume,
-                              numar: n,
-                              maxim: s.instante.first.$2,
-                            ),
+                            _RandInstanta(nume: nume, numar: n, maxim: s.instante.first.$2),
                         ],
                       ),
               ),
               const Text(
                 'Cifrele privesc dosarele urmărite în aplicație, cu datele publicate pe '
                 'portal la ultima verificare.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.onSurfaceVariant,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
               ),
             ],
           );
@@ -287,10 +237,7 @@ class _Sectiune extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              titlu,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
+            Text(titlu, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             child,
           ],
@@ -304,11 +251,7 @@ class _Cifra extends StatelessWidget {
   final String eticheta;
   final int valoare;
   final String detaliu;
-  const _Cifra({
-    required this.eticheta,
-    required this.valoare,
-    this.detaliu = '',
-  });
+  const _Cifra({required this.eticheta, required this.valoare, this.detaliu = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -324,10 +267,7 @@ class _Cifra extends StatelessWidget {
               eticheta,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.onSurfaceVariant,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
             ),
             const SizedBox(height: 2),
             Text(
@@ -343,10 +283,7 @@ class _Cifra extends StatelessWidget {
                 detaliu,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.onSurfaceVariant,
-                ),
+                style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
               ),
           ],
         ),
@@ -361,11 +298,7 @@ class _GraficLuni extends StatelessWidget {
   final int an;
   final List<int> curent;
   final List<int> trecut;
-  const _GraficLuni({
-    required this.an,
-    required this.curent,
-    required this.trecut,
-  });
+  const _GraficLuni({required this.an, required this.curent, required this.trecut});
 
   @override
   Widget build(BuildContext context) {
@@ -435,10 +368,7 @@ class _GraficLuni extends StatelessWidget {
                 child: Text(
                   l,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.onSurfaceVariant,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                 ),
               ),
           ],
@@ -485,11 +415,7 @@ class _RandSolutie extends StatelessWidget {
   final TipSolutie tip;
   final int numar;
   final int total;
-  const _RandSolutie({
-    required this.tip,
-    required this.numar,
-    required this.total,
-  });
+  const _RandSolutie({required this.tip, required this.numar, required this.total});
 
   @override
   Widget build(BuildContext context) {
@@ -519,11 +445,7 @@ class _RandInstanta extends StatelessWidget {
   final String nume;
   final int numar;
   final int maxim;
-  const _RandInstanta({
-    required this.nume,
-    required this.numar,
-    required this.maxim,
-  });
+  const _RandInstanta({required this.nume, required this.numar, required this.maxim});
 
   @override
   Widget build(BuildContext context) {
@@ -534,13 +456,8 @@ class _RandInstanta extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(nume, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-              Text(
-                '$numar',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
+              Expanded(child: Text(nume, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Text('$numar', style: const TextStyle(fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 4),
@@ -550,10 +467,7 @@ class _RandInstanta extends StatelessWidget {
               widthFactor: maxim == 0 ? 0 : numar / maxim,
               child: Container(
                 height: 6,
-                decoration: BoxDecoration(
-                  color: _anCurent,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+                decoration: BoxDecoration(color: _anCurent, borderRadius: BorderRadius.circular(3)),
               ),
             ),
           ),
@@ -576,10 +490,7 @@ class _Legenda extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: culoare,
-            borderRadius: BorderRadius.circular(2),
-          ),
+          decoration: BoxDecoration(color: culoare, borderRadius: BorderRadius.circular(2)),
         ),
         const SizedBox(width: 6),
         Text(text, style: const TextStyle(fontSize: 13)),
@@ -608,11 +519,7 @@ class _Blocat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.workspace_premium_outlined,
-              size: 48,
-              color: AppColors.accent,
-            ),
+            const Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.accent),
             const SizedBox(height: 12),
             const Text(
               'Disponibil în Portal Dosare Pro',

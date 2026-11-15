@@ -26,15 +26,12 @@ class IccjService {
   /// Dosarele ÎCCJ cu numărul [numar]. Aruncă [IccjException] dacă serviciul
   /// nu răspunde (de obicei în afara ferestrei de noapte).
   Future<List<Dosar>> cautaDosar(String numar) async {
-    final uri = Uri.parse('$_baza/CautareDosare')
-        .replace(queryParameters: {'nr': numar.trim()});
+    final uri = Uri.parse('$_baza/CautareDosare').replace(queryParameters: {'nr': numar.trim()});
     final http.Response r;
     try {
       r = await _client.get(uri).timeout(const Duration(seconds: 20));
     } catch (e) {
-      throw IccjException(
-        'ÎCCJ nu răspunde acum. Serviciul lor merge doar între 03:30 și 06:30.',
-      );
+      throw IccjException('ÎCCJ nu răspunde acum. Serviciul lor merge doar între 03:30 și 06:30.');
     }
     if (r.statusCode != 200) {
       throw IccjException('ÎCCJ a răspuns cu eroarea ${r.statusCode}.');
@@ -130,5 +127,4 @@ Dosar dosarIccjInAsteptare(String numar) => Dosar(
   sedinte: const [],
 );
 
-bool esteIccjInAsteptare(Dosar d) =>
-    d.institutie == codIccj && d.data == null && d.sedinte.isEmpty;
+bool esteIccjInAsteptare(Dosar d) => d.institutie == codIccj && d.data == null && d.sedinte.isEmpty;

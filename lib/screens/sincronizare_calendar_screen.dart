@@ -12,12 +12,10 @@ class SincronizareCalendarScreen extends StatefulWidget {
   const SincronizareCalendarScreen({super.key});
 
   @override
-  State<SincronizareCalendarScreen> createState() =>
-      _SincronizareCalendarScreenState();
+  State<SincronizareCalendarScreen> createState() => _SincronizareCalendarScreenState();
 }
 
-class _SincronizareCalendarScreenState
-    extends State<SincronizareCalendarScreen> {
+class _SincronizareCalendarScreenState extends State<SincronizareCalendarScreen> {
   final _derulare = ScrollController();
 
   @override
@@ -55,12 +53,8 @@ class _SincronizareCalendarScreenState
   @override
   void initState() {
     super.initState();
-    final toate = {
-      for (final s in BibliotecaService.instance.dosare) s.dosar.cheie,
-    };
-    _alese = _sync.dosareAlese == null
-        ? toate
-        : toate.intersection(_sync.dosareAlese!);
+    final toate = {for (final s in BibliotecaService.instance.dosare) s.dosar.cheie};
+    _alese = _sync.dosareAlese == null ? toate : toate.intersection(_sync.dosareAlese!);
     _incarcaCalendare();
   }
 
@@ -78,15 +72,11 @@ class _SincronizareCalendarScreenState
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _trimite() async {
-    final toate = {
-      for (final s in BibliotecaService.instance.dosare) s.dosar.cheie,
-    };
+    final toate = {for (final s in BibliotecaService.instance.dosare) s.dosar.cheie};
     _sync.dosareAlese = _alese.length == toate.length ? null : {..._alese};
     setState(() => _lucreaza = true);
     try {
-      final r = await _sync.trimite([
-        for (final s in BibliotecaService.instance.dosare) s.dosar,
-      ]);
+      final r = await _sync.trimite([for (final s in BibliotecaService.instance.dosare) s.dosar]);
       final n = _alese.length;
       _mesaj(
         r.adaugate == 0
@@ -128,11 +118,8 @@ class _SincronizareCalendarScreenState
       final (n, negasite) = await _sync.adaugaInBiblioteca(alese);
       _mesaj(
         [
-          n == 1
-              ? 'Un dosar adăugat în bibliotecă.'
-              : '$n dosare adăugate în bibliotecă.',
-          if (negasite.isNotEmpty)
-            'Negăsite pe portal: ${negasite.join(', ')}.',
+          n == 1 ? 'Un dosar adăugat în bibliotecă.' : '$n dosare adăugate în bibliotecă.',
+          if (negasite.isNotEmpty) 'Negăsite pe portal: ${negasite.join(', ')}.',
         ].join(' '),
       );
       setState(() => _gasite = null);
@@ -172,11 +159,7 @@ class _SincronizareCalendarScreenState
                 'Dosarele apar în calendarul ales (Google, iCloud sau altul configurat în telefon), '
                 'la data și ora fiecărei ședințe, cu instanța ca locație. Așa, Google Calendar și Maps '
                 'îți pot spune când să pleci ca să ajungi la timp. Nimic nu se șterge și nimic nu se dublează.',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: AppColors.onSurfaceVariant,
-                ),
+                style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
               _cardCalendar(),
@@ -197,10 +180,7 @@ class _SincronizareCalendarScreenState
       children: [
         Icon(icon, size: 20, color: AppColors.primary),
         const SizedBox(width: 10),
-        Text(
-          t,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
+        Text(t, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ],
     ),
   );
@@ -213,16 +193,10 @@ class _SincronizareCalendarScreenState
         children: [
           Text(
             'Nu am acces la calendare. Permite accesul la calendar pentru aplicație.\n\n$_eroare',
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
-            ),
+            style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: _incarcaCalendare,
-            child: const Text('Încearcă din nou'),
-          ),
+          OutlinedButton(onPressed: _incarcaCalendare, child: const Text('Încearcă din nou')),
         ],
       );
     } else if (_calendare == null) {
@@ -272,17 +246,13 @@ class _SincronizareCalendarScreenState
             Row(
               children: [
                 const Expanded(
-                  child: Text(
-                    'Notificare înainte de termen cu:',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  child: Text('Notificare înainte de termen cu:', style: TextStyle(fontSize: 14)),
                 ),
                 DropdownButton<Duration>(
                   value: _sync.amintire,
                   underline: const SizedBox(),
                   items: [
-                    for (final (d, t) in _amintiri)
-                      DropdownMenuItem(value: d, child: Text(t)),
+                    for (final (d, t) in _amintiri) DropdownMenuItem(value: d, child: Text(t)),
                   ],
                   onChanged: (d) {
                     _sync.amintire = d!;
@@ -294,19 +264,13 @@ class _SincronizareCalendarScreenState
             Row(
               children: [
                 const Expanded(
-                  child: Text(
-                    'Trimite și termenele trecute din:',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  child: Text('Trimite și termenele trecute din:', style: TextStyle(fontSize: 14)),
                 ),
                 DropdownButton<int>(
-                  value: _istoric.any((e) => e.$1 == _sync.zileIstoric)
-                      ? _sync.zileIstoric
-                      : 0,
+                  value: _istoric.any((e) => e.$1 == _sync.zileIstoric) ? _sync.zileIstoric : 0,
                   underline: const SizedBox(),
                   items: [
-                    for (final (z, t) in _istoric)
-                      DropdownMenuItem(value: z, child: Text(t)),
+                    for (final (z, t) in _istoric) DropdownMenuItem(value: z, child: Text(t)),
                   ],
                   onChanged: (z) {
                     setState(() => _sync.zileIstoric = z!);
@@ -318,10 +282,7 @@ class _SincronizareCalendarScreenState
             Row(
               children: [
                 const Expanded(
-                  child: Text(
-                    'Simbol în fața termenelor:',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  child: Text('Simbol în fața termenelor:', style: TextStyle(fontSize: 14)),
                 ),
                 DropdownButton<String>(
                   value: _sync.simbol,
@@ -330,10 +291,7 @@ class _SincronizareCalendarScreenState
                     for (final s in simboluriTermen)
                       DropdownMenuItem(
                         value: s,
-                        child: Text(
-                          s.isEmpty ? 'Fără' : s,
-                          style: const TextStyle(fontSize: 18),
-                        ),
+                        child: Text(s.isEmpty ? 'Fără' : s, style: const TextStyle(fontSize: 18)),
                       ),
                   ],
                   onChanged: (s) {
@@ -367,15 +325,10 @@ class _SincronizareCalendarScreenState
           children: [
             _titlu('Dosarele sincronizate', Icons.checklist),
             if (dosare.isEmpty)
-              const Text(
-                'Biblioteca e goală.',
-                style: TextStyle(color: AppColors.onSurfaceVariant),
-              )
+              const Text('Biblioteca e goală.', style: TextStyle(color: AppColors.onSurfaceVariant))
             else ...[
               FilledButton.icon(
-                onPressed: _lucreaza || !_sync.configurat || alese == 0
-                    ? null
-                    : _trimite,
+                onPressed: _lucreaza || !_sync.configurat || alese == 0 ? null : _trimite,
                 icon: const Icon(Icons.sync),
                 label: Text(
                   alese == 0
@@ -389,10 +342,7 @@ class _SincronizareCalendarScreenState
                   child: Text(
                     'Alege întâi un calendar.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
                 ),
               if (_sync.ultimaSincronizare != null)
@@ -403,10 +353,7 @@ class _SincronizareCalendarScreenState
                     '${_sync.numeCalendar == null ? '' : ' · ${_sync.numeCalendar}'}. '
                     'Dosarele se sincronizează automat când deschizi aplicația.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                   ),
                 ),
               const SizedBox(height: 8),
@@ -414,14 +361,9 @@ class _SincronizareCalendarScreenState
                 value: toate,
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
-                title: const Text(
-                  'Toate dosarele',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                title: const Text('Toate dosarele', style: TextStyle(fontWeight: FontWeight.w600)),
                 onChanged: (v) => setState(() {
-                  _alese = v == true
-                      ? {for (final s in dosare) s.dosar.cheie}
-                      : {};
+                  _alese = v == true ? {for (final s in dosare) s.dosar.cheie} : {};
                 }),
               ),
               const Divider(),
@@ -433,10 +375,7 @@ class _SincronizareCalendarScreenState
                   controlAffinity: ListTileControlAffinity.leading,
                   title: Text(
                     s.dosar.numar,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                   ),
                   subtitle: Text(
                     '${s.dosar.instanta} · ${rezumatTermen(s.dosar)}',
@@ -444,9 +383,7 @@ class _SincronizareCalendarScreenState
                     overflow: TextOverflow.ellipsis,
                   ),
                   onChanged: (v) => setState(() {
-                    v == true
-                        ? _alese.add(s.dosar.cheie)
-                        : _alese.remove(s.dosar.cheie);
+                    v == true ? _alese.add(s.dosar.cheie) : _alese.remove(s.dosar.cheie);
                   }),
                 ),
             ],
@@ -468,18 +405,12 @@ class _SincronizareCalendarScreenState
             const Text(
               'Caut numere de dosar în evenimentele din calendarele tale și le adaug în bibliotecă. '
               'Dosarele pe care le ai deja nu se dublează.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: AppColors.onSurfaceVariant,
-              ),
+              style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
             if (g == null)
               OutlinedButton.icon(
-                onPressed: _lucreaza || (_calendare?.isEmpty ?? true)
-                    ? null
-                    : _cauta,
+                onPressed: _lucreaza || (_calendare?.isEmpty ?? true) ? null : _cauta,
                 icon: const Icon(Icons.search),
                 label: const Text('Caută dosare în calendare'),
               )
@@ -497,10 +428,7 @@ class _SincronizareCalendarScreenState
                   controlAffinity: ListTileControlAffinity.leading,
                   title: Text(
                     d.numar,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                   ),
                   subtitle: Text(
                     '${formateazaData(d.eveniment.start)} · ${d.eveniment.titlu}',
@@ -508,9 +436,7 @@ class _SincronizareCalendarScreenState
                     overflow: TextOverflow.ellipsis,
                   ),
                   onChanged: (v) => setState(() {
-                    v == true
-                        ? _deAdaugat.add(d.numar)
-                        : _deAdaugat.remove(d.numar);
+                    v == true ? _deAdaugat.add(d.numar) : _deAdaugat.remove(d.numar);
                   }),
                 ),
               const SizedBox(height: 8),

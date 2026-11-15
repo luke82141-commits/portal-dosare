@@ -30,11 +30,7 @@ class ParagrafBloc extends Bloc {
 
   /// Rămâne pe aceeași pagină cu tabelul de după.
   final bool cuUrmatorul;
-  const ParagrafBloc(
-    this.text, {
-    this.stil = StilParagraf.normal,
-    this.cuUrmatorul = false,
-  });
+  const ParagrafBloc(this.text, {this.stil = StilParagraf.normal, this.cuUrmatorul = false});
 }
 
 class TabelBloc extends Bloc {
@@ -44,12 +40,7 @@ class TabelBloc extends Bloc {
   /// Lățimile coloanelor, în centimetri (împreună, cel mult 17).
   final List<double> latimi;
   final double marimeText;
-  const TabelBloc(
-    this.antet,
-    this.randuri,
-    this.latimi, {
-    this.marimeText = 8.5,
-  });
+  const TabelBloc(this.antet, this.randuri, this.latimi, {this.marimeText = 8.5});
 }
 
 const _romane = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -96,8 +87,7 @@ List<Bloc> blocuriRaport(Raport r) {
       TabelBloc(
         ['Luna', 'Termene de judecată', 'Hotărâri pronunțate'],
         [
-          for (final l in r.peLuni)
-            [l.eticheta, '${l.termene}', '${l.hotarari}'],
+          for (final l in r.peLuni) [l.eticheta, '${l.termene}', '${l.hotarari}'],
           ['Total', '${r.termene.length}', '${r.hotarari.length}'],
         ],
         [7, 5, 5],
@@ -119,9 +109,7 @@ List<Bloc> blocuriRaport(Raport r) {
   } else {
     titlu('Termene de judecată în perioada de referință');
     if (r.termene.isEmpty) {
-      gol(
-        'În perioada de referință nu au existat termene de judecată în dosarele monitorizate.',
-      );
+      gol('În perioada de referință nu au existat termene de judecată în dosarele monitorizate.');
     } else {
       blocuri.add(
         const ParagrafBloc(
@@ -132,14 +120,7 @@ List<Bloc> blocuriRaport(Raport r) {
       );
       blocuri.add(
         TabelBloc(
-          [
-            'Data / ora',
-            'Nr. dosar',
-            'Instanța',
-            'Obiect',
-            'Părți',
-            'Soluția la termen',
-          ],
+          ['Data / ora', 'Nr. dosar', 'Instanța', 'Obiect', 'Părți', 'Soluția la termen'],
           [
             for (final t in r.termene)
               [
@@ -159,9 +140,7 @@ List<Bloc> blocuriRaport(Raport r) {
 
   titlu('Hotărâri pronunțate');
   if (r.hotarari.isEmpty) {
-    gol(
-      'În perioada de referință nu au fost pronunțate hotărâri în dosarele monitorizate.',
-    );
+    gol('În perioada de referință nu au fost pronunțate hotărâri în dosarele monitorizate.');
   } else {
     blocuri.add(
       const ParagrafBloc(
@@ -192,13 +171,7 @@ List<Bloc> blocuriRaport(Raport r) {
     titlu('Căi de atac declarate');
     blocuri.add(
       TabelBloc(
-        [
-          'Data declarării',
-          'Nr. dosar',
-          'Instanța',
-          'Calea de atac',
-          'Partea declarantă',
-        ],
+        ['Data declarării', 'Nr. dosar', 'Instanța', 'Calea de atac', 'Partea declarantă'],
         [
           for (final c in r.caiAtac)
             [
@@ -220,9 +193,7 @@ List<Bloc> blocuriRaport(Raport r) {
     PerioadaRaport.anual => 'Termene stabilite la începutul anului următor',
   });
   if (r.urmatoare.isEmpty) {
-    gol(
-      'Până la data întocmirii nu au fost publicate termene pentru această perioadă.',
-    );
+    gol('Până la data întocmirii nu au fost publicate termene pentru această perioadă.');
   } else {
     blocuri.add(
       TabelBloc(
@@ -285,55 +256,40 @@ Future<Uint8List> raportPdf(Raport r, FonturiRaport f) {
       child: pw.Text(
         text,
         textAlign: pw.TextAlign.justify,
-        style: pw.TextStyle(
-          fontSize: stil == StilParagraf.normal ? 11 : 10,
-          lineSpacing: 1.5,
-        ),
+        style: pw.TextStyle(fontSize: stil == StilParagraf.normal ? 11 : 10, lineSpacing: 1.5),
       ),
     ),
-    TabelBloc(:final antet, :final randuri, :final latimi, :final marimeText) =>
-      pw.Table(
-        border: pw.TableBorder.all(color: PdfColors.grey600, width: 0.5),
-        columnWidths: {
-          for (final (i, w) in latimi.indexed) i: pw.FixedColumnWidth(w * cm),
-        },
-        children: [
+    TabelBloc(:final antet, :final randuri, :final latimi, :final marimeText) => pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey600, width: 0.5),
+      columnWidths: {for (final (i, w) in latimi.indexed) i: pw.FixedColumnWidth(w * cm)},
+      children: [
+        pw.TableRow(
+          repeat: true,
+          decoration: const pw.BoxDecoration(color: _primar),
+          children: [
+            for (final h in antet)
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(3),
+                child: pw.Text(
+                  h,
+                  style: pw.TextStyle(font: f.bold, fontSize: marimeText, color: PdfColors.white),
+                ),
+              ),
+          ],
+        ),
+        for (final (k, rand) in randuri.indexed)
           pw.TableRow(
-            repeat: true,
-            decoration: const pw.BoxDecoration(color: _primar),
+            decoration: k.isOdd ? const pw.BoxDecoration(color: _dunga) : null,
             children: [
-              for (final h in antet)
+              for (final c in rand)
                 pw.Padding(
                   padding: const pw.EdgeInsets.all(3),
-                  child: pw.Text(
-                    h,
-                    style: pw.TextStyle(
-                      font: f.bold,
-                      fontSize: marimeText,
-                      color: PdfColors.white,
-                    ),
-                  ),
+                  child: pw.Text(c, style: pw.TextStyle(fontSize: marimeText)),
                 ),
             ],
           ),
-          for (final (k, rand) in randuri.indexed)
-            pw.TableRow(
-              decoration: k.isOdd
-                  ? const pw.BoxDecoration(color: _dunga)
-                  : null,
-              children: [
-                for (final c in rand)
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(3),
-                    child: pw.Text(
-                      c,
-                      style: pw.TextStyle(fontSize: marimeText),
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
+      ],
+    ),
   };
 
   doc.addPage(
@@ -345,11 +301,7 @@ Future<Uint8List> raportPdf(Raport r, FonturiRaport f) {
           marginTop: 1.8 * cm,
           marginBottom: 1.8 * cm,
         ),
-        theme: pw.ThemeData.withFont(
-          base: f.normal,
-          bold: f.bold,
-          italic: f.italic,
-        ),
+        theme: pw.ThemeData.withFont(base: f.normal, bold: f.bold, italic: f.italic),
       ),
       footer: (context) => pw.Center(
         child: pw.Text(
@@ -371,8 +323,7 @@ Future<Uint8List> raportPdf(Raport r, FonturiRaport f) {
           style: pw.TextStyle(font: f.bold, fontSize: 14, color: _primar),
         ),
         pw.SizedBox(height: 4),
-        for (final d in detaliiRaport(r))
-          pw.Text(d, style: const pw.TextStyle(fontSize: 11)),
+        for (final d in detaliiRaport(r)) pw.Text(d, style: const pw.TextStyle(fontSize: 11)),
         pw.SizedBox(height: 4),
         for (final b in blocuriRaport(r)) bloc(b),
       ],
@@ -384,9 +335,7 @@ Future<Uint8List> raportPdf(Raport r, FonturiRaport f) {
 // ───────────────────────────── Word ─────────────────────────────
 
 String _x(String s) =>
-    const HtmlEscape(HtmlEscapeMode.element)
-        .convert(s)
-        .replaceAll('"', '&quot;');
+    const HtmlEscape(HtmlEscapeMode.element).convert(s).replaceAll('"', '&quot;');
 
 String _run(
   String text, {
@@ -418,12 +367,7 @@ String _par(
 
 String _tabel(TabelBloc t) {
   int tw(double cm) => (cm * 567).round();
-  String celula(
-    String text,
-    double latime, {
-    bool antet = false,
-    bool dunga = false,
-  }) {
+  String celula(String text, double latime, {bool antet = false, bool dunga = false}) {
     final fond = antet ? '1F3A93' : (dunga ? 'F2F4F9' : null);
     return '<w:tc><w:tcPr><w:tcW w:w="${tw(latime)}" w:type="dxa"/>'
         '${fond != null ? '<w:shd w:val="clear" w:color="auto" w:fill="$fond"/>' : ''}</w:tcPr>'
@@ -431,20 +375,11 @@ String _tabel(TabelBloc t) {
   }
 
   final b = StringBuffer()
-    ..write(
-      '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>',
-    )
+    ..write('<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>')
     ..write('<w:jc w:val="center"/><w:tblLayout w:type="fixed"/><w:tblBorders>')
     ..write(
       [
-        for (final s in [
-          'top',
-          'left',
-          'bottom',
-          'right',
-          'insideH',
-          'insideV',
-        ])
+        for (final s in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'])
           '<w:$s w:val="single" w:sz="4" w:space="0" w:color="808080"/>',
       ].join(),
     )
@@ -452,22 +387,12 @@ String _tabel(TabelBloc t) {
     ..write([for (final w in t.latimi) '<w:gridCol w:w="${tw(w)}"/>'].join())
     ..write('</w:tblGrid>')
     ..write('<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>')
-    ..write(
-      [
-        for (final (i, h) in t.antet.indexed)
-          celula(h, t.latimi[i], antet: true),
-      ].join(),
-    )
+    ..write([for (final (i, h) in t.antet.indexed) celula(h, t.latimi[i], antet: true)].join())
     ..write('</w:tr>');
   for (final (k, rand) in t.randuri.indexed) {
     b
       ..write('<w:tr><w:trPr><w:cantSplit/></w:trPr>')
-      ..write(
-        [
-          for (final (i, c) in rand.indexed)
-            celula(c, t.latimi[i], dunga: k.isOdd),
-        ].join(),
-      )
+      ..write([for (final (i, c) in rand.indexed) celula(c, t.latimi[i], dunga: k.isOdd)].join())
       ..write('</w:tr>');
   }
   b.write('</w:tbl>');
@@ -480,24 +405,9 @@ const _ns =
 
 Uint8List raportDocx(Raport r) {
   final corp = StringBuffer()
-    ..write(
-      _par(
-        _run('PORTAL DOSARE', bold: true, size: 9, culoare: 'B8892F'),
-        dupa: 0,
-      ),
-    )
-    ..write(
-      _par(
-        _run(titluRaport(r), bold: true, size: 20, culoare: '1F3A93'),
-        dupa: 0,
-      ),
-    )
-    ..write(
-      _par(
-        _run(subtitluRaport(r), bold: true, size: 14, culoare: '1F3A93'),
-        dupa: 4,
-      ),
-    );
+    ..write(_par(_run('PORTAL DOSARE', bold: true, size: 9, culoare: 'B8892F'), dupa: 0))
+    ..write(_par(_run(titluRaport(r), bold: true, size: 20, culoare: '1F3A93'), dupa: 0))
+    ..write(_par(_run(subtitluRaport(r), bold: true, size: 14, culoare: '1F3A93'), dupa: 4));
   for (final d in detaliiRaport(r)) {
     corp.write(_par(_run(d), dupa: 0));
   }

@@ -14,18 +14,19 @@ Dosar _d({
   DateTime? modificat,
   List<Parte> parti = const [Parte(nume: 'POPESCU ION', calitate: 'Reclamant')],
   List<Sedinta> sedinte = const [],
-}) => Dosar(
-  numar: numar,
-  data: data ?? DateTime(2026, 3, 10),
-  institutie: institutie,
-  obiect: obiect,
-  stadiuProcesual: stadiu,
-  sectie: sectie,
-  categorie: categorie,
-  dataModificare: modificat,
-  parti: parti,
-  sedinte: sedinte,
-);
+}) =>
+    Dosar(
+      numar: numar,
+      data: data ?? DateTime(2026, 3, 10),
+      institutie: institutie,
+      obiect: obiect,
+      stadiuProcesual: stadiu,
+      sectie: sectie,
+      categorie: categorie,
+      dataModificare: modificat,
+      parti: parti,
+      sedinte: sedinte,
+    );
 
 void main() {
   test('filtrul gol lasă să treacă orice dosar', () {
@@ -41,9 +42,7 @@ void main() {
   });
 
   test('mai multe valori pentru același criteriu: ajunge una', () {
-    final f = FiltreDosare(
-      institutii: {'TribunalulBUCURESTI', 'CurteadeApelBUCURESTI'},
-    );
+    final f = FiltreDosare(institutii: {'TribunalulBUCURESTI', 'CurteadeApelBUCURESTI'});
     expect(f.potriveste(_d(institutie: 'CurteadeApelBUCURESTI')), isTrue);
     expect(f.potriveste(_d(institutie: 'TribunalulCLUJ')), isFalse);
   });
@@ -55,22 +54,11 @@ void main() {
   });
 
   test('perioadele: data dosarului și data modificării', () {
-    final martie = DateTimeRange(
-      start: DateTime(2026, 3, 1),
-      end: DateTime(2026, 3, 31),
-    );
+    final martie = DateTimeRange(start: DateTime(2026, 3, 1), end: DateTime(2026, 3, 31));
     expect(FiltreDosare(inregistrare: martie).potriveste(_d()), isTrue);
-    expect(
-      FiltreDosare(inregistrare: martie)
-          .potriveste(_d(data: DateTime(2026, 4, 1))),
-      isFalse,
-    );
+    expect(FiltreDosare(inregistrare: martie).potriveste(_d(data: DateTime(2026, 4, 1))), isFalse);
     expect(FiltreDosare(modificare: martie).potriveste(_d()), isFalse);
-    expect(
-      FiltreDosare(modificare: martie)
-          .potriveste(_d(modificat: DateTime(2026, 3, 31, 15))),
-      isTrue,
-    );
+    expect(FiltreDosare(modificare: martie).potriveste(_d(modificat: DateTime(2026, 3, 31, 15))), isTrue);
   });
 
   test('pornit din detaliu: anul înregistrării', () {

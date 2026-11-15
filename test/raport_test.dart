@@ -51,11 +51,7 @@ DosarSalvat _s(
 
 final _dosare = [
   _s('1/105/2026', [
-    _t(
-      DateTime(2026, 11, 3),
-      solutie: 'Amână cauza',
-      sumar: 'Amână judecarea cauzei.',
-    ),
+    _t(DateTime(2026, 11, 3), solutie: 'Amână cauza', sumar: 'Amână judecarea cauzei.'),
     _t(
       DateTime(2026, 11, 26),
       solutie: 'Admite în parte',
@@ -68,11 +64,7 @@ final _dosare = [
   _s(
     '2/281/2026',
     [
-      _t(
-        DateTime(2026, 11, 12),
-        solutie: 'Respinge',
-        sumar: 'Respinge plângerea ca neîntemeiată.',
-      ),
+      _t(DateTime(2026, 11, 12), solutie: 'Respinge', sumar: 'Respinge plângerea ca neîntemeiată.'),
       _t(DateTime(2027, 1, 14)),
     ],
     institutie: 'JudecatoriaPLOIESTI',
@@ -85,27 +77,16 @@ final _dosare = [
     ],
   ),
   _s('3/42/2026', [
-    _t(
-      DateTime(2026, 3, 10),
-      solutie: 'Admite',
-      sumar: 'Admite acțiunea.',
-      document: 'Hotarare',
-    ),
+    _t(DateTime(2026, 3, 10), solutie: 'Admite', sumar: 'Admite acțiunea.', document: 'Hotarare'),
   ], institutie: 'CurteadeApelPLOIESTI'),
 ];
 
 void main() {
   test('Perioadele: săptămâna de luni, luna, anul, cu navigare', () {
-    final s = IntervalRaport.pentru(
-      PerioadaRaport.saptamanal,
-      DateTime(2026, 11, 14),
-    );
+    final s = IntervalRaport.pentru(PerioadaRaport.saptamanal, DateTime(2026, 11, 14));
     expect(s.text, '09.11.2026 – 15.11.2026');
     expect(s.urmator.text, '16.11.2026 – 22.11.2026');
-    final l = IntervalRaport.pentru(
-      PerioadaRaport.lunar,
-      DateTime(2026, 12, 31),
-    );
+    final l = IntervalRaport.pentru(PerioadaRaport.lunar, DateTime(2026, 12, 31));
     expect(l.eticheta, 'Decembrie 2026');
     expect(l.urmator.eticheta, 'Ianuarie 2027');
     expect(l.precedent.text, '01.11.2026 – 30.11.2026');
@@ -116,37 +97,17 @@ void main() {
   });
 
   test('Felul soluției, cu sau fără diacritice', () {
-    expect(
-      tipSolutie(_t(DateTime(2026), solutie: 'Admite în parte')),
-      TipSolutie.admiteInParte,
-    );
+    expect(tipSolutie(_t(DateTime(2026), solutie: 'Admite în parte')), TipSolutie.admiteInParte);
     expect(
       tipSolutie(_t(DateTime(2026), sumar: 'Admite in parte cererea')),
       TipSolutie.admiteInParte,
     );
-    expect(
-      tipSolutie(_t(DateTime(2026), solutie: 'Admisă')),
-      TipSolutie.admite,
-    );
-    expect(
-      tipSolutie(_t(DateTime(2026), solutie: 'Respinge')),
-      TipSolutie.respinge,
-    );
-    expect(
-      tipSolutie(_t(DateTime(2026), solutie: 'Amână pronunţarea')),
-      TipSolutie.amanare,
-    );
+    expect(tipSolutie(_t(DateTime(2026), solutie: 'Admisă')), TipSolutie.admite);
+    expect(tipSolutie(_t(DateTime(2026), solutie: 'Respinge')), TipSolutie.respinge);
+    expect(tipSolutie(_t(DateTime(2026), solutie: 'Amână pronunţarea')), TipSolutie.amanare);
     expect(esteHotarare(_t(DateTime(2026), solutie: 'Amână cauza')), isFalse);
-    expect(
-      esteHotarare(
-        _t(DateTime(2026), solutie: 'Suspendă', document: 'Incheiere'),
-      ),
-      isFalse,
-    );
-    expect(
-      esteHotarare(_t(DateTime(2026), solutie: 'Perimă', document: 'Sentinta')),
-      isTrue,
-    );
+    expect(esteHotarare(_t(DateTime(2026), solutie: 'Suspendă', document: 'Incheiere')), isFalse);
+    expect(esteHotarare(_t(DateTime(2026), solutie: 'Perimă', document: 'Sentinta')), isTrue);
   });
 
   test('Raportul lunar: termene, hotărâri, căi de atac, termene următoare', () {
@@ -155,15 +116,9 @@ void main() {
       IntervalRaport.pentru(PerioadaRaport.lunar, DateTime(2026, 11, 1)),
       acum: DateTime(2026, 12, 1, 8),
     );
-    expect(
-      [for (final t in r.termene) t.dosar.numar],
-      ['1/105/2026', '2/281/2026', '1/105/2026'],
-    );
+    expect([for (final t in r.termene) t.dosar.numar], ['1/105/2026', '2/281/2026', '1/105/2026']);
     expect(r.amanari, 1);
-    expect(
-      [for (final h in r.hotarari) h.dosar.numar],
-      ['2/281/2026', '1/105/2026'],
-    );
+    expect([for (final h in r.hotarari) h.dosar.numar], ['2/281/2026', '1/105/2026']);
     expect(r.hotarari.last.document, 'Hotărâre 1290/2026');
     expect(r.caiAtac.single.cale.tip, 'Apel');
     expect([for (final t in r.urmatoare) t.dataOra], ['08.12.2026, 10:00']);
@@ -220,16 +175,9 @@ void main() {
 
   test('Se creează PDF-ul și documentul Word', () async {
     pw.Font font(String n) => pw.Font.ttf(
-      File('assets/fonts/LiberationSerif-$n.ttf')
-          .readAsBytesSync()
-          .buffer
-          .asByteData(),
+      File('assets/fonts/LiberationSerif-$n.ttf').readAsBytesSync().buffer.asByteData(),
     );
-    final fonturi = FonturiRaport(
-      font('Regular'),
-      font('Bold'),
-      font('Italic'),
-    );
+    final fonturi = FonturiRaport(font('Regular'), font('Bold'), font('Italic'));
     final iesire = Platform.environment['RAPORT_IESIRE'];
     for (final perioada in PerioadaRaport.values) {
       final r = construiesteRaport(

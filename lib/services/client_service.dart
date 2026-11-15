@@ -14,16 +14,14 @@ class ClientService extends ChangeNotifier {
   static const _cheie = 'clientul_meu_v1';
   Map<String, String> _clienti = {};
 
-  static String _nume(String s) =>
-      s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  static String _nume(String s) => s.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
   Future<void> incarca() async {
     final prefs = await SharedPreferences.getInstance();
     final l = prefs.getStringList(_cheie) ?? const <String>[];
     _clienti = {
       for (final s in l)
-        if (s.indexOf('\u0001') case final i when i > 0)
-          s.substring(0, i): s.substring(i + 1),
+        if (s.indexOf('\u0001') case final i when i > 0) s.substring(0, i): s.substring(i + 1),
     };
     notifyListeners();
   }
@@ -72,10 +70,8 @@ enum Pozitie { initiator, aparare, necunoscuta }
 /// („Intimat-Reclamant” apără o hotărâre, deci e în apărare).
 Pozitie pozitie(String calitate) {
   final c = _fara(calitate);
-  if (c.isEmpty || c.contains('debitor') || c.contains('creditor'))
-    return Pozitie.necunoscuta;
-  if (RegExp(r'apelant|recurent|revizuent|contestator|petitionar')
-      .hasMatch(c)) {
+  if (c.isEmpty || c.contains('debitor') || c.contains('creditor')) return Pozitie.necunoscuta;
+  if (RegExp(r'apelant|recurent|revizuent|contestator|petitionar').hasMatch(c)) {
     return Pozitie.initiator;
   }
   if (c.contains('intimat')) return Pozitie.aparare;
@@ -93,8 +89,7 @@ String rezultatPentruClient(Parte? client, Sedinta hotarare) {
   return switch (tipSolutie(hotarare)) {
     TipSolutie.admiteInParte => 'Parțial',
     TipSolutie.admite => poz == Pozitie.initiator ? 'Favorabil' : 'Nefavorabil',
-    TipSolutie.respinge =>
-      poz == Pozitie.initiator ? 'Nefavorabil' : 'Favorabil',
+    TipSolutie.respinge => poz == Pozitie.initiator ? 'Nefavorabil' : 'Favorabil',
     _ => '',
   };
 }

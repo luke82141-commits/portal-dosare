@@ -73,10 +73,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         _Modificari(salvat: salvat),
                         const SizedBox(height: 16),
                       ],
-                      ParcursDosarCard(
-                        key: ValueKey(dosar.cheie),
-                        dosar: dosar,
-                      ),
+                      ParcursDosarCard(key: ValueKey(dosar.cheie), dosar: dosar),
                       const SizedBox(height: 16),
                       _RutaInstanta(dosar: dosar),
                       const SizedBox(height: 16),
@@ -91,23 +88,15 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                           deschisInitial: false,
                           numar: dosar.parti.length,
                           copii: dosar.parti.isEmpty
-                              ? [
-                                  const _Gol(
-                                    'Portalul nu afișează părți pentru acest dosar.',
-                                  ),
-                                ]
+                              ? [const _Gol('Portalul nu afișează părți pentru acest dosar.')]
                               : [
                                   for (final p in dosar.parti)
                                     ParteRand(
                                       parte: p,
-                                      esteClient: ClientService.instance
-                                          .esteClient(dosar.numar, p),
+                                      esteClient: ClientService.instance.esteClient(dosar.numar, p),
                                       onClient: salvat == null
                                           ? null
-                                          : () => ClientService.instance.comuta(
-                                              dosar.numar,
-                                              p,
-                                            ),
+                                          : () => ClientService.instance.comuta(dosar.numar, p),
                                     ),
                                 ],
                         ),
@@ -120,10 +109,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                         numar: sedinte.length,
                         copii: sedinte.isEmpty
                             ? [const _Gol('Nu există încă ședințe publicate.')]
-                            : [
-                                for (final s in sedinte)
-                                  SedintaRand(sedinta: s, dosar: dosar),
-                              ],
+                            : [for (final s in sedinte) SedintaRand(sedinta: s, dosar: dosar)],
                       ),
                       if (dosar.caiAtac.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -132,10 +118,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                           titlu: 'Căi de atac',
                           numar: dosar.caiAtac.length,
                           deschisInitial: false,
-                          copii: [
-                            for (final c in dosar.caiAtac)
-                              _CaleAtacRand(cale: c),
-                          ],
+                          copii: [for (final c in dosar.caiAtac) _CaleAtacRand(cale: c)],
                         ),
                       ],
                       const SizedBox(height: 16),
@@ -144,10 +127,7 @@ class _DosarDetaliuScreenState extends State<DosarDetaliuScreen> {
                             ? 'Ultima verificare: ${formateazaDataOra(salvat!.ultimaVerificare)}'
                                   ' · sursa: portal.just.ro'
                             : 'Sursa: portal.just.ro',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                        style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -173,23 +153,17 @@ class _Antet extends StatelessWidget {
     final chips = [
       (dosar.stadiuProcesual, TipFiltru.stadiu),
       (dosar.categorie, TipFiltru.categorie),
-      if (dosar.data != null)
-        ('Înregistrat ${formateazaData(dosar.data)}', TipFiltru.an),
+      if (dosar.data != null) ('Înregistrat ${formateazaData(dosar.data)}', TipFiltru.an),
     ].where((e) => e.$1.isNotEmpty);
 
     void filtreaza(TipFiltru tip) => Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar)),
-      ),
+      MaterialPageRoute(builder: (_) => DosareFiltrateScreen(filtre: FiltreDosare.din(tip, dosar))),
     );
 
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.hero),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.hero)),
       ),
       padding: const EdgeInsets.only(bottom: 20),
       child: SafeArea(
@@ -205,11 +179,7 @@ class _Antet extends StatelessWidget {
                   const Expanded(
                     child: Text(
                       'Detaliu dosar',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: alb,
-                      ),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: alb),
                     ),
                   ),
                   ListenableBuilder(
@@ -223,9 +193,7 @@ class _Antet extends StatelessWidget {
                         icon: Badge(
                           isLabelVisible: b.totalNecitite > 0,
                           label: Text('${b.totalNecitite}'),
-                          child: const Icon(
-                            Icons.collections_bookmark_outlined,
-                          ),
+                          child: const Icon(Icons.collections_bookmark_outlined),
                         ),
                         onPressed: () => _arataDosarele(context, dosar),
                       );
@@ -239,24 +207,14 @@ class _Antet extends StatelessWidget {
                       final messenger = ScaffoldMessenger.of(context);
                       await Clipboard.setData(ClipboardData(text: dosar.numar));
                       messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Numărul ${dosar.numar} a fost copiat.',
-                          ),
-                        ),
+                        SnackBar(content: Text('Numărul ${dosar.numar} a fost copiat.')),
                       );
                     },
                   ),
                   IconButton(
-                    tooltip: monitorizat
-                        ? 'Oprește monitorizarea'
-                        : 'Monitorizează dosarul',
+                    tooltip: monitorizat ? 'Oprește monitorizarea' : 'Monitorizează dosarul',
                     color: monitorizat ? AppColors.accentContainer : alb,
-                    icon: Icon(
-                      monitorizat
-                          ? Icons.bookmark
-                          : Icons.bookmark_add_outlined,
-                    ),
+                    icon: Icon(monitorizat ? Icons.bookmark : Icons.bookmark_add_outlined),
                     onPressed: () => comutaMonitorizare(context, dosar),
                   ),
                 ],
@@ -269,11 +227,7 @@ class _Antet extends StatelessWidget {
                 children: [
                   SelectableText(
                     dosar.numar,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: alb,
-                    ),
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: alb),
                   ),
                   const SizedBox(height: 6),
                   InkWell(
@@ -296,18 +250,11 @@ class _Antet extends StatelessWidget {
                           Flexible(
                             child: Text(
                               dosar.instanta,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: alb.withValues(alpha: 0.85),
-                              ),
+                              style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.85)),
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: alb.withValues(alpha: 0.6),
-                          ),
+                          Icon(Icons.chevron_right, size: 18, color: alb.withValues(alpha: 0.6)),
                         ],
                       ),
                     ),
@@ -325,10 +272,7 @@ class _Antet extends StatelessWidget {
                             customBorder: const StadiumBorder(),
                             onTap: () => filtreaza(tip),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               child: Text(
                                 text,
                                 style: const TextStyle(
@@ -354,9 +298,7 @@ class _Antet extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(
-                              monitorizat
-                                  ? Icons.notifications_active
-                                  : Icons.notifications_none,
+                              monitorizat ? Icons.notifications_active : Icons.notifications_none,
                               size: 22,
                               color: AppColors.accentContainer,
                             ),
@@ -366,9 +308,7 @@ class _Antet extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    monitorizat
-                                        ? 'Monitorizare activă'
-                                        : 'Monitorizează dosarul',
+                                    monitorizat ? 'Monitorizare activă' : 'Monitorizează dosarul',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -389,8 +329,7 @@ class _Antet extends StatelessWidget {
                             ),
                             Switch(
                               value: monitorizat,
-                              onChanged: (_) =>
-                                  comutaMonitorizare(context, dosar),
+                              onChanged: (_) => comutaMonitorizare(context, dosar),
                             ),
                           ],
                         ),
@@ -418,9 +357,7 @@ void _arataDosarele(BuildContext context, Dosar curent) {
     builder: (ctx) {
       final dosare = BibliotecaService.instance.dosare;
       return ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(ctx).height * 0.7,
-        ),
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -431,10 +368,7 @@ void _arataDosarele(BuildContext context, Dosar curent) {
                 dosare.length == 1
                     ? 'Un dosar monitorizat'
                     : '${dosare.length} dosare monitorizate',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
             ),
             Flexible(
@@ -447,9 +381,7 @@ void _arataDosarele(BuildContext context, Dosar curent) {
                   final s = dosare[i];
                   final esteCurent = s.dosar.cheie == curent.cheie;
                   return Material(
-                    color: esteCurent
-                        ? AppColors.primaryContainer
-                        : Colors.transparent,
+                    color: esteCurent ? AppColors.primaryContainer : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
@@ -457,16 +389,11 @@ void _arataDosarele(BuildContext context, Dosar curent) {
                         Navigator.of(ctx).pop();
                         if (esteCurent) return;
                         Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => DosarDetaliuScreen(dosar: s.dosar),
-                          ),
+                          MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: s.dosar)),
                         );
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         child: Row(
                           children: [
                             Expanded(
@@ -522,20 +449,14 @@ class _RutaInstanta extends StatelessWidget {
 
   const _RutaInstanta({required this.dosar});
 
-  Future<void> _deschide(
-    BuildContext context,
-    Uri uri,
-    String aplicatie,
-  ) async {
+  Future<void> _deschide(BuildContext context, Uri uri, String aplicatie) async {
     final messenger = ScaffoldMessenger.of(context);
     var reusit = false;
     try {
       reusit = await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {}
     if (!reusit) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Nu am putut deschide $aplicatie.')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Nu am putut deschide $aplicatie.')));
     }
   }
 
@@ -567,10 +488,7 @@ class _RutaInstanta extends StatelessWidget {
                     children: [
                       const Text(
                         'Mergi la instanță',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -579,10 +497,7 @@ class _RutaInstanta extends StatelessWidget {
                             : 'Termen ${formateazaData(termen.data)}'
                                   '${termen.ora.isEmpty ? '' : ', ora ${termen.ora}'}'
                                   ' · ruta pornește din locația ta.',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -594,11 +509,8 @@ class _RutaInstanta extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _deschide(
-                      context,
-                      rutaGoogleMaps(dosar.instanta),
-                      'Google Maps',
-                    ),
+                    onPressed: () =>
+                        _deschide(context, rutaGoogleMaps(dosar.instanta), 'Google Maps'),
                     icon: const Icon(Icons.map_outlined, size: 18),
                     label: const Text('Google Maps'),
                   ),
@@ -606,8 +518,7 @@ class _RutaInstanta extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () =>
-                        _deschide(context, rutaWaze(dosar.instanta), 'Waze'),
+                    onPressed: () => _deschide(context, rutaWaze(dosar.instanta), 'Waze'),
                     icon: const Icon(Icons.navigation_outlined, size: 18),
                     label: const Text('Waze'),
                   ),
@@ -617,11 +528,8 @@ class _RutaInstanta extends StatelessWidget {
             if (instantaDupaCod(dosar.institutie) case final instanta?) ...[
               const SizedBox(height: 10),
               FilledButton.tonalIcon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => InstantaScreen(instanta: instanta),
-                  ),
-                ),
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => InstantaScreen(instanta: instanta))),
                 icon: const Icon(Icons.contact_phone_outlined, size: 18),
                 label: const Text('Contact și program instanță'),
               ),
@@ -671,10 +579,7 @@ class _InformatiiGenerale extends StatelessWidget {
                       width: 120,
                       child: Text(
                         randuri[i].$1,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.onSurfaceVariant,
-                        ),
+                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -692,8 +597,7 @@ class _InformatiiGenerale extends StatelessWidget {
                 ),
               ),
             ],
-            if (trimiteriDinObiect(dosar.obiect) case final trimiteri
-                when trimiteri.isNotEmpty) ...[
+            if (trimiteriDinObiect(dosar.obiect) case final trimiteri when trimiteri.isNotEmpty) ...[
               const Divider(),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -702,10 +606,7 @@ class _InformatiiGenerale extends StatelessWidget {
                   children: [
                     const Text(
                       'Legislație pentru obiect',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -779,16 +680,10 @@ class _ModificariState extends State<_Modificari> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      m.text,
-                      style: const TextStyle(fontSize: 14, height: 1.36),
-                    ),
+                    Text(m.text, style: const TextStyle(fontSize: 14, height: 1.36)),
                     Text(
                       'detectat ${formateazaDataOra(m.detectataLa)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -821,19 +716,13 @@ class _CaleAtacRand extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            [
-              cale.tip,
-              formateazaData(cale.dataDeclarare),
-            ].where((e) => e.isNotEmpty).join(' · '),
+            [cale.tip, formateazaData(cale.dataDeclarare)].where((e) => e.isNotEmpty).join(' · '),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           if (cale.parteDeclaratoare.isNotEmpty)
             Text(
               'Declarată de ${cale.parteDeclaratoare}',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.onSurfaceVariant,
-              ),
+              style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
             ),
         ],
       ),
@@ -850,10 +739,7 @@ class _Gol extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        text,
-        style: const TextStyle(color: AppColors.onSurfaceVariant),
-      ),
+      child: Text(text, style: const TextStyle(color: AppColors.onSurfaceVariant)),
     );
   }
 }

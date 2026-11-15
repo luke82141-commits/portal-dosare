@@ -270,10 +270,7 @@ void main() {
     });
     await tester.pump();
     expect(find.text('În vigoare'), findsOneWidget);
-    expect(
-      find.textContaining('ultima modificare: 08.05.2026'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('ultima modificare: 08.05.2026'), findsOneWidget);
     expect(find.textContaining('Istoric ('), findsOneWidget);
     // Textul legii se poate selecta și copia.
     expect(find.byType(SelectionArea), findsOneWidget);

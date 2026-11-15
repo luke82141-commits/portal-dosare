@@ -38,14 +38,9 @@ class _PartiUrmariteScreenState extends State<PartiUrmariteScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Nu mai urmări partea?'),
-        content: Text(
-          'Nu vei mai fi anunțat de dosarele noi pe numele „${p.eticheta}”.',
-        ),
+        content: Text('Nu vei mai fi anunțat de dosarele noi pe numele „${p.eticheta}”.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Renunță'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Renunță')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Nu mai urmări'),
@@ -87,10 +82,7 @@ class _PartiUrmariteScreenState extends State<PartiUrmariteScreen> {
                     padding: EdgeInsets.only(bottom: 8),
                     child: Text(
                       'Niciun dosar nou de la începutul urmăririi.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                     ),
                   )
                 else
@@ -132,18 +124,12 @@ class _AntetParte extends StatelessWidget {
             children: [
               Text(
                 parte.eticheta,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               Text(
                 'Urmărită din ${formateazaData(parte.adaugataLa)}'
                 '${verificare == null ? '' : ' · verificată ${formateazaDataOra(verificare)}'}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.onSurfaceVariant,
-                ),
+                style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
               ),
             ],
           ),

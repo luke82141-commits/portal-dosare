@@ -66,18 +66,13 @@ class _CautareScreenState extends State<CautareScreen> {
     );
     if (!criterii.areCriteriuPrincipal) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Introdu numărul dosarului, obiectul sau numele unei părți.',
-          ),
-        ),
+        const SnackBar(content: Text('Introdu numărul dosarului, obiectul sau numele unei părți.')),
       );
       return;
     }
     CautariRecenteService.instance.adauga(criterii);
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => RezultateScreen(criterii: criterii)));
   }
 
   void _reia(CautareRecenta c) {
@@ -127,10 +122,7 @@ class _CautareScreenState extends State<CautareScreen> {
         // trece pe sub ceas și iconițe.
         body: Column(
           children: [
-            Container(
-              color: AppColors.primary,
-              height: MediaQuery.paddingOf(context).top,
-            ),
+            Container(color: AppColors.primary, height: MediaQuery.paddingOf(context).top),
             Expanded(
               child: MediaQuery.removePadding(
                 context: context,
@@ -161,9 +153,7 @@ class _CautareScreenState extends State<CautareScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.primary,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.hero),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.hero)),
       ),
       padding: const EdgeInsets.only(bottom: 24),
       child: SafeArea(
@@ -188,19 +178,12 @@ class _CautareScreenState extends State<CautareScreen> {
                   const SizedBox(height: 6),
                   const Text(
                     'Caută un dosar',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: alb,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: alb),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Date preluate direct de pe portal.just.ro',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: alb.withValues(alpha: 0.8),
-                    ),
+                    style: TextStyle(fontSize: 14, color: alb.withValues(alpha: 0.8)),
                   ),
                 ],
               ),
@@ -213,11 +196,7 @@ class _CautareScreenState extends State<CautareScreen> {
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x2E0D1433),
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
+                    BoxShadow(color: Color(0x2E0D1433), blurRadius: 24, offset: Offset(0, 8)),
                   ],
                 ),
                 child: Column(
@@ -261,9 +240,7 @@ class _CautareScreenState extends State<CautareScreen> {
   }
 
   Widget _criteriiSuplimentare() {
-    final instanta = _institutii.isEmpty
-        ? 'Toate instanțele'
-        : descrieInstante(_institutii);
+    final instanta = _institutii.isEmpty ? 'Toate instanțele' : descrieInstante(_institutii);
     final interval = _interval == null
         ? 'Oricând'
         : '${formateazaData(_interval!.start)} – ${formateazaData(_interval!.end)}';
@@ -274,10 +251,7 @@ class _CautareScreenState extends State<CautareScreen> {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: () => setState(() => _maiMulte = !_maiMulte),
-            icon: Icon(
-              _maiMulte ? Icons.expand_less : Icons.expand_more,
-              size: 20,
-            ),
+            icon: Icon(_maiMulte ? Icons.expand_less : Icons.expand_more, size: 20),
             label: const Text('Mai multe criterii'),
           ),
         ),
@@ -287,9 +261,7 @@ class _CautareScreenState extends State<CautareScreen> {
             valoare: instanta,
             icon: Icons.account_balance,
             onTap: _alegeInstanta,
-            onSterge: _institutii.isEmpty
-                ? null
-                : () => setState(() => _institutii = []),
+            onSterge: _institutii.isEmpty ? null : () => setState(() => _institutii = []),
           ),
           const SizedBox(height: 14),
           _selector(
@@ -297,9 +269,7 @@ class _CautareScreenState extends State<CautareScreen> {
             valoare: interval,
             icon: Icons.date_range,
             onTap: _alegeInterval,
-            onSterge: _interval == null
-                ? null
-                : () => setState(() => _interval = null),
+            onSterge: _interval == null ? null : () => setState(() => _interval = null),
           ),
         ],
       ],
@@ -403,11 +373,7 @@ class _CautareScreenState extends State<CautareScreen> {
                 runSpacing: 8,
                 children: [
                   for (final c in recente)
-                    Pastila(
-                      c.eticheta,
-                      icon: Icons.history,
-                      onTap: () => _reia(c),
-                    ),
+                    Pastila(c.eticheta, icon: Icons.history, onTap: () => _reia(c)),
                 ],
               ),
             ],
@@ -438,20 +404,13 @@ class _CautareScreenState extends State<CautareScreen> {
             if (cuTermen.isEmpty)
               const Text(
                 'Monitorizează un dosar ca să vezi aici următoarele termene.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.onSurfaceVariant,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
               )
             else
               for (final (s, _) in cuTermen.take(3))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: DosarCardWidget(
-                    key: ValueKey(s.dosar.cheie),
-                    dosar: s.dosar,
-                    salvat: s,
-                  ),
+                  child: DosarCardWidget(key: ValueKey(s.dosar.cheie), dosar: s.dosar, salvat: s),
                 ),
           ],
         );
@@ -491,17 +450,14 @@ class _FoaieInstanteState extends State<_FoaieInstante> {
     final cautat = _simplu(_text.trim());
     final instante = [
       for (final i in toateInstantele)
-        if (cautat.isEmpty || _simplu('${i.nume} ${i.judet}').contains(cautat))
-          i,
+        if (cautat.isEmpty || _simplu('${i.nume} ${i.judet}').contains(cautat)) i,
     ]..sort((a, b) => a.nume.compareTo(b.nume));
     // Cele bifate stau sus, ca să se vadă ce ai ales.
     instante.sort((a, b) {
-      final x = _alese.contains(a.cod) ? 0 : 1,
-          y = _alese.contains(b.cod) ? 0 : 1;
+      final x = _alese.contains(a.cod) ? 0 : 1, y = _alese.contains(b.cod) ? 0 : 1;
       return x - y;
     });
-    final toateBifate =
-        instante.isNotEmpty && instante.every((i) => _alese.contains(i.cod));
+    final toateBifate = instante.isNotEmpty && instante.every((i) => _alese.contains(i.cod));
 
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.85,
@@ -533,10 +489,7 @@ class _FoaieInstanteState extends State<_FoaieInstante> {
                       }
                     }
                   }),
-                  icon: Icon(
-                    toateBifate ? Icons.remove_done : Icons.done_all,
-                    size: 20,
-                  ),
+                  icon: Icon(toateBifate ? Icons.remove_done : Icons.done_all, size: 20),
                   label: Text(
                     toateBifate
                         ? 'Debifează cele ${instante.length}'
@@ -567,17 +520,13 @@ class _FoaieInstanteState extends State<_FoaieInstante> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: _alese.isEmpty
-                        ? null
-                        : () => setState(_alese.clear),
+                    onPressed: _alese.isEmpty ? null : () => setState(_alese.clear),
                     child: const Text('Toate instanțele'),
                   ),
                   const Spacer(),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(_alese),
-                    child: Text(
-                      _alese.isEmpty ? 'Gata' : 'Gata (${_alese.length})',
-                    ),
+                    child: Text(_alese.isEmpty ? 'Gata' : 'Gata (${_alese.length})'),
                   ),
                 ],
               ),

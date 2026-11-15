@@ -45,8 +45,7 @@ class CuloriDosareService extends ChangeNotifier {
   }
 
   /// Culoarea aleasă de utilizator, sau null dacă e automată.
-  Color? aleasa(String cheie) =>
-      _alese[cheie] == null ? null : Color(_alese[cheie]!);
+  Color? aleasa(String cheie) => _alese[cheie] == null ? null : Color(_alese[cheie]!);
 
   /// [culoare] null revine la culoarea automată.
   Future<void> seteaza(String cheie, Color? culoare) async {
@@ -57,9 +56,7 @@ class CuloriDosareService extends ChangeNotifier {
     }
     _invalideaza();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_cheie, [
-      for (final e in _alese.entries) '${e.key}=${e.value}',
-    ]);
+    await prefs.setStringList(_cheie, [for (final e in _alese.entries) '${e.key}=${e.value}']);
   }
 
   /// Culoarea dosarului [d] (din bibliotecă sau nu).
@@ -68,9 +65,7 @@ class CuloriDosareService extends ChangeNotifier {
       [for (final s in BibliotecaService.instance.dosare.reversed) s.dosar],
       alese: {for (final e in _alese.entries) e.key: Color(e.value)},
     );
-    return _calculate![d.cheie] ??
-        aleasa(d.cheie) ??
-        paletaDosare[_preferata(d.cheie)].$1;
+    return _calculate![d.cheie] ?? aleasa(d.cheie) ?? paletaDosare[_preferata(d.cheie)].$1;
   }
 
   void _invalideaza() {
@@ -93,10 +88,7 @@ int _preferata(String cheie) {
 ///
 /// Fiecare dosar pornește de la o culoare derivată din număr, deci adăugarea
 /// unui dosar nou nu le schimbă pe ale celor existente.
-Map<String, Color> culoriAutomate(
-  List<Dosar> dosare, {
-  Map<String, Color> alese = const {},
-}) {
+Map<String, Color> culoriAutomate(List<Dosar> dosare, {Map<String, Color> alese = const {}}) {
   final peZile = <DateTime, Set<String>>{};
   for (final d in dosare) {
     for (final s in d.sedinte) {

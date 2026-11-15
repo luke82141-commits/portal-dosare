@@ -13,13 +13,9 @@ void main() {
     expect(ProService.instance.activ, isTrue);
   });
 
-  testWidgets('Widgeturile nu mai au comutator de test pentru Pro', (
-    tester,
-  ) async {
+  testWidgets('Widgeturile nu mai au comutator de test pentru Pro', (tester) async {
     SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(
-      MaterialApp(theme: construiesteTema(), home: const WidgeturiScreen()),
-    );
+    await tester.pumpWidget(MaterialApp(theme: construiesteTema(), home: const WidgeturiScreen()));
     await tester.pumpAndSettle();
     expect(find.byType(Switch), findsNothing);
     expect(find.text('Pro activ (test)'), findsNothing);

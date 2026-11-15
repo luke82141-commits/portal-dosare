@@ -43,40 +43,21 @@ void main() {
       return http.Response(_gol, 200);
     });
     final soap = SoapService(client: client);
-    await Future.wait([
-      for (var i = 1; i <= 3; i++) soap.cautaDosare(numarDosar: '$i/105/2026'),
-    ]);
+    await Future.wait([for (var i = 1; i <= 3; i++) soap.cautaDosare(numarDosar: '$i/105/2026')]);
     expect(momente, hasLength(3));
     for (var i = 1; i < momente.length; i++) {
-      expect(
-        momente[i].difference(momente[i - 1]).inMilliseconds,
-        greaterThanOrEqualTo(45),
-      );
+      expect(momente[i].difference(momente[i - 1]).inMilliseconds, greaterThanOrEqualTo(45));
     }
   });
 
-  test(
-    'La deschiderea aplicației verificăm cel mult o dată la 15 minute',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        'ultima_verificare_completa': DateTime(
-          2026,
-          11,
-          14,
-          15,
-        ).toIso8601String(),
-      });
-      final m = MonitorizareService.instance;
-      expect(
-        await m.eTimpulPentruVerificare(acum: DateTime(2026, 11, 14, 15, 10)),
-        isFalse,
-      );
-      expect(
-        await m.eTimpulPentruVerificare(acum: DateTime(2026, 11, 14, 15, 16)),
-        isTrue,
-      );
-      SharedPreferences.setMockInitialValues({});
-      expect(await m.eTimpulPentruVerificare(), isTrue);
-    },
-  );
+  test('La deschiderea aplicației verificăm cel mult o dată la 15 minute', () async {
+    SharedPreferences.setMockInitialValues({
+      'ultima_verificare_completa': DateTime(2026, 11, 14, 15).toIso8601String(),
+    });
+    final m = MonitorizareService.instance;
+    expect(await m.eTimpulPentruVerificare(acum: DateTime(2026, 11, 14, 15, 10)), isFalse);
+    expect(await m.eTimpulPentruVerificare(acum: DateTime(2026, 11, 14, 15, 16)), isTrue);
+    SharedPreferences.setMockInitialValues({});
+    expect(await m.eTimpulPentruVerificare(), isTrue);
+  });
 }

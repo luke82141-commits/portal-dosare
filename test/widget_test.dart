@@ -90,9 +90,7 @@ void main() {
     ParcursDosar.soap = _SoapFals.new;
   });
 
-  testWidgets('Ecranul de căutare are câmpurile pentru număr și obiect', (
-    tester,
-  ) async {
+  testWidgets('Ecranul de căutare are câmpurile pentru număr și obiect', (tester) async {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
     expect(find.text('Număr dosar'), findsOneWidget);
@@ -108,24 +106,15 @@ void main() {
     expect(find.text('Nicio notificare'), findsOneWidget);
   });
 
-  testWidgets('Calendarele și dialogurile sistemului sunt în română', (
-    tester,
-  ) async {
+  testWidgets('Calendarele și dialogurile sistemului sunt în română', (tester) async {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
-    final l = MaterialLocalizations.of(
-      tester.element(find.text('Caută dosar')),
-    );
+    final l = MaterialLocalizations.of(tester.element(find.text('Caută dosar')));
     expect(l.firstDayOfWeekIndex, 1); // săptămâna începe luni
-    expect(
-      l.formatMonthYear(DateTime(2026, 11)).toLowerCase(),
-      contains('noiembrie'),
-    );
+    expect(l.formatMonthYear(DateTime(2026, 11)).toLowerCase(), contains('noiembrie'));
   });
 
-  testWidgets('Căutarea are numele părții, instanța și intervalul', (
-    tester,
-  ) async {
+  testWidgets('Căutarea are numele părții, instanța și intervalul', (tester) async {
     await tester.pumpWidget(const LegalManagementApp());
     await tester.pumpAndSettle();
     expect(find.text('Nume parte'), findsOneWidget);
@@ -139,10 +128,7 @@ void main() {
 
     await tester.tap(find.text('Toate instanțele'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Caută instanța sau județul'),
-      'sinaia',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'Caută instanța sau județul'), 'sinaia');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Judecătoria Sinaia'));
     await tester.pumpAndSettle();
@@ -155,30 +141,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Caută dosar'), warnIfMissed: true);
     await tester.pump(const Duration(milliseconds: 500));
-    expect(
-      find.text('Introdu numărul dosarului, obiectul sau numele unei părți.'),
-      findsOneWidget,
-    );
+    expect(find.text('Introdu numărul dosarului, obiectul sau numele unei părți.'), findsOneWidget);
   });
 
-  testWidgets('Cardul e compact: instanța, obiectul și ultima soluție', (
-    tester,
-  ) async {
+  testWidgets('Cardul e compact: instanța, obiectul și ultima soluție', (tester) async {
     await _pompeazaCard(tester);
     expect(find.text('468/310/2026'), findsOneWidget);
-    expect(
-      find.text('Judecătoria Sectorul 1 București · Secția Civilă'),
-      findsOneWidget,
-    );
+    expect(find.text('Judecătoria Sectorul 1 București · Secția Civilă'), findsOneWidget);
     expect(find.text('uzucapiune'), findsOneWidget);
     expect(find.text('Ultima soluție: Amână cauza'), findsOneWidget);
     // Părțile și ședințele apar doar în detaliu.
     expect(find.text('POPESCU ION'), findsNothing);
   });
 
-  testWidgets('Tap pe card deschide detaliul cu părți și ședințe', (
-    tester,
-  ) async {
+  testWidgets('Tap pe card deschide detaliul cu părți și ședințe', (tester) async {
     await _pompeazaCard(tester);
     await tester.tap(find.byType(DosarCardWidget));
     await tester.pumpAndSettle();
@@ -217,9 +193,7 @@ void main() {
     expect(find.text('Monitorizare activă'), findsOneWidget);
   });
 
-  testWidgets('Din detaliu se poate sări la alt dosar monitorizat', (
-    tester,
-  ) async {
+  testWidgets('Din detaliu se poate sări la alt dosar monitorizat', (tester) async {
     final altul = Dosar(
       numar: '5900/2/2026',
       data: DateTime(2026, 9, 16),
@@ -281,9 +255,7 @@ void main() {
     expect(find.text('2 dosare'), findsOneWidget);
   });
 
-  testWidgets('Din rezultate dosarul se adaugă și se scoate din bibliotecă', (
-    tester,
-  ) async {
+  testWidgets('Din rezultate dosarul se adaugă și se scoate din bibliotecă', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: construiesteTema(),
@@ -312,9 +284,7 @@ void main() {
     expect(find.text('Adaugă'), findsOneWidget);
   });
 
-  testWidgets('La fond apare și calea de atac, cu soluția și ședințele ei', (
-    tester,
-  ) async {
+  testWidgets('La fond apare și calea de atac, cu soluția și ședințele ei', (tester) async {
     ParcursDosar.soap = () => _SoapFals([_dosar, _apel]);
     await _pompeazaCard(tester);
     await tester.tap(find.byType(DosarCardWidget));
@@ -335,11 +305,8 @@ void main() {
     expect(find.text('Respinge apelul ca nefondat. Definitivă.'), findsWidgets);
   });
 
-  testWidgets('Tap pe o soluție lungă din parcurs o arată întreagă', (
-    tester,
-  ) async {
-    final lung =
-        'Admite apelul. ${'Schimbă în parte sentința apelată. ' * 12}Definitivă.';
+  testWidgets('Tap pe o soluție lungă din parcurs o arată întreagă', (tester) async {
+    final lung = 'Admite apelul. ${'Schimbă în parte sentința apelată. ' * 12}Definitivă.';
     final apel = Dosar(
       numar: _apel.numar,
       data: _apel.data,
@@ -384,9 +351,7 @@ void main() {
     expect(find.textContaining('apare doar la'), findsNothing);
   });
 
-  testWidgets('În apel, fără fondul pe portal, spune ce lipsește', (
-    tester,
-  ) async {
+  testWidgets('În apel, fără fondul pe portal, spune ce lipsește', (tester) async {
     ParcursDosar.soap = () => _SoapFals([_apel]);
     await tester.pumpWidget(
       MaterialApp(
@@ -396,10 +361,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Parcursul dosarului'), findsNothing);
-    expect(
-      find.textContaining('apare doar la Tribunalul Prahova'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('apare doar la Tribunalul Prahova'), findsOneWidget);
     expect(find.text('Reîncearcă'), findsOneWidget);
   });
 }

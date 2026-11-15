@@ -6,25 +6,14 @@ import '../services/iccj_service.dart';
 /// Cere numărul unui dosar de la Înalta Curte și îl pune în bibliotecă. În
 /// fereastra de noapte îl aduce imediat; altfel îl ține „în așteptare” până la
 /// verificarea de noapte. Întoarce mesajul de arătat utilizatorului.
-Future<String?> adaugaDosarIccj(
-  BuildContext context, {
-  IccjService? iccj,
-  DateTime? acum,
-}) async {
-  final numar = await showDialog<String>(
-    context: context,
-    builder: (_) => const _DialogNumar(),
-  );
+Future<String?> adaugaDosarIccj(BuildContext context, {IccjService? iccj, DateTime? acum}) async {
+  final numar = await showDialog<String>(context: context, builder: (_) => const _DialogNumar());
   if (numar == null || numar.trim().isEmpty || !context.mounted) return null;
   return urmaresteDosarIccj(numar.trim(), iccj: iccj, acum: acum);
 }
 
 /// Logica din spatele dialogului, separată ca să poată fi testată.
-Future<String> urmaresteDosarIccj(
-  String numar, {
-  IccjService? iccj,
-  DateTime? acum,
-}) async {
+Future<String> urmaresteDosarIccj(String numar, {IccjService? iccj, DateTime? acum}) async {
   final biblioteca = BibliotecaService.instance;
   if (IccjService.inFereastra(acum ?? DateTime.now())) {
     try {
@@ -89,10 +78,7 @@ class _DialogNumarState extends State<_DialogNumar> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Renunță'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Renunță')),
         FilledButton(
           onPressed: () => Navigator.pop(context, _controller.text),
           child: const Text('Urmărește'),

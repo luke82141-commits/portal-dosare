@@ -53,24 +53,16 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
     setState(() => _lucreaza = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      (await SharedPreferences.getInstance()).setString(
-        _cheieBeneficiar,
-        _beneficiar.text.trim(),
-      );
+      (await SharedPreferences.getInstance()).setString(_cheieBeneficiar, _beneficiar.text.trim());
       final raport = _raport;
       final Uint8List date;
       final String tip;
       if (extensie == 'pdf') {
-        Future<pw.Font> font(String nume) async => pw.Font.ttf(
-          await rootBundle.load('assets/fonts/LiberationSerif-$nume.ttf'),
-        );
+        Future<pw.Font> font(String nume) async =>
+            pw.Font.ttf(await rootBundle.load('assets/fonts/LiberationSerif-$nume.ttf'));
         date = await raportPdf(
           raport,
-          FonturiRaport(
-            await font('Regular'),
-            await font('Bold'),
-            await font('Italic'),
-          ),
+          FonturiRaport(await font('Regular'), await font('Bold'), await font('Italic')),
         );
         tip = 'application/pdf';
       } else {
@@ -86,9 +78,7 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
         ),
       );
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Raportul nu a putut fi creat: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Raportul nu a putut fi creat: $e')));
     } finally {
       if (mounted) setState(() => _lucreaza = false);
     }
@@ -99,10 +89,7 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Rapoarte')),
       body: ListenableBuilder(
-        listenable: Listenable.merge([
-          ProService.instance,
-          BibliotecaService.instance,
-        ]),
+        listenable: Listenable.merge([ProService.instance, BibliotecaService.instance]),
         builder: (context, _) {
           if (!ProService.instance.activ) return const _Blocat();
           final raport = _raport;
@@ -111,27 +98,14 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
             children: [
               SegmentedButton<PerioadaRaport>(
                 segments: const [
-                  ButtonSegment(
-                    value: PerioadaRaport.saptamanal,
-                    label: Text('Săptămânal'),
-                  ),
-                  ButtonSegment(
-                    value: PerioadaRaport.lunar,
-                    label: Text('Lunar'),
-                  ),
-                  ButtonSegment(
-                    value: PerioadaRaport.anual,
-                    label: Text('Anual'),
-                  ),
+                  ButtonSegment(value: PerioadaRaport.saptamanal, label: Text('Săptămânal')),
+                  ButtonSegment(value: PerioadaRaport.lunar, label: Text('Lunar')),
+                  ButtonSegment(value: PerioadaRaport.anual, label: Text('Anual')),
                 ],
                 selected: {_interval.perioada},
                 showSelectedIcon: false,
-                onSelectionChanged: (s) => setState(
-                  () => _interval = IntervalRaport.pentru(
-                    s.first,
-                    _interval.inceput,
-                  ),
-                ),
+                onSelectionChanged: (s) =>
+                    setState(() => _interval = IntervalRaport.pentru(s.first, _interval.inceput)),
               ),
               const SizedBox(height: 8),
               Row(
@@ -139,8 +113,7 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
                   IconButton(
                     tooltip: 'Perioada anterioară',
                     icon: const Icon(Icons.chevron_left),
-                    onPressed: () =>
-                        setState(() => _interval = _interval.precedent),
+                    onPressed: () => setState(() => _interval = _interval.precedent),
                   ),
                   Expanded(
                     child: Text(
@@ -152,8 +125,7 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
                   IconButton(
                     tooltip: 'Perioada următoare',
                     icon: const Icon(Icons.chevron_right),
-                    onPressed: () =>
-                        setState(() => _interval = _interval.urmator),
+                    onPressed: () => setState(() => _interval = _interval.urmator),
                   ),
                 ],
               ),
@@ -167,24 +139,14 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
                         ListTile(
                           dense: true,
                           visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.only(
-                            left: sub ? 32 : 16,
-                            right: 16,
-                          ),
+                          contentPadding: EdgeInsets.only(left: sub ? 32 : 16, right: 16),
                           title: Text(
                             eticheta,
-                            style: sub
-                                ? const TextStyle(
-                                    color: AppColors.onSurfaceVariant,
-                                  )
-                                : null,
+                            style: sub ? const TextStyle(color: AppColors.onSurfaceVariant) : null,
                           ),
                           trailing: Text(
                             valoare,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                           ),
                         ),
                     ],
@@ -230,10 +192,7 @@ class _RapoarteScreenState extends State<RapoarteScreen> {
               const Text(
                 'Raportul se întocmește din dosarele urmărite, cu datele publicate pe portal la '
                 'ultima verificare.',
-                style: TextStyle(
-                  color: AppColors.onSurfaceVariant,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
               ),
             ],
           );
@@ -254,11 +213,7 @@ class _Blocat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.workspace_premium_outlined,
-              size: 48,
-              color: AppColors.accent,
-            ),
+            const Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.accent),
             const SizedBox(height: 12),
             const Text(
               'Disponibil în Portal Dosare Pro',

@@ -26,24 +26,15 @@ class NotificariScreen extends StatelessWidget {
         listenable: BibliotecaService.instance,
         builder: (context, _) {
           final biblioteca = BibliotecaService.instance;
-          final elemente =
-              <_Element>[
-                for (final s in biblioteca.dosare)
-                  for (var i = 0; i < s.modificari.length; i++)
-                    _Element(s.dosar, s.modificari[i], necitit: i < s.necitite),
-              ]..sort(
-                (a, b) => b.modificare.detectataLa.compareTo(
-                  a.modificare.detectataLa,
-                ),
-              );
+          final elemente = <_Element>[
+            for (final s in biblioteca.dosare)
+              for (var i = 0; i < s.modificari.length; i++)
+                _Element(s.dosar, s.modificari[i], necitit: i < s.necitite),
+          ]..sort((a, b) => b.modificare.detectataLa.compareTo(a.modificare.detectataLa));
 
           final azi = DateUtils.dateOnly(DateTime.now());
-          final deAzi = elemente
-              .where((e) => !e.modificare.detectataLa.isBefore(azi))
-              .toList();
-          final vechi = elemente
-              .where((e) => e.modificare.detectataLa.isBefore(azi))
-              .toList();
+          final deAzi = elemente.where((e) => !e.modificare.detectataLa.isBefore(azi)).toList();
+          final vechi = elemente.where((e) => e.modificare.detectataLa.isBefore(azi)).toList();
 
           return ListView(
             padding: EdgeInsets.zero,
@@ -61,18 +52,12 @@ class NotificariScreen extends StatelessWidget {
                           children: [
                             Text(
                               'Notificări',
-                              style: TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 4),
                             Text(
                               'Alerte despre dosarele pe care le monitorizezi',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.onSurfaceVariant,
-                              ),
+                              style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -92,8 +77,7 @@ class NotificariScreen extends StatelessWidget {
                     ? const StareMesaj(
                         icon: Icons.notifications_none,
                         titlu: 'Nicio notificare',
-                        text:
-                            'Când apare un termen nou sau o soluție la un dosar '
+                        text: 'Când apare un termen nou sau o soluție la un dosar '
                             'monitorizat, o vei vedea aici.',
                       )
                     : Column(
@@ -159,24 +143,12 @@ class _NotificareRand extends StatelessWidget {
       return (Icons.event, AppColors.successContainer, AppColors.success);
     }
     if (t.contains('soluți') || t.contains('pronunț')) {
-      return (
-        Icons.gavel,
-        AppColors.primaryContainer,
-        AppColors.onPrimaryContainer,
-      );
+      return (Icons.gavel, AppColors.primaryContainer, AppColors.onPrimaryContainer);
     }
     if (t.contains('instanț')) {
-      return (
-        Icons.account_balance,
-        AppColors.accentContainer,
-        AppColors.accent,
-      );
+      return (Icons.account_balance, AppColors.accentContainer, AppColors.accent);
     }
-    return (
-      Icons.notifications,
-      AppColors.surfaceVariant,
-      AppColors.onSurfaceVariant,
-    );
+    return (Icons.notifications, AppColors.surfaceVariant, AppColors.onSurfaceVariant);
   }
 
   String get _ora {
@@ -198,16 +170,12 @@ class _NotificareRand extends StatelessWidget {
         color: e.necitit ? AppColors.card : AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.card),
-          side: e.necitit
-              ? const BorderSide(color: AppColors.outline)
-              : BorderSide.none,
+          side: e.necitit ? const BorderSide(color: AppColors.outline) : BorderSide.none,
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.card),
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => DosarDetaliuScreen(dosar: e.dosar),
-            ),
+            MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: e.dosar)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -217,10 +185,7 @@ class _NotificareRand extends StatelessWidget {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: fundal,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  decoration: BoxDecoration(color: fundal, borderRadius: BorderRadius.circular(12)),
                   child: Icon(icon, size: 20, color: culoare),
                 ),
                 const SizedBox(width: 12),
@@ -233,19 +198,13 @@ class _NotificareRand extends StatelessWidget {
                           Expanded(
                             child: Text(
                               e.dosar.numar,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             _ora,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
-                            ),
+                            style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                           ),
                         ],
                       ),

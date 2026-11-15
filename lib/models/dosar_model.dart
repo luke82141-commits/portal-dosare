@@ -43,28 +43,28 @@ class Sedinta {
   bool get arePronuntare => solutie.isNotEmpty || solutieSumar.isNotEmpty;
 
   factory Sedinta.fromJson(Map<String, dynamic> j) => Sedinta(
-    complet: j['complet'] ?? '',
-    data: _data(j['data']),
-    ora: j['ora'] ?? '',
-    solutie: j['solutie'] ?? '',
-    solutieSumar: j['solutieSumar'] ?? '',
-    dataPronuntare: _data(j['dataPronuntare']),
-    document: j['document'] ?? '',
-    numarDocument: j['numarDocument'] ?? '',
-    dataDocument: _data(j['dataDocument']),
-  );
+        complet: j['complet'] ?? '',
+        data: _data(j['data']),
+        ora: j['ora'] ?? '',
+        solutie: j['solutie'] ?? '',
+        solutieSumar: j['solutieSumar'] ?? '',
+        dataPronuntare: _data(j['dataPronuntare']),
+        document: j['document'] ?? '',
+        numarDocument: j['numarDocument'] ?? '',
+        dataDocument: _data(j['dataDocument']),
+      );
 
   Map<String, dynamic> toJson() => {
-    'complet': complet,
-    'data': data?.toIso8601String(),
-    'ora': ora,
-    'solutie': solutie,
-    'solutieSumar': solutieSumar,
-    'dataPronuntare': dataPronuntare?.toIso8601String(),
-    'document': document,
-    'numarDocument': numarDocument,
-    'dataDocument': dataDocument?.toIso8601String(),
-  };
+        'complet': complet,
+        'data': data?.toIso8601String(),
+        'ora': ora,
+        'solutie': solutie,
+        'solutieSumar': solutieSumar,
+        'dataPronuntare': dataPronuntare?.toIso8601String(),
+        'document': document,
+        'numarDocument': numarDocument,
+        'dataDocument': dataDocument?.toIso8601String(),
+      };
 }
 
 class CaleAtac {
@@ -79,16 +79,16 @@ class CaleAtac {
   });
 
   factory CaleAtac.fromJson(Map<String, dynamic> j) => CaleAtac(
-    dataDeclarare: _data(j['dataDeclarare']),
-    parteDeclaratoare: j['parteDeclaratoare'] ?? '',
-    tip: j['tip'] ?? '',
-  );
+        dataDeclarare: _data(j['dataDeclarare']),
+        parteDeclaratoare: j['parteDeclaratoare'] ?? '',
+        tip: j['tip'] ?? '',
+      );
 
   Map<String, dynamic> toJson() => {
-    'dataDeclarare': dataDeclarare?.toIso8601String(),
-    'parteDeclaratoare': parteDeclaratoare,
-    'tip': tip,
-  };
+        'dataDeclarare': dataDeclarare?.toIso8601String(),
+        'parteDeclaratoare': parteDeclaratoare,
+        'tip': tip,
+      };
 }
 
 class Dosar {
@@ -133,44 +133,39 @@ class Dosar {
     final l = [...sedinte];
     l.sort((a, b) {
       final da = a.data, db = b.data;
-      if (da == null || db == null)
-        return da == null ? (db == null ? 0 : 1) : -1;
+      if (da == null || db == null) return da == null ? (db == null ? 0 : 1) : -1;
       return db.compareTo(da);
     });
     return l;
   }
 
   factory Dosar.fromJson(Map<String, dynamic> j) => Dosar(
-    numar: j['numar'] ?? '',
-    data: _data(j['data']),
-    institutie: j['institutie'] ?? '',
-    obiect: j['obiect'] ?? '',
-    stadiuProcesual: j['stadiuProcesual'] ?? '',
-    sectie: j['sectie'] ?? '',
-    categorie: j['categorie'] ?? '',
-    dataModificare: _data(j['dataModificare']),
-    parti: [for (final p in (j['parti'] as List? ?? [])) Parte.fromJson(p)],
-    sedinte: [
-      for (final s in (j['sedinte'] as List? ?? [])) Sedinta.fromJson(s),
-    ],
-    caiAtac: [
-      for (final c in (j['caiAtac'] as List? ?? [])) CaleAtac.fromJson(c),
-    ],
-  );
+        numar: j['numar'] ?? '',
+        data: _data(j['data']),
+        institutie: j['institutie'] ?? '',
+        obiect: j['obiect'] ?? '',
+        stadiuProcesual: j['stadiuProcesual'] ?? '',
+        sectie: j['sectie'] ?? '',
+        categorie: j['categorie'] ?? '',
+        dataModificare: _data(j['dataModificare']),
+        parti: [for (final p in (j['parti'] as List? ?? [])) Parte.fromJson(p)],
+        sedinte: [for (final s in (j['sedinte'] as List? ?? [])) Sedinta.fromJson(s)],
+        caiAtac: [for (final c in (j['caiAtac'] as List? ?? [])) CaleAtac.fromJson(c)],
+      );
 
   Map<String, dynamic> toJson() => {
-    'numar': numar,
-    'data': data?.toIso8601String(),
-    'institutie': institutie,
-    'obiect': obiect,
-    'stadiuProcesual': stadiuProcesual,
-    'sectie': sectie,
-    'categorie': categorie,
-    'dataModificare': dataModificare?.toIso8601String(),
-    'parti': [for (final p in parti) p.toJson()],
-    'sedinte': [for (final s in sedinte) s.toJson()],
-    'caiAtac': [for (final c in caiAtac) c.toJson()],
-  };
+        'numar': numar,
+        'data': data?.toIso8601String(),
+        'institutie': institutie,
+        'obiect': obiect,
+        'stadiuProcesual': stadiuProcesual,
+        'sectie': sectie,
+        'categorie': categorie,
+        'dataModificare': dataModificare?.toIso8601String(),
+        'parti': [for (final p in parti) p.toJson()],
+        'sedinte': [for (final s in sedinte) s.toJson()],
+        'caiAtac': [for (final c in caiAtac) c.toJson()],
+      };
 }
 
 /// O schimbare detectată pe portal la un dosar din bibliotecă.
@@ -181,15 +176,12 @@ class Modificare {
   const Modificare({required this.detectataLa, required this.text});
 
   factory Modificare.fromJson(Map<String, dynamic> j) => Modificare(
-    detectataLa:
-        _data(j['detectataLa']) ?? DateTime.fromMillisecondsSinceEpoch(0),
-    text: j['text'] ?? '',
-  );
+        detectataLa: _data(j['detectataLa']) ?? DateTime.fromMillisecondsSinceEpoch(0),
+        text: j['text'] ?? '',
+      );
 
-  Map<String, dynamic> toJson() => {
-    'detectataLa': detectataLa.toIso8601String(),
-    'text': text,
-  };
+  Map<String, dynamic> toJson() =>
+      {'detectataLa': detectataLa.toIso8601String(), 'text': text};
 }
 
 /// Un dosar salvat în bibliotecă, împreună cu istoricul schimbărilor detectate.
@@ -217,29 +209,30 @@ class DosarSalvat {
     DateTime? ultimaVerificare,
     List<Modificare>? modificari,
     int? necitite,
-  }) => DosarSalvat(
-    dosar: dosar ?? this.dosar,
-    adaugatLa: adaugatLa,
-    ultimaVerificare: ultimaVerificare ?? this.ultimaVerificare,
-    modificari: modificari ?? this.modificari,
-    necitite: necitite ?? this.necitite,
-  );
+  }) =>
+      DosarSalvat(
+        dosar: dosar ?? this.dosar,
+        adaugatLa: adaugatLa,
+        ultimaVerificare: ultimaVerificare ?? this.ultimaVerificare,
+        modificari: modificari ?? this.modificari,
+        necitite: necitite ?? this.necitite,
+      );
 
   factory DosarSalvat.fromJson(Map<String, dynamic> j) => DosarSalvat(
-    dosar: Dosar.fromJson(j['dosar']),
-    adaugatLa: _data(j['adaugatLa']) ?? DateTime.now(),
-    ultimaVerificare: _data(j['ultimaVerificare']),
-    modificari: [
-      for (final m in (j['modificari'] as List? ?? [])) Modificare.fromJson(m),
-    ],
-    necitite: j['necitite'] ?? 0,
-  );
+        dosar: Dosar.fromJson(j['dosar']),
+        adaugatLa: _data(j['adaugatLa']) ?? DateTime.now(),
+        ultimaVerificare: _data(j['ultimaVerificare']),
+        modificari: [
+          for (final m in (j['modificari'] as List? ?? [])) Modificare.fromJson(m),
+        ],
+        necitite: j['necitite'] ?? 0,
+      );
 
   Map<String, dynamic> toJson() => {
-    'dosar': dosar.toJson(),
-    'adaugatLa': adaugatLa.toIso8601String(),
-    'ultimaVerificare': ultimaVerificare?.toIso8601String(),
-    'modificari': [for (final m in modificari) m.toJson()],
-    'necitite': necitite,
-  };
+        'dosar': dosar.toJson(),
+        'adaugatLa': adaugatLa.toIso8601String(),
+        'ultimaVerificare': ultimaVerificare?.toIso8601String(),
+        'modificari': [for (final m in modificari) m.toJson()],
+        'necitite': necitite,
+      };
 }

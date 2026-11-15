@@ -35,11 +35,7 @@ class Rezumat {
     required this.procedurale,
   });
 
-  bool get gol =>
-      azi.isEmpty &&
-      urmatoare.isEmpty &&
-      actualizari.isEmpty &&
-      procedurale.isEmpty;
+  bool get gol => azi.isEmpty && urmatoare.isEmpty && actualizari.isEmpty && procedurale.isEmpty;
 }
 
 DateTime _zi(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -55,8 +51,7 @@ DateTime urmatoareaZiLucratoare(DateTime zi) {
 
 int _minute(String ora) {
   final p = ora.split(':');
-  return (int.tryParse(p.first) ?? 99) * 60 +
-      (p.length > 1 ? int.tryParse(p[1]) ?? 0 : 0);
+  return (int.tryParse(p.first) ?? 99) * 60 + (p.length > 1 ? int.tryParse(p[1]) ?? 0 : 0);
 }
 
 List<TermenZi> termeneInZiua(List<DosarSalvat> salvate, DateTime zi) {
@@ -81,14 +76,11 @@ Rezumat construiesteRezumat(
   final azi = _zi(acum);
   final urm = urmatoareaZiLucratoare(azi);
   final deLa = dela ?? acum.subtract(const Duration(hours: 24));
-  final actualizari =
-      [
-        for (final s in salvate)
-          for (final m in s.modificari)
-            if (m.detectataLa.isAfter(deLa)) (dosar: s.dosar, modificare: m),
-      ]..sort(
-        (a, b) => b.modificare.detectataLa.compareTo(a.modificare.detectataLa),
-      );
+  final actualizari = [
+    for (final s in salvate)
+      for (final m in s.modificari)
+        if (m.detectataLa.isAfter(deLa)) (dosar: s.dosar, modificare: m),
+  ]..sort((a, b) => b.modificare.detectataLa.compareTo(a.modificare.detectataLa));
   return Rezumat(
     zi: azi,
     azi: termeneInZiua(salvate, azi),
@@ -97,8 +89,7 @@ Rezumat construiesteRezumat(
     actualizari: actualizari,
     procedurale: [
       for (final t in procedurale)
-        if (!t.ultimaZi.isBefore(azi) && t.ultimaZi.difference(azi).inDays <= 3)
-          t,
+        if (!t.ultimaZi.isBefore(azi) && t.ultimaZi.difference(azi).inDays <= 3) t,
     ],
   );
 }
@@ -197,16 +188,11 @@ String numeZiUrmatoare(Rezumat r) => r.ziUrmatoare.difference(r.zi).inDays == 1
 String _nr(int n, String unu, String multe) => n == 1 ? '1 $unu' : '$n $multe';
 
 /// Titlul și rândurile notificării de dimineață.
-({String titlu, String sumar, List<String> linii}) textRezumat(
-  Rezumat r, {
-  required String ziUrm,
-}) {
+({String titlu, String sumar, List<String> linii}) textRezumat(Rezumat r, {required String ziUrm}) {
   final sumar = [
     if (r.azi.isNotEmpty) 'Azi ${_nr(r.azi.length, 'termen', 'termene')}',
-    if (r.urmatoare.isNotEmpty)
-      '$ziUrm ${_nr(r.urmatoare.length, 'termen', 'termene')}',
-    if (r.actualizari.isNotEmpty)
-      _nr(r.actualizari.length, 'actualizare', 'actualizări'),
+    if (r.urmatoare.isNotEmpty) '$ziUrm ${_nr(r.urmatoare.length, 'termen', 'termene')}',
+    if (r.actualizari.isNotEmpty) _nr(r.actualizari.length, 'actualizare', 'actualizări'),
     if (r.procedurale.isNotEmpty)
       _nr(r.procedurale.length, 'termen care expiră', 'termene care expiră'),
   ].join(' · ');
@@ -214,14 +200,8 @@ String _nr(int n, String unu, String multe) => n == 1 ? '1 $unu' : '$n $multe';
     titlu: 'Rezumatul zilei',
     sumar: sumar,
     linii: [
-      if (r.azi.isNotEmpty) ...[
-        'Azi:',
-        for (final t in r.azi) '• ${_termen(t)}',
-      ],
-      if (r.urmatoare.isNotEmpty) ...[
-        '$ziUrm:',
-        for (final t in r.urmatoare) '• ${_termen(t)}',
-      ],
+      if (r.azi.isNotEmpty) ...['Azi:', for (final t in r.azi) '• ${_termen(t)}'],
+      if (r.urmatoare.isNotEmpty) ...['$ziUrm:', for (final t in r.urmatoare) '• ${_termen(t)}'],
       if (r.procedurale.isNotEmpty) ...[
         'Expiră:',
         for (final t in r.procedurale)

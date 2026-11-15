@@ -91,10 +91,7 @@ Future<Uint8List> actPdf(
       ),
     ),
     TipBloc.alineat || TipBloc.litera => pw.Padding(
-      padding: pw.EdgeInsets.only(
-        left: b.tip == TipBloc.litera ? 16 : 0,
-        bottom: 3,
-      ),
+      padding: pw.EdgeInsets.only(left: b.tip == TipBloc.litera ? 16 : 0, bottom: 3),
       child: pw.RichText(
         textAlign: pw.TextAlign.justify,
         text: pw.TextSpan(
@@ -140,10 +137,7 @@ Future<Uint8List> actPdf(
       footer: (context) => pw.Row(
         children: [
           pw.Expanded(
-            child: pw.Text(
-              a.denumireScurta,
-              style: const pw.TextStyle(fontSize: 8, color: _gri),
-            ),
+            child: pw.Text(a.denumireScurta, style: const pw.TextStyle(fontSize: 8, color: _gri)),
           ),
           pw.Text(
             '${context.pageNumber} / ${context.pagesCount}',
@@ -154,12 +148,7 @@ Future<Uint8List> actPdf(
       build: (context) => [
         pw.Text(
           a.titlu.isEmpty ? a.denumireScurta : a.titlu,
-          style: pw.TextStyle(
-            font: bold,
-            fontSize: 15,
-            color: _primar,
-            lineSpacing: 2,
-          ),
+          style: pw.TextStyle(font: bold, fontSize: 15, color: _primar, lineSpacing: 2),
         ),
         pw.SizedBox(height: 6),
         for (final d in _detalii(a))
@@ -180,9 +169,7 @@ Future<Uint8List> actPdf(
 // ───────────────────────────── Word ─────────────────────────────
 
 String _x(String s) =>
-    const HtmlEscape(HtmlEscapeMode.element)
-        .convert(s)
-        .replaceAll('"', '&quot;');
+    const HtmlEscape(HtmlEscapeMode.element).convert(s).replaceAll('"', '&quot;');
 
 String _run(
   String text, {
@@ -216,12 +203,7 @@ Uint8List actDocx(ActNormativ a, List<BlocAct> blocuri) {
   final c = StringBuffer()
     ..write(
       _par(
-        _run(
-          a.titlu.isEmpty ? a.denumireScurta : a.titlu,
-          bold: true,
-          size: 15,
-          culoare: '1F3A93',
-        ),
+        _run(a.titlu.isEmpty ? a.denumireScurta : a.titlu, bold: true, size: 15, culoare: '1F3A93'),
         dupa: 6,
       ),
     );
@@ -229,11 +211,7 @@ Uint8List actDocx(ActNormativ a, List<BlocAct> blocuri) {
     c.write(_par(_run(d, size: 9.5, culoare: '5A6273'), dupa: 0));
   }
   c.write(
-    _par(
-      _run(_avertisment, italic: true, size: 8.5, culoare: '5A6273'),
-      inainte: 4,
-      dupa: 10,
-    ),
+    _par(_run(_avertisment, italic: true, size: 8.5, culoare: '5A6273'), inainte: 4, dupa: 10),
   );
   for (final b in blocuri) {
     c.write(switch (b.tip) {
@@ -257,12 +235,7 @@ Uint8List actDocx(ActNormativ a, List<BlocAct> blocuri) {
         _run(b.eticheta, bold: true, size: 11.5, culoare: '1F3A93') +
             (b.titlu.isEmpty
                 ? ''
-                : _run(
-                    ' - ${b.titlu}',
-                    bold: true,
-                    size: 11.5,
-                    culoare: '1F3A93',
-                  )),
+                : _run(' - ${b.titlu}', bold: true, size: 11.5, culoare: '1F3A93')),
         inainte: 10,
         dupa: 3,
         cuUrmatorul: true,
@@ -273,10 +246,7 @@ Uint8List actDocx(ActNormativ a, List<BlocAct> blocuri) {
         indent: b.tip == TipBloc.litera ? 16 : 0,
         dupa: 3,
       ),
-      TipBloc.nota => _par(
-        _run(b.text, italic: true, size: 9, culoare: '5A6273'),
-        dupa: 3,
-      ),
+      TipBloc.nota => _par(_run(b.text, italic: true, size: 9, culoare: '5A6273'), dupa: 3),
       TipBloc.text => _par(_run(b.text), align: 'both', dupa: 3),
     });
   }
@@ -348,20 +318,10 @@ Future<Uint8List> actPdfInFundal(
   Uint8List normal,
   Uint8List bold,
   Uint8List italic,
-) => Isolate.run(
-  () => actPdf(
-    a,
-    blocuri,
-    fontNormal: normal,
-    fontBold: bold,
-    fontItalic: italic,
-  ),
-);
+) => Isolate.run(() => actPdf(a, blocuri, fontNormal: normal, fontBold: bold, fontItalic: italic));
 
 Future<Uint8List> actDocxInFundal(ActNormativ a, List<BlocAct> blocuri) =>
     Isolate.run(() => actDocx(a, blocuri));
 
 Future<List<BlocAct>> structureazaInFundal(String text) async =>
-    text.length > 20000
-    ? Isolate.run(() => structureazaAct(text))
-    : structureazaAct(text);
+    text.length > 20000 ? Isolate.run(() => structureazaAct(text)) : structureazaAct(text);

@@ -41,9 +41,7 @@ class PortalOcupatException extends SoapException {
 /// (portalquery.just.ro). Serviciul răspunde doar pe HTTP; pe HTTPS
 /// întoarce eroarea 525.
 class SoapService {
-  static final Uri _endpoint = Uri.parse(
-    'http://portalquery.just.ro/query.asmx',
-  );
+  static final Uri _endpoint = Uri.parse('http://portalquery.just.ro/query.asmx');
   static const String _ns = 'portalquery.just.ro';
   static const int limitaServiciu = 1000;
 
@@ -186,9 +184,7 @@ class SoapService {
       throw PortalOcupatException(pana);
     }
     if (response.statusCode != 200) {
-      throw SoapException(
-        'Portalul a răspuns cu eroarea ${response.statusCode}.',
-      );
+      throw SoapException('Portalul a răspuns cu eroarea ${response.statusCode}.');
     }
 
     // Răspunsurile pot avea mai mulți MB; parsarea se face în alt isolate
@@ -215,9 +211,8 @@ String construiesteCerereCautare({
   DateTime? dataStart,
   DateTime? dataStop,
 }) {
-  String camp(String nume, String valoare) => valoare.isEmpty
-      ? '<$nume xsi:nil="true"/>'
-      : '<$nume>${SoapService.escape(valoare)}</$nume>';
+  String camp(String nume, String valoare) =>
+      valoare.isEmpty ? '<$nume xsi:nil="true"/>' : '<$nume>${SoapService.escape(valoare)}</$nume>';
   String zi(DateTime? d) => d == null
       ? ''
       : '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}'
@@ -249,26 +244,17 @@ List<Dosar> parseazaRaspunsDosare(String body) {
   final result = doc.findAllElements('CautareDosareResult').firstOrNull;
   if (result == null) return [];
 
-  return result.childElements
-      .where((e) => e.localName == 'Dosar')
-      .map(_parseazaDosar)
-      .toList();
+  return result.childElements.where((e) => e.localName == 'Dosar').map(_parseazaDosar).toList();
 }
 
 Dosar _parseazaDosar(XmlElement e) {
-  String text(XmlElement parent, String name) =>
-      parent.getElement(name)?.innerText.trim() ?? '';
+  String text(XmlElement parent, String name) => parent.getElement(name)?.innerText.trim() ?? '';
 
   final parti =
       e
           .getElement('parti')
           ?.childElements
-          .map(
-            (p) => Parte(
-              nume: text(p, 'nume'),
-              calitate: text(p, 'calitateParte'),
-            ),
-          )
+          .map((p) => Parte(nume: text(p, 'nume'), calitate: text(p, 'calitateParte')))
           .toList() ??
       [];
 

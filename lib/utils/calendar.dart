@@ -3,29 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/dosar_model.dart';
 
 const lunileAnului = [
-  'Ianuarie',
-  'Februarie',
-  'Martie',
-  'Aprilie',
-  'Mai',
-  'Iunie',
-  'Iulie',
-  'August',
-  'Septembrie',
-  'Octombrie',
-  'Noiembrie',
-  'Decembrie',
+  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
 ];
 
-const zileleSaptamanii = [
-  'Luni',
-  'Marți',
-  'Miercuri',
-  'Joi',
-  'Vineri',
-  'Sâmbătă',
-  'Duminică',
-];
+const zileleSaptamanii = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
 
 /// Un termen (o ședință) al unui dosar, așezat în calendar.
 class Termen {
@@ -76,15 +58,13 @@ Map<DateTime, List<Termen>> termenePeZile(
     for (final s in d.sedinte) {
       if (s.data == null) continue;
       final zi = DateUtils.dateOnly(s.data!);
-      (rezultat[zi] ??= []).add(
-        Termen(
-          dosar: d,
-          sedinta: s,
-          zi: zi,
-          minut: minutDinOra(s.ora),
-          culoare: c,
-        ),
-      );
+      (rezultat[zi] ??= []).add(Termen(
+        dosar: d,
+        sedinta: s,
+        zi: zi,
+        minut: minutDinOra(s.ora),
+        culoare: c,
+      ));
     }
   }
   for (final l in rezultat.values) {
@@ -94,16 +74,12 @@ Map<DateTime, List<Termen>> termenePeZile(
 }
 
 /// Lunea săptămânii din care face parte [d].
-DateTime inceputSaptamana(DateTime d) =>
-    DateTime(d.year, d.month, d.day - (d.weekday - 1));
+DateTime inceputSaptamana(DateTime d) => DateTime(d.year, d.month, d.day - (d.weekday - 1));
 
 /// Cele 6 × 7 zile afișate în grila lunii (de luni până duminică).
 List<DateTime> zileGrilaLuna(DateTime luna) {
   final start = inceputSaptamana(DateTime(luna.year, luna.month));
-  return [
-    for (var i = 0; i < 42; i++)
-      DateTime(start.year, start.month, start.day + i),
-  ];
+  return [for (var i = 0; i < 42; i++) DateTime(start.year, start.month, start.day + i)];
 }
 
 /// Coloanele pentru termenele care se suprapun în aceeași zi (durată

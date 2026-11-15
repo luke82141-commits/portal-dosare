@@ -31,101 +31,69 @@ void main() {
   });
 
   group('Biblioteca', () {
-    test(
-      'stergeToate scoate dosarele, iar restaureaza le pune la loc cu istoric',
-      () async {
-        final b = BibliotecaService.instance;
-        final chei = await b.adaugaToate([
-          _dosar('1/105/2026', 'TribunalulPRAHOVA'),
-          _dosar('2/105/2026', 'TribunalulPRAHOVA'),
-          _dosar('3/281/2026', 'JudecatoriaPLOIESTI'),
-        ]);
-        expect(chei, hasLength(3));
-        expect(
-          await b.adaugaToate([_dosar('1/105/2026', 'TribunalulPRAHOVA')]),
-          isEmpty,
-        );
+    test('stergeToate scoate dosarele, iar restaureaza le pune la loc cu istoric', () async {
+      final b = BibliotecaService.instance;
+      final chei = await b.adaugaToate([
+        _dosar('1/105/2026', 'TribunalulPRAHOVA'),
+        _dosar('2/105/2026', 'TribunalulPRAHOVA'),
+        _dosar('3/281/2026', 'JudecatoriaPLOIESTI'),
+      ]);
+      expect(chei, hasLength(3));
+      expect(await b.adaugaToate([_dosar('1/105/2026', 'TribunalulPRAHOVA')]), isEmpty);
 
-        final scoase = await b.stergeToate([chei[0], chei[2]]);
-        expect(scoase, hasLength(2));
-        expect(b.dosare.map((s) => s.dosar.numar), ['2/105/2026']);
+      final scoase = await b.stergeToate([chei[0], chei[2]]);
+      expect(scoase, hasLength(2));
+      expect(b.dosare.map((s) => s.dosar.numar), ['2/105/2026']);
 
-        await b.restaureaza(scoase);
-        expect(b.dosare.map((s) => s.dosar.numar).toSet(), {
-          '1/105/2026',
-          '2/105/2026',
-          '3/281/2026',
-        });
-      },
-    );
+      await b.restaureaza(scoase);
+      expect(b.dosare.map((s) => s.dosar.numar).toSet(), {
+        '1/105/2026',
+        '2/105/2026',
+        '3/281/2026',
+      });
+    });
 
-    test(
-      'Filtrul găsește dosarele de la o instanță fără clientul meu',
-      () async {
-        final b = BibliotecaService.instance;
-        await b.adaugaToate([
-          _dosar('1/105/2026', 'TribunalulPRAHOVA'),
-          _dosar('2/105/2026', 'TribunalulPRAHOVA'),
-          _dosar('3/281/2026', 'JudecatoriaPLOIESTI'),
-        ]);
-        await ClientService.instance.comuta('1/105/2026', _alfa);
-        final r = filtreazaPentruSelectie(
-          b.dosare,
-          institutie: 'TribunalulPRAHOVA',
-          faraClient: true,
-          clienti: ClientService.instance,
-        );
-        expect(r.map((s) => s.dosar.numar), ['2/105/2026']);
-      },
-    );
+    test('Filtrul găsește dosarele de la o instanță fără clientul meu', () async {
+      final b = BibliotecaService.instance;
+      await b.adaugaToate([
+        _dosar('1/105/2026', 'TribunalulPRAHOVA'),
+        _dosar('2/105/2026', 'TribunalulPRAHOVA'),
+        _dosar('3/281/2026', 'JudecatoriaPLOIESTI'),
+      ]);
+      await ClientService.instance.comuta('1/105/2026', _alfa);
+      final r = filtreazaPentruSelectie(
+        b.dosare,
+        institutie: 'TribunalulPRAHOVA',
+        faraClient: true,
+        clienti: ClientService.instance,
+      );
+      expect(r.map((s) => s.dosar.numar), ['2/105/2026']);
+    });
   });
 
   group('Programul de verificare', () {
     test('Din oră în oră ziua, în zilele lucrătoare; la 4 ore noaptea și în weekend', () {
       // 13.11.2026 e vineri, 14.11.2026 sâmbătă.
-      expect(
-        intervalVerificare(DateTime(2026, 11, 13, 10)),
-        const Duration(hours: 1),
-      );
-      expect(
-        intervalVerificare(DateTime(2026, 11, 13, 22)),
-        const Duration(hours: 4),
-      );
-      expect(
-        intervalVerificare(DateTime(2026, 11, 13, 6)),
-        const Duration(hours: 4),
-      );
-      expect(
-        intervalVerificare(DateTime(2026, 11, 14, 12)),
-        const Duration(hours: 4),
-      );
-      expect(
-        intervalVerificare(DateTime(2026, 11, 15, 12)),
-        const Duration(hours: 4),
-      );
+      expect(intervalVerificare(DateTime(2026, 11, 13, 10)), const Duration(hours: 1));
+      expect(intervalVerificare(DateTime(2026, 11, 13, 22)), const Duration(hours: 4));
+      expect(intervalVerificare(DateTime(2026, 11, 13, 6)), const Duration(hours: 4));
+      expect(intervalVerificare(DateTime(2026, 11, 14, 12)), const Duration(hours: 4));
+      expect(intervalVerificare(DateTime(2026, 11, 15, 12)), const Duration(hours: 4));
     });
 
     test('Peste plafon intervalele se dublează', () {
       expect(
-        intervalVerificare(
-          DateTime(2026, 11, 13, 10),
-          dosare: plafonDosare + 1,
-        ),
+        intervalVerificare(DateTime(2026, 11, 13, 10), dosare: plafonDosare + 1),
         const Duration(hours: 2),
       );
       expect(
-        intervalVerificare(
-          DateTime(2026, 11, 14, 10),
-          dosare: plafonDosare + 1,
-        ),
+        intervalVerificare(DateTime(2026, 11, 14, 10), dosare: plafonDosare + 1),
         const Duration(hours: 8),
       );
     });
   });
 
-  testWidgets('Selectezi dosarele unei instanțe, le scoți și anulezi', (
-    tester,
-  ) async {
+  testWidgets('Selectezi dosarele unei instanțe, le scoți și anulezi', (tester) async {
     final b = BibliotecaService.instance;
     await b.adaugaToate([
       _dosar('1/105/2026', 'TribunalulPRAHOVA'),
@@ -133,10 +101,7 @@ void main() {
       _dosar('3/281/2026', 'JudecatoriaPLOIESTI'),
     ]);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: construiesteTema(),
-        home: const SelecteazaMonitorizateScreen(),
-      ),
+      MaterialApp(theme: construiesteTema(), home: const SelecteazaMonitorizateScreen()),
     );
     await tester.pumpAndSettle();
 
@@ -163,42 +128,34 @@ void main() {
     expect(b.dosare, hasLength(3));
   });
 
-  testWidgets(
-    'Avertizarea de plafon se închide cu X și reapare doar peste acel număr',
-    (tester) async {
-      final b = BibliotecaService.instance;
-      await b.adaugaToate([
-        for (var i = 1; i <= plafonDosare + 5; i++)
-          _dosar('$i/105/2026', 'TribunalulPRAHOVA'),
-      ]);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: construiesteTema(),
-          home: const MonitorizateScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Alege ce scoți'), findsOneWidget);
+  testWidgets('Avertizarea de plafon se închide cu X și reapare doar peste acel număr', (
+    tester,
+  ) async {
+    final b = BibliotecaService.instance;
+    await b.adaugaToate([
+      for (var i = 1; i <= plafonDosare + 5; i++) _dosar('$i/105/2026', 'TribunalulPRAHOVA'),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(theme: construiesteTema(), home: const MonitorizateScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Ascunde avertizarea'));
-      await tester.pumpAndSettle();
-      expect(find.text('Alege ce scoți'), findsNothing);
+    await tester.tap(find.byTooltip('Ascunde avertizarea'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsNothing);
 
-      // Rămâne ascunsă și după redeschiderea ecranului.
-      await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: construiesteTema(),
-          home: const MonitorizateScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Alege ce scoți'), findsNothing);
+    // Rămâne ascunsă și după redeschiderea ecranului.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      MaterialApp(theme: construiesteTema(), home: const MonitorizateScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsNothing);
 
-      // Cu și mai multe dosare, reapare.
-      await b.adauga(_dosar('999/105/2026', 'TribunalulPRAHOVA'));
-      await tester.pumpAndSettle();
-      expect(find.text('Alege ce scoți'), findsOneWidget);
-    },
-  );
+    // Cu și mai multe dosare, reapare.
+    await b.adauga(_dosar('999/105/2026', 'TribunalulPRAHOVA'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alege ce scoți'), findsOneWidget);
+  });
 }

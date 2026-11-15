@@ -8,33 +8,24 @@ import 'package:legal_management_app/widgets/dosar_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Dosar _d(String numar, List<DateTime> zile) => Dosar(
-  numar: numar,
-  data: DateTime(2026, 1, 1),
-  institutie: 'TribunalulBUCURESTI',
-  obiect: 'x',
-  stadiuProcesual: 'Fond',
-  sectie: '',
-  categorie: '',
-  parti: const [],
-  sedinte: [
-    for (final z in zile)
-      Sedinta(
-        complet: 'C1',
-        data: z,
-        ora: '09:00',
-        solutie: '',
-        solutieSumar: '',
-      ),
-  ],
-);
+      numar: numar,
+      data: DateTime(2026, 1, 1),
+      institutie: 'TribunalulBUCURESTI',
+      obiect: 'x',
+      stadiuProcesual: 'Fond',
+      sectie: '',
+      categorie: '',
+      parti: const [],
+      sedinte: [
+        for (final z in zile) Sedinta(complet: 'C1', data: z, ora: '09:00', solutie: '', solutieSumar: ''),
+      ],
+    );
 
 void main() {
   final zi = DateTime(2026, 11, 13);
 
   test('dosarele din aceeași zi primesc culori diferite', () {
-    final dosare = [
-      for (var i = 0; i < 10; i++) _d('$i/3/2026', [zi]),
-    ];
+    final dosare = [for (var i = 0; i < 10; i++) _d('$i/3/2026', [zi])];
     final c = culoriAutomate(dosare);
     expect(c.values.toSet().length, 10);
   });
@@ -50,18 +41,12 @@ void main() {
   test('un dosar nou nu schimbă culorile celor existente', () {
     final a = _d('1/3/2026', [zi]), b = _d('2/3/2026', [zi]);
     final inainte = culoriAutomate([a, b]);
-    final dupa = culoriAutomate([
-      a,
-      b,
-      _d('3/3/2026', [zi]),
-    ]);
+    final dupa = culoriAutomate([a, b, _d('3/3/2026', [zi])]);
     expect(dupa[a.cheie], inainte[a.cheie]);
     expect(dupa[b.cheie], inainte[b.cheie]);
   });
 
-  testWidgets('din card se alege culoarea și se poate reveni la automat', (
-    tester,
-  ) async {
+  testWidgets('din card se alege culoarea și se poate reveni la automat', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final d = _d('5/3/2026', [zi]);
     await tester.runAsync(() async {
@@ -70,22 +55,15 @@ void main() {
       await BibliotecaService.instance.adauga(d);
     });
     final salvat = BibliotecaService.instance.dosare.single;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: construiesteTema(),
-        home: Scaffold(
-          body: DosarCardWidget(dosar: d, salvat: salvat),
-        ),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(
+      theme: construiesteTema(),
+      home: Scaffold(body: DosarCardWidget(dosar: d, salvat: salvat)),
+    ));
     await tester.tap(find.byTooltip('Schimbă culoarea'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Mov'));
     await tester.pumpAndSettle();
-    expect(
-      CuloriDosareService.instance.aleasa(d.cheie),
-      const Color(0xFF8E24AA),
-    );
+    expect(CuloriDosareService.instance.aleasa(d.cheie), const Color(0xFF8E24AA));
     expect(CuloriDosareService.instance.culoare(d), const Color(0xFF8E24AA));
 
     await tester.tap(find.byTooltip('Schimbă culoarea'));

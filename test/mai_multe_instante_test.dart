@@ -23,11 +23,7 @@ void main() {
   test('Mai multe instanțe: câte o cerere pe instanță, rezultate unite fără dubluri', () async {
     final cerute = <String>[];
     final client = MockClient((r) async {
-      final inst =
-          RegExp(r'<institutie>(\w+)</institutie>')
-              .firstMatch(r.body)
-              ?.group(1) ??
-          '';
+      final inst = RegExp(r'<institutie>(\w+)</institutie>').firstMatch(r.body)?.group(1) ?? '';
       cerute.add(inst);
       return http.Response(
         _raspuns([
@@ -50,18 +46,11 @@ void main() {
   });
 
   test('Căutarea recentă ține minte toate instanțele', () {
-    const c = CautareRecenta(
-      parte: 'Popescu',
-      institutie: 'TribunalulPRAHOVA,JudecatoriaSINAIA',
-    );
+    const c = CautareRecenta(parte: 'Popescu', institutie: 'TribunalulPRAHOVA,JudecatoriaSINAIA');
     expect(c.institutii, ['TribunalulPRAHOVA', 'JudecatoriaSINAIA']);
     expect(c.numeInstante, 'Tribunalul Prahova și Judecătoria Sinaia');
     expect(
-      descrieInstante([
-        'TribunalulPRAHOVA',
-        'JudecatoriaSINAIA',
-        'JudecatoriaMIZIL',
-      ]),
+      descrieInstante(['TribunalulPRAHOVA', 'JudecatoriaSINAIA', 'JudecatoriaMIZIL']),
       'Tribunalul Prahova și încă 2 instanțe',
     );
     expect(const CautareRecenta(parte: 'x').institutii, isEmpty);
@@ -76,19 +65,14 @@ void main() {
     await tester.tap(find.text('Toate instanțele'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Caută instanța sau județul'),
-      'prahova',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'Caută instanța sau județul'), 'prahova');
     await tester.pumpAndSettle();
     final bifeaza = find.textContaining('Bifează toate cele');
     expect(bifeaza, findsOneWidget);
     await tester.tap(bifeaza);
     await tester.pumpAndSettle();
     final gata = find.textContaining('Gata (');
-    final n = int.parse(
-      RegExp(r'\d+').firstMatch(tester.widget<Text>(gata).data!)!.group(0)!,
-    );
+    final n = int.parse(RegExp(r'\d+').firstMatch(tester.widget<Text>(gata).data!)!.group(0)!);
     expect(n, greaterThanOrEqualTo(7));
     await tester.tap(gata);
     await tester.pumpAndSettle();

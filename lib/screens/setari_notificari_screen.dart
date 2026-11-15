@@ -36,10 +36,7 @@ class _SetariNotificariScreenState extends State<SetariNotificariScreen> {
       ),
     );
     if (ales == null) return;
-    await _setari.seteazaLiniste(
-      start: inceput ? ales : null,
-      stop: inceput ? null : ales,
-    );
+    await _setari.seteazaLiniste(start: inceput ? ales : null, stop: inceput ? null : ales);
   }
 
   @override
@@ -67,20 +64,14 @@ class _SetariNotificariScreenState extends State<SetariNotificariScreen> {
                 enabled: activ,
                 leading: const Icon(Icons.bedtime_outlined),
                 title: const Text('De la'),
-                trailing: Text(
-                  _ora(_setari.start),
-                  style: const TextStyle(fontSize: 16),
-                ),
+                trailing: Text(_ora(_setari.start), style: const TextStyle(fontSize: 16)),
                 onTap: () => _alegeOra(inceput: true),
               ),
               ListTile(
                 enabled: activ,
                 leading: const Icon(Icons.wb_sunny_outlined),
                 title: const Text('Până la'),
-                trailing: Text(
-                  _ora(_setari.stop),
-                  style: const TextStyle(fontSize: 16),
-                ),
+                trailing: Text(_ora(_setari.stop), style: const TextStyle(fontSize: 16)),
                 onTap: () => _alegeOra(inceput: false),
               ),
               const Padding(
@@ -91,10 +82,7 @@ class _SetariNotificariScreenState extends State<SetariNotificariScreen> {
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
                   'Dosarele importante anunță cu sunet și în orele de liniște.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                 ),
               ),
               if (dosare.isEmpty)
@@ -102,10 +90,7 @@ class _SetariNotificariScreenState extends State<SetariNotificariScreen> {
                   padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Text(
                     'Nu ai încă dosare monitorizate.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                   ),
                 )
               else
@@ -113,17 +98,12 @@ class _SetariNotificariScreenState extends State<SetariNotificariScreen> {
                   SwitchListTile(
                     title: Text(s.dosar.numar),
                     subtitle: Text(
-                      [
-                        s.dosar.instanta,
-                        s.dosar.obiect,
-                      ].where((e) => e.isNotEmpty).join(' · '),
+                      [s.dosar.instanta, s.dosar.obiect].where((e) => e.isNotEmpty).join(' · '),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     value: _setari.important(s.dosar.cheie),
-                    onChanged: activ
-                        ? (v) => _setari.seteazaImportant(s.dosar.cheie, v)
-                        : null,
+                    onChanged: activ ? (v) => _setari.seteazaImportant(s.dosar.cheie, v) : null,
                   ),
             ],
           );

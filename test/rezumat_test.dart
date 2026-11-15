@@ -29,15 +29,9 @@ DosarSalvat _salvat(
 
 void main() {
   test('Vinerea, „următoarea zi” e lunea', () {
-    expect(
-      urmatoareaZiLucratoare(DateTime(2026, 11, 13)),
-      DateTime(2026, 11, 16),
-    );
+    expect(urmatoareaZiLucratoare(DateTime(2026, 11, 13)), DateTime(2026, 11, 16));
     // Înainte de 30.11 și 1.12, sărbători.
-    expect(
-      urmatoareaZiLucratoare(DateTime(2026, 11, 27)),
-      DateTime(2026, 12, 2),
-    );
+    expect(urmatoareaZiLucratoare(DateTime(2026, 11, 27)), DateTime(2026, 12, 2));
   });
 
   test('Rezumatul strânge termenele, actualizările și ce expiră', () {
@@ -49,15 +43,9 @@ void main() {
       ]),
       _salvat(
         '2/105/2026',
-        [
-          _s(DateTime(2026, 11, 13), '09:00'),
-          _s(DateTime(2026, 11, 16), '10:00'),
-        ],
+        [_s(DateTime(2026, 11, 13), '09:00'), _s(DateTime(2026, 11, 16), '10:00')],
         modificari: [
-          Modificare(
-            detectataLa: DateTime(2026, 11, 13, 3),
-            text: 'Termen nou',
-          ),
+          Modificare(detectataLa: DateTime(2026, 11, 13, 3), text: 'Termen nou'),
           Modificare(detectataLa: DateTime(2026, 11, 10), text: 'Veche'),
         ],
       ),
@@ -87,32 +75,23 @@ void main() {
     expect(numeZiUrmatoare(r), 'Luni');
 
     final t = textRezumat(r, ziUrm: numeZiUrmatoare(r));
-    expect(
-      t.sumar,
-      'Azi 2 termene · Luni 1 termen · 1 actualizare · 1 termen care expiră',
-    );
+    expect(t.sumar, 'Azi 2 termene · Luni 1 termen · 1 actualizare · 1 termen care expiră');
     expect(t.linii.first, 'Azi:');
     expect(t.linii[1], '• 09:00 · 2/105/2026 · Trib. Prahova · complet C3');
   });
 
-  test(
-    'Vine o dată pe zi, după ora aleasă, doar în zilele lucrătoare',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final s = RezumatService.instance;
-      await s.incarca();
-      expect(s.eTimpul(DateTime(2026, 11, 13, 7, 0)), isFalse);
-      expect(s.eTimpul(DateTime(2026, 11, 13, 7, 45)), isTrue);
-      expect(s.eTimpul(DateTime(2026, 11, 14, 8)), isFalse); // sâmbătă
-      expect(s.eTimpul(DateTime(2026, 12, 1, 8)), isFalse); // Ziua Națională
-      await s.marcheazaTrimis(DateTime(2026, 11, 13, 7, 45));
-      expect(s.eTimpul(DateTime(2026, 11, 13, 8, 45)), isFalse);
-      expect(s.eTimpul(DateTime(2026, 11, 16, 8)), isTrue);
-      // Actualizările de luni se numără de vineri, nu doar de 24 de ore.
-      expect(
-        s.actualizariDeLa(DateTime(2026, 11, 16, 8)),
-        DateTime(2026, 11, 13, 7, 45),
-      );
-    },
-  );
+  test('Vine o dată pe zi, după ora aleasă, doar în zilele lucrătoare', () async {
+    SharedPreferences.setMockInitialValues({});
+    final s = RezumatService.instance;
+    await s.incarca();
+    expect(s.eTimpul(DateTime(2026, 11, 13, 7, 0)), isFalse);
+    expect(s.eTimpul(DateTime(2026, 11, 13, 7, 45)), isTrue);
+    expect(s.eTimpul(DateTime(2026, 11, 14, 8)), isFalse); // sâmbătă
+    expect(s.eTimpul(DateTime(2026, 12, 1, 8)), isFalse); // Ziua Națională
+    await s.marcheazaTrimis(DateTime(2026, 11, 13, 7, 45));
+    expect(s.eTimpul(DateTime(2026, 11, 13, 8, 45)), isFalse);
+    expect(s.eTimpul(DateTime(2026, 11, 16, 8)), isTrue);
+    // Actualizările de luni se numără de vineri, nu doar de 24 de ore.
+    expect(s.actualizariDeLa(DateTime(2026, 11, 16, 8)), DateTime(2026, 11, 13, 7, 45));
+  });
 }

@@ -50,10 +50,7 @@ void main() {
 
     final r = await BackupService.restaureaza(json);
     expect(r.dosare, 1);
-    expect(
-      BibliotecaService.instance.dosare.single.dosar.numar,
-      '468/310/2026',
-    );
+    expect(BibliotecaService.instance.dosare.single.dosar.numar, '468/310/2026');
     expect(SetariNotificariService.instance.linisteActiva, isTrue);
     expect(SetariNotificariService.instance.important(_dosar.cheie), isTrue);
     expect(PartiUrmariteService.instance.parti, isEmpty);
@@ -61,35 +58,21 @@ void main() {
 
   test('Un fișier străin nu atinge datele', () async {
     await BibliotecaService.instance.adauga(_dosar);
-    for (final text in [
-      'nu e json',
-      '{"format":"altceva","date":{}}',
-      '[1,2]',
-    ]) {
-      await expectLater(
-        BackupService.restaureaza(text),
-        throwsA(isA<BackupException>()),
-      );
+    for (final text in ['nu e json', '{"format":"altceva","date":{}}', '[1,2]']) {
+      await expectLater(BackupService.restaureaza(text), throwsA(isA<BackupException>()));
     }
     await expectLater(
-      BackupService.restaureaza(
-        '{"format":"portal-dosare-backup","versiune":99,"date":{}}',
-      ),
+      BackupService.restaureaza('{"format":"portal-dosare-backup","versiune":99,"date":{}}'),
       throwsA(isA<BackupException>()),
     );
     expect(BibliotecaService.instance.dosare.length, 1);
   });
 
   test('Numele fișierului are data', () {
-    expect(
-      BackupService.numeFisier(DateTime(2026, 1, 5)),
-      'portal-dosare-2026-01-05.json',
-    );
+    expect(BackupService.numeFisier(DateTime(2026, 1, 5)), 'portal-dosare-2026-01-05.json');
   });
 
-  testWidgets('Ecranul salvează și restaurează după confirmare', (
-    tester,
-  ) async {
+  testWidgets('Ecranul salvează și restaurează după confirmare', (tester) async {
     await BibliotecaService.instance.adauga(_dosar);
     String? trimis;
     await tester.pumpWidget(
