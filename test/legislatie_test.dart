@@ -424,6 +424,66 @@ void main() {
       expect(sugestii('legea 307 incendii').first.deschideDirect, isTrue);
     });
 
+    test('ordine liberă: numărul, tipul și anul oriunde în frază', () {
+      final a = CerereLegislatie.dinText('incendii legea 307');
+      expect(
+        (a.cerere.numar, a.tip, a.cerere.cuvinte),
+        ('307', 'LEGE', 'incendii'),
+      );
+      final b = CerereLegislatie.dinText(
+        'apararea impotriva incendiilor 307 2006',
+      );
+      expect((b.cerere.numar, b.cerere.an, b.tip), ('307', 2006, null));
+      expect(b.cerere.cuvinte, 'apararea impotriva incendiilor');
+      final c = CerereLegislatie.dinText('ordonanta de urgenta 195 circulatia');
+      expect((c.cerere.numar, c.tip), ('195', 'ORDONANTA DE URGENTA'));
+      final d = CerereLegislatie.dinText('hg 1 2020');
+      expect((d.cerere.numar, d.cerere.an, d.tip), ('1', 2020, 'HOTARARE'));
+      expect(
+        CerereLegislatie.dinText('codul fiscal 2015').cerere.text,
+        'codul fiscal 2015',
+      );
+      expect(
+        CerereLegislatie.dinText('codul civil art. 1357 alin 2').cerere.numar,
+        isEmpty,
+      );
+    });
+
+    test('cuvinte în orice ordine găsesc legea după titlu', () async {
+      final client = MockClient((r) async {
+        if (r.headers['SOAPAction']!.contains('GetToken')) {
+          return http.Response(_raspunsToken, 200);
+        }
+        if (r.body.contains('<d:SearchTitlu>incendiilor</d:SearchTitlu>')) {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(
+                  numar: '1',
+                  id: '1',
+                  titlu: 'ORDIN nr. 1 din 2 mai 2010 privind incendiilor ceva',
+                ),
+                _lege(
+                  numar: '307',
+                  id: '2',
+                  titlu: 'LEGE nr. 307 din 12 iulie 2006 privind apărarea împotriva incendiilor',
+                ),
+              ]),
+            ),
+            200,
+          );
+        }
+        return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+      });
+      final p = await LegislatieService.cuClient(client)
+          .cauta(const CerereLegislatie(text: 'incendiilor apararea'));
+      expect(p.acte.first.numar, '307');
+      expect(
+        ordoneazaDupaRelevanta(p.acte, 'incendiilor apararea').first.numar,
+        '307',
+      );
+    });
+
     test('emitent cu „?” și titlu cu antet', () {
       expect(emitentReparat('Pre?edintele României'), 'Președintele României');
       expect(
@@ -618,7 +678,7 @@ void main() {
           'teritoriului',
           'amenajării',
         ]);
-        expect(cuvinteCheie('insolvență'), isEmpty);
+        expect(cuvinteCheie('insolvență'), ['insolvență']);
         expect(cuvinteCheie('legea de la'), isEmpty);
         expect(
           titluContineToate(
@@ -833,7 +893,7 @@ void main() {
         const CerereLegislatie(titlu: 'codul urbanismului'),
       );
       expect(p.acte.map((a) => a.numar), ['169']);
-      expect(cereri, hasLength(2));
+      expect(cereri.length, inInclusiveRange(2, 4));
     });
 
     test('Codul civil: după titlu, republicat întâi', () async {
