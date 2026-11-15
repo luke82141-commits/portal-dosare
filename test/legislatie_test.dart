@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:legal_management_app/data/acte_cunoscute.dart';
 import 'package:legal_management_app/screens/act_normativ_screen.dart';
 import 'package:legal_management_app/screens/legislatie_screen.dart';
 import 'package:legal_management_app/services/act_export.dart';
@@ -27,10 +28,11 @@ String _lege({
   String titlu = 'LEGE nr. 85 din 25 iunie 2014 privind procedurile de prevenire a insolvenței și de insolvență',
   String emitent = 'PARLAMENTUL',
   String data = '2014-06-28T00:00:00',
+  String id = '155854',
   String text = 'TITLUL I\nArt. 1\nScopul legii\nArt. 2\nInsolvența debitorului &lt;b&gt;x&lt;/b&gt;',
 }) =>
     '<a:Legi><a:DataVigoare>$data</a:DataVigoare><a:Emitent>$emitent</a:Emitent>'
-    '<a:LinkHtml>http://legislatie.just.ro/Public/DetaliiDocument/155854$tip$numar</a:LinkHtml>'
+    '<a:LinkHtml>http://legislatie.just.ro/Public/DetaliiDocument/$id$tip$numar</a:LinkHtml>'
     '<a:Numar>$numar</a:Numar><a:Publicatie>MONITORUL OFICIAL nr. 466 din 25 iunie 2014</a:Publicatie>'
     '<a:Text>$text</a:Text><a:TipAct>$tip</a:TipAct><a:Titlu>$titlu</a:Titlu></a:Legi>';
 
@@ -52,7 +54,7 @@ void main() {
         pagina: 2,
       );
       expect(x, contains('<d:NumarPagina>2</d:NumarPagina>'));
-      expect(x, contains('<d:RezultatePagina>20</d:RezultatePagina>'));
+      expect(x, contains('<d:RezultatePagina>10</d:RezultatePagina>'));
       expect(x, contains('<d:SearchAn i:nil="true"/>'));
       expect(x, contains('<d:SearchText>a &amp; b</d:SearchText>'));
       expect(x, contains('<tokenKey>T</tokenKey>'));
@@ -319,6 +321,77 @@ void main() {
       );
     });
 
+    test('textul real al portalului: blocuri „+”, spații, „...” și note', () {
+      const real =
+          ' LEGE nr. 287 din 17 iulie 2009  privind Codul civil     EMITENT     PARLAMENTUL       '
+          'Publicat în \n\t\t\t  MONITORUL OFICIAL nr. 511 din 24 iulie 2009     Parlamentul '
+          'României adoptă prezenta lege.   \n\t\t\t\t + \n\t\t\t  Titlul PRELIMINAR   Despre '
+          'legea civilă    \n\t\t\t\t + \n\t\t\t  Capitolul I   Dispoziţii generale    \n\t\t\t\t + '
+          '\n\t\t\t  Articolul 1     Obiectul Codului civil  Dispoziţiile prezentului cod '
+          'reglementează raporturile patrimoniale.     \n\t\t\t\t + \n\t\t\t  Articolul 3     '
+          'Aplicarea generală a Codului civil      (1) Dispoziţiile prezentului cod se aplică şi '
+          'raporturilor dintre profesionişti.   ...        (2) Sunt consideraţi profesionişti '
+          'toţi cei care exploatează o întreprindere.   ...       \n\t\t\t\t + \n\t\t\t  '
+          'Articolul 4     Prezenta lege intră în vigoare la data publicării.     \n\t\t\t\t + '
+          '\n\t\t\t  Articolul 5      Obiectul de reglementare    (1)     Obiectivele '
+          'generale sunt:  a)    satisfacerea nevoilor;    ...     b)    utilizarea '
+          'rațională a teritoriului;    ...       (2)    Termenii sunt în  anexa nr. 1 .       ';
+      final text = textFaraAntet(real);
+      expect(text, startsWith('Parlamentul României'));
+      final b = structureazaAct(text);
+      expect(
+        b.where((x) => x.text.contains('...') || x.textComplet.trim() == '+'),
+        isEmpty,
+      );
+      final art = b.where((x) => x.tip == TipBloc.articol).toList();
+      expect(art.map((x) => x.eticheta), [
+        'Art. 1',
+        'Art. 3',
+        'Art. 4',
+        'Art. 5',
+      ]);
+      expect(art.map((x) => x.titlu), [
+        'Obiectul Codului civil',
+        'Aplicarea generală a Codului civil',
+        '',
+        'Obiectul de reglementare',
+      ]);
+      final s = b.where((x) => x.tip == TipBloc.structura).toList();
+      expect(s.first.eticheta, 'TITLUL PRELIMINAR');
+      expect(s.first.titlu, 'Despre legea civilă');
+      expect(s[1].titlu, 'Dispoziţii generale');
+      final a5 = blocuriArticol(b, indiceArticol(b, '5')!);
+      expect(a5.map((x) => x.eticheta), ['Art. 5', '(1)', 'a)', 'b)', '(2)']);
+      expect(a5[1].text, 'Obiectivele generale sunt:');
+      expect(a5[2].text, 'satisfacerea nevoilor;');
+      final a3 = blocuriArticol(b, indiceArticol(b, '3')!);
+      expect(a3.map((x) => x.eticheta), ['Art. 3', '(1)', '(2)']);
+      expect(
+        b[indiceArticol(b, '4')! + 1].text,
+        'Prezenta lege intră în vigoare la data publicării.',
+      );
+    });
+
+    test('emitent cu „?” și titlu cu antet', () {
+      expect(emitentReparat('Pre?edintele României'), 'Președintele României');
+      expect(
+        emitentReparat('Înalta Curte de Casa?ie ?i Justi?ie'),
+        'Înalta Curte de Casație și Justiție',
+      );
+      expect(
+        emitentReparat('Curtea Constitu?ională'),
+        'Curtea Constituțională',
+      );
+      expect(
+        titluFaraAntet(
+          "﻿  DECIZIE nr. 578 privind domnul G\\'f6nczi  EMITENT: GUVERNUL PUBLICAT ÎN: X",
+        ),
+        'DECIZIE nr. 578 privind domnul Gönczi',
+      );
+      expect(etichetaTip('HOTĂRÂRE'), 'Hotărâre');
+      expect(etichetaTip('ORDONANȚĂ DE URGENȚĂ'), 'OUG');
+    });
+
     test('mergi la articol, inclusiv „5^1”', () {
       expect(indiceArticol(b, '2'), 6);
       expect(indiceArticol(b, 'art. 5^1'), 10);
@@ -485,10 +558,13 @@ void main() {
     test(
       'căutarea din mai multe cuvinte alege un cuvânt rar pentru titluri',
       () {
-        expect(cuvantPentruTitlu('codul urbanismului'), 'urbanism');
-        expect(cuvantPentruTitlu('Codul construcțiilor'), 'construc');
-        expect(cuvantPentruTitlu('insolvență'), isNull);
-        expect(cuvantPentruTitlu('legea de la'), isNull);
+        expect(cuvinteCheie('codul urbanismului'), ['urbanismului']);
+        expect(cuvinteCheie('Codul amenajării teritoriului'), [
+          'teritoriului',
+          'amenajării',
+        ]);
+        expect(cuvinteCheie('insolvență'), isEmpty);
+        expect(cuvinteCheie('legea de la'), isEmpty);
         expect(
           titluContineToate(
             'CODUL amenajării teritoriului, urbanismului şi construcţiilor',
@@ -668,7 +744,7 @@ void main() {
         await s.cauta(const CerereLegislatie(numar: '85', an: 2014));
         await s.cauta(const CerereLegislatie(numar: '85', an: 2014), pagina: 2);
         expect(actiuni.where((a) => a.contains('GetToken')), hasLength(1));
-        expect(actiuni.where((a) => a.contains('Search')), hasLength(2));
+        expect(actiuni.where((a) => a.contains('Search')), hasLength(1));
       },
     );
 
@@ -678,7 +754,7 @@ void main() {
         if (r.headers['SOAPAction']!.contains('GetToken'))
           return http.Response(_raspunsToken, 200);
         cereri.add(r.body);
-        if (r.body.contains('<d:SearchTitlu>urbanism</d:SearchTitlu>')) {
+        if (r.body.contains('<d:SearchTitlu>urbanismului</d:SearchTitlu>')) {
           return http.Response.bytes(
             _utf8(
               _raspunsCautare([
@@ -704,6 +780,95 @@ void main() {
       expect(p.acte.map((a) => a.numar), ['169']);
       expect(cereri, hasLength(2));
     });
+
+    test(
+      'Codul civil: după titlu, în anul intrării în vigoare, republicat întâi',
+      () async {
+        final cereri = <String>[];
+        final client = MockClient((r) async {
+          if (r.headers['SOAPAction']!.contains('GetToken')) {
+            return http.Response(_raspunsToken, 200);
+          }
+          cereri.add(r.body);
+          if (r.body.contains(
+                '<d:SearchTitlu>LEGE nr. 287 din</d:SearchTitlu>',
+              ) &&
+              r.body.contains('<d:SearchAn>2011</d:SearchAn>')) {
+            return http.Response.bytes(
+              _utf8(
+                _raspunsCautare([
+                  _lege(
+                    numar: '287',
+                    data: '2011-10-01T00:00:00',
+                    titlu: '﻿   LEGE nr. 287 din 17 iulie 2009 privind Codul civil EMITENT: PARLAMENTUL',
+                  ),
+                  _lege(
+                    numar: '287',
+                    data: '2011-10-01T00:00:00',
+                    id: '130142',
+                    titlu: 'LEGE nr. 287 din 17 iulie 2009*) (*republicată*) privind Codul civil',
+                  ),
+                ]),
+              ),
+              200,
+            );
+          }
+          return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+        });
+        final s = LegislatieService.cuClient(client);
+        final civil = acteCunoscute.firstWhere((a) => a.nume == 'Codul civil');
+        final p = await s.cauta(cerereActCunoscut(civil));
+        expect(cereri, hasLength(1));
+        expect(p.acte, hasLength(2));
+        expect(p.acte.first.titlu, contains('republicat'));
+        expect(
+          p.acte.last.titlu,
+          'LEGE nr. 287 din 17 iulie 2009 privind Codul civil',
+        );
+        expect(p.acte.first.an, 2009);
+        expect(p.acte.first.denumireScurta, 'Lege nr. 287/2009');
+      },
+    );
+
+    test(
+      '„legea 307/2006”: anul din titlu, nu din intrarea în vigoare',
+      () async {
+        final ani = <String>[];
+        final client = MockClient((r) async {
+          if (r.headers['SOAPAction']!.contains('GetToken')) {
+            return http.Response(_raspunsToken, 200);
+          }
+          ani.add(
+            RegExp(r'<d:SearchAn>(\d+)').firstMatch(r.body)?.group(1) ?? '-',
+          );
+          if (r.body.contains('<d:SearchAn>2007</d:SearchAn>')) {
+            return http.Response.bytes(
+              _utf8(
+                _raspunsCautare([
+                  _lege(
+                    tip: 'HOTĂRÂRE',
+                    numar: '307',
+                    titlu: 'HOTĂRÂRE nr. 307 din 8 martie 2007 privind altceva',
+                  ),
+                  _lege(
+                    numar: '307',
+                    data: '2007-01-01T00:00:00',
+                    titlu: 'LEGE nr. 307 din 12 iulie 2006 privind apărarea împotriva incendiilor',
+                  ),
+                ]),
+              ),
+              200,
+            );
+          }
+          return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+        });
+        final d = CerereLegislatie.dinText('legea 307/2006');
+        final p = await LegislatieService.cuClient(client).cauta(d.cerere);
+        expect(ani, ['2006', '2007']);
+        expect(p.acte.first.titlu, contains('apărarea împotriva incendiilor'));
+        expect(potrivireExacta(p.acte, d.cerere, d.tip)?.numar, '307');
+      },
+    );
 
     test('la eroare reîncearcă o dată cu token nou', () async {
       var cautari = 0;

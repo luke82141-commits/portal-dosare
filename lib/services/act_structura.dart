@@ -76,6 +76,87 @@ String spargeRanduri(String text) {
       );
 }
 
+final _reMarcajPortal = RegExp(r'\n[\t \u00a0]*\+[\t \u00a0]*\n');
+final _reEticheta = RegExp(
+  r'^(\(\d+(?:\^\d+)?\)|[a-z]{1,2}(?:\^\d+)?\)|\d{1,3}(?:\^\d+)?\.)[\s\u00a0]+',
+);
+
+/// Textul integral de pe legislatie.just.ro (verificat pe 15.11.2026): fără
+/// HTML, cu blocuri despărțite de „\n\t\t\t\t + \n\t\t\t  ”. Într-un bloc,
+/// spațiile multiple despart părțile: „Articolul 3     Aplicarea generală a
+/// Codului civil      (1) Dispozițiile ...   ...        (2) Sunt ...   ...”.
+/// După fiecare paragraf vine „ ... ”. Notele au „Notă” și chenare „────”.
+/// Întoarce rândurile curate, câte unul pe articol, denumire, alineat, literă.
+List<String>? randuriPortal(String text) {
+  if (!_reMarcajPortal.hasMatch(text)) return null;
+  final r = <String>[];
+  String curat(String x) => x.replaceAll(RegExp(r'[\s\u00a0]+'), ' ').trim();
+  final spatii = RegExp(r'[ \t\u00a0]{2,}');
+
+  void corp(String c) {
+    // Paragrafele se termină cu „...”; chenarele notelor sunt linii.
+    final bucati = c
+        .split(RegExp(r'[\s\u00a0]+\.\.\.(?=[\s\u00a0]|$)|[─━]{3,}|-{6,}'))
+        .expand(
+          // Etichetele de alineat și literă vin după 2+ spații.
+          (b) => b.split(
+            RegExp(
+              r'[ \t\u00a0]{2,}(?=\(\d+(?:\^\d+)?\)[\s\u00a0]|[a-z]{1,2}(?:\^\d+)?\)[\s\u00a0])',
+            ),
+          ),
+        );
+    for (final b in bucati) {
+      final t = curat(b);
+      if (t.isEmpty || t == '...' || t == '…') continue;
+      r.add(t);
+    }
+  }
+
+  for (final bloc in text.split(_reMarcajPortal)) {
+    final b = bloc.replaceAll('\r', '').trim();
+    if (b.isEmpty) continue;
+    // Fără spații multiple nu putem despărți după ele; ghicim după majuscule.
+    if (!spatii.hasMatch(b)) {
+      r.addAll(
+        _preproceseaza(b).split('\n').map(curat).where((x) => x.isNotEmpty),
+      );
+      continue;
+    }
+    final art = RegExp(
+      r'^(Articolul|ARTICOLUL|Art\.)[\s\u00a0]+(\d+(?:[\s\u00a0]*\^[\s\u00a0]*\d+)?)[\s\u00a0]*',
+    ).firstMatch(b);
+    if (art != null) {
+      r.add('Articolul ${art[2]!.replaceAll(RegExp(r'[\s\u00a0]'), '')}');
+      var rest = b.substring(art.end);
+      // Denumirea: până la primele 2+ spații, dacă nu e deja textul.
+      final sep = spatii.firstMatch(rest);
+      if (sep != null && !_reEticheta.hasMatch(rest)) {
+        final denumire = curat(rest.substring(0, sep.start));
+        if (denumire.isNotEmpty &&
+            denumire.length <= 200 &&
+            !RegExp(r'[.;:,]$').hasMatch(denumire)) {
+          r.add(denumire);
+          rest = rest.substring(sep.end);
+        }
+      }
+      corp(rest);
+      continue;
+    }
+    final str = _reStructura.firstMatch(curat(b.split(spatii).first));
+    if (str != null || RegExp(r'^(ANEXA|Anexa)\b').hasMatch(b)) {
+      // „Titlul PRELIMINAR   Despre legea civilă”: eticheta, apoi denumirea.
+      final parti = b.split(spatii).where((x) => x.trim().isNotEmpty).toList();
+      if (parti.isNotEmpty) r.add(curat(parti.first));
+      if (parti.length > 1)
+        r.add(curat(parti[1]).replaceAll(RegExp(r'\*+\)$'), ''));
+      if (parti.length > 2) corp(parti.skip(2).join('  '));
+      continue;
+    }
+    corp(b);
+  }
+  return r;
+}
+
 /// Textul de pe legislatie.just.ro vine cu „+” pe rânduri separate (butoanele
 /// de pliere din pagină) și cu denumirea articolului, alineatele și literele
 /// lipite pe același rând: „Articolul 5 Aplicarea legii penale mai favorabile
@@ -203,11 +284,11 @@ bool _eDenumire(String s) {
 
 /// Transformă textul actului în blocuri.
 List<BlocAct> structureazaAct(String text) {
-  final linii = _preproceseaza(spargeRanduri(text))
-      .split('\n')
-      .map((l) => l.replaceAll(RegExp(r'[ \t ]+'), ' ').trim())
-      .where((l) => l.isNotEmpty)
-      .toList();
+  final linii =
+      (randuriPortal(text) ?? _preproceseaza(spargeRanduri(text)).split('\n'))
+          .map((l) => l.replaceAll(RegExp(r'[ \t ]+'), ' ').trim())
+          .where((l) => l.isNotEmpty)
+          .toList();
   final blocuri = <BlocAct>[];
   String? articol;
   var i = 0;
