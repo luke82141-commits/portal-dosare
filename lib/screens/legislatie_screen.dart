@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/acte_cunoscute.dart';
+import '../services/act_structura.dart';
 import '../services/legislatie_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/elemente.dart';
@@ -193,9 +194,11 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     }
   }
 
-  void _deschide(ActNormativ a) => Navigator.of(context).push(
+  /// Deschide actul; din rezultatele căutării în text, direct la articolul
+  /// în care apare termenul.
+  void _deschide(ActNormativ a, {String? laArticol}) => Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => ActNormativScreen(act: a, articolInitial: _articol),
+      builder: (_) => ActNormativScreen(act: a, articolInitial: _articol ?? laArticol),
     ),
   );
 
@@ -314,7 +317,10 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           act: a,
           articol: _articol,
           termen: c.text.isNotEmpty ? c.text : c.titlu,
-          onTap: () => _deschide(a),
+          onTap: () => _deschide(
+            a,
+            laArticol: c.text.isNotEmpty ? fragmentDinAct(a.text, c.text)?.nrArticol : null,
+          ),
         ),
       if (vizibile.isEmpty)
         StareMesaj(
@@ -762,7 +768,7 @@ class _Sugestii extends StatelessWidget {
 }
 
 /// Literele scrise apar îngroșate în sugestie („Codul civil”).
-List<TextSpan> _evidentiaza(String text, String interogare) {
+List<TextSpan> _evidentiaza(String text, String interogare, {bool cuvantIntreg = false}) {
   final cuvinte = fataDiacritice(interogare.toLowerCase())
       .split(RegExp(r'\s+'))
       .where((c) => c.length >= 2)
@@ -775,10 +781,17 @@ List<TextSpan> _evidentiaza(String text, String interogare) {
     while (true) {
       final i = baza.indexOf(c, start);
       if (i < 0) break;
-      for (var k = i; k < i + c.length; k++) {
+      var sf = i + c.length;
+      // În fragmente evidențiem cuvântul întreg („Uzucapiunea”, nu „Uzucapiune”+„a”).
+      if (cuvantIntreg) {
+        while (sf < text.length && RegExp(r'[\wăâîșțşţĂÂÎȘȚŞŢ]').hasMatch(text[sf])) {
+          sf++;
+        }
+      }
+      for (var k = i; k < sf; k++) {
         marcat[k] = true;
       }
-      start = i + c.length;
+      start = sf;
     }
   }
   final r = <TextSpan>[];
@@ -792,7 +805,13 @@ List<TextSpan> _evidentiaza(String text, String interogare) {
       TextSpan(
         text: text.substring(i, j),
         style: marcat[i]
-            ? const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)
+            ? (cuvantIntreg
+                  ? const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurface,
+                      backgroundColor: AppColors.accentContainer,
+                    )
+                  : const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary))
             : const TextStyle(fontWeight: FontWeight.w400),
       ),
     );
@@ -846,23 +865,10 @@ class _CardAct extends StatelessWidget {
 
   const _CardAct({required this.act, required this.onTap, this.articol, this.termen = ''});
 
-  /// Primul loc din text unde apare termenul căutat, cu puțin context.
-  String? get _fragment {
-    final t = termen.trim();
-    if (t.length < 3 || act.text.isEmpty) return null;
-    final baza = fataDiacritice(act.text.toLowerCase());
-    final i = baza.indexOf(fataDiacritice(t.toLowerCase()));
-    if (i < 0 || baza.length != act.text.length) return null;
-    final start = (i - 70).clamp(0, act.text.length);
-    final end = (i + t.length + 110).clamp(0, act.text.length);
-    final f = act.text.substring(start, end).replaceAll(RegExp(r'\s+'), ' ').trim();
-    return '${start > 0 ? '…' : ''}$f${end < act.text.length ? '…' : ''}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final d = act.dataVigoare;
-    final fragment = _fragment;
+    final fragment = fragmentDinAct(act.text, termen);
     final (culoare, fundal) = culoriTip(act.tipAct);
     final meta = [
       if (act.emitent.isNotEmpty) act.emitent,
@@ -931,15 +937,59 @@ class _CardAct extends StatelessWidget {
                   ),
                 ),
                 if (fragment != null) ...[
-                  const SizedBox(height: 8),
-                  Text.rich(
-                    TextSpan(children: _evidentiaza(fragment, termen)),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: AppColors.onSurfaceVariant,
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (fragment.articol != null) ...[
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.subdirectory_arrow_right,
+                                size: 14,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  fragment.articol!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              if (fragment.inceputTaiat) const TextSpan(text: '… '),
+                              ..._evidentiaza(fragment.text, termen, cuvantIntreg: true),
+                              if (fragment.sfarsitTaiat) const TextSpan(text: ' …'),
+                            ],
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

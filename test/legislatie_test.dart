@@ -277,6 +277,32 @@ void main() {
     });
   });
 
+  group('fragmentul din rezultat', () {
+    const text =
+        'CARTEA a III-a\nDespre bunuri\nArt. 930. - Uzucapiunea extratabulară\n'
+        '(1) Dreptul de proprietate asupra unui imobil se poate înscrie în cartea funciară, '
+        'în temeiul uzucapiunii, în folosul celui care l-a posedat timp de 10 ani.\n'
+        'Art. 931. - Alte cazuri\n(1) Drepturile asupra unui imobil se dobândesc prin uzucapiune.';
+
+    test('termenul în titlul articolului: arată articolul și primul alineat', () {
+      final f = fragmentDinAct(text, 'uzucapiune')!;
+      expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
+      expect(f.text, startsWith('Dreptul de proprietate'));
+      expect(f.inceputTaiat, isFalse);
+    });
+
+    test('termenul în corp: fără „(1)”, tăiat la cuvinte întregi', () {
+      final f = fragmentDinAct(text, 'posedat', latime: 20)!;
+      expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
+      expect(f.text, isNot(startsWith('(1)')));
+      expect(f.text, contains('posedat'));
+      expect(f.inceputTaiat, isTrue);
+      expect(f.text.split(' ').first, isNot(isEmpty));
+    });
+
+    test('fără potrivire', () => expect(fragmentDinAct(text, 'divorț'), isNull));
+  });
+
   group('sugestii', () {
     test('„codul civ” propune Codul civil primul, apoi procedura civilă', () {
       final s = sugestii('codul civ');
