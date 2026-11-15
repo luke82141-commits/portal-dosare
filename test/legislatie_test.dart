@@ -843,6 +843,52 @@ void main() {
   });
 
   group('serviciul', () {
+    test('„1045 artificii”: doar ordinul cu numărul și cuvântul', () async {
+      final r = CerereLegislatie.dinText('1045 artificii');
+      expect(r.cerere.numar, '1045');
+      expect(r.cerere.cuvinte, 'artificii');
+      final titluri = <String>[];
+      final client = MockClient((q) async {
+        if (q.headers['SOAPAction']!.contains('GetToken'))
+          return http.Response(_raspunsToken, 200);
+        final m = RegExp(r'<d:SearchTitlu>(.*?)</d:SearchTitlu>')
+            .firstMatch(q.body);
+        if (m != null) titluri.add(m.group(1)!);
+        if (m?.group(1) == 'nr. 1.045 din artific*') {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(
+                  numar: '1045',
+                  id: '1',
+                  titlu: 'ORDIN nr. 1.045 din 3 septembrie 2007 privind aprobarea Normelor metodologice de emitere a acordului pentru organizarea jocurilor de artificii',
+                ),
+              ]),
+            ),
+            200,
+          );
+        }
+        // Celelalte acte cu nr. 1045 nu mai trebuie aduse.
+        return http.Response.bytes(
+          _utf8(
+            _raspunsCautare([
+              _lege(
+                numar: '1045',
+                id: '9',
+                titlu: 'HOTĂRÂRE nr. 1.045 din 2010',
+              ),
+            ]),
+          ),
+          200,
+        );
+      });
+      final p = await LegislatieService.cuClient(client).cauta(r.cerere);
+      expect(p.acte.single.titlu, contains('artificii'));
+      expect(titluri, ['nr. 1.045 din artific*']);
+      expect(numarCuPunct('1045'), '1.045');
+      expect(numarCuPunct('307'), '307');
+    });
+
     test('rădăcini cu „*” pentru căutarea în orice formă', () {
       expect(interogarePrefixe('regulament receptii'), 'regulament* recept*');
       expect(interogarePrefixe('codul urbanismului'), 'cod* urbanism*');

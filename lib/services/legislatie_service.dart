@@ -546,24 +546,52 @@ class LegislatieService {
         toate.addAll(acte.where((a) => vazute.add(a.cheie)));
     bool gasit() => toate.any(potrivit);
 
+    final radacini = radaciniCautare(c.cuvinte);
+    int cuCuvinte(ActNormativ a) =>
+        radacini.isNotEmpty && titluContineToate(a.titlu, radacini) ? 1 : 0;
+    bool gasitCuCuvinte() => toate.any((a) => potrivit(a) && cuCuvinte(a) == 1);
+
+    // „1045 artificii”: numărul și cuvintele în aceeași căutare pe titlu
+    // („nr. 1.045 din artific*”), ca să nu răsfoim toate actele cu nr. 1045.
+    final prefixe = interogarePrefixe(c.cuvinte)
+        .split(' ')
+        .where((t) => t.endsWith('*'))
+        .join(' ');
+    if (prefixe.isNotEmpty) {
+      final cuPunct = numarCuPunct(n);
+      final variante = <String>{
+        '$titlu $prefixe',
+        '$cuPunct $prefixe',
+        '$n $prefixe',
+      };
+      for (final v in variante) {
+        try {
+          final r = await _cautaPagina(CerereLegislatie(titlu: v, an: c.an), 1);
+          adauga(r.acte);
+        } catch (_) {}
+        if (gasitCuCuvinte()) break;
+      }
+    }
+
     // La căutarea după titlu, anul e o limită de jos pentru data intrării în
     // vigoare (care nu e niciodată înaintea actului), iar ordinea e
     // amestecată: răsfoim câteva pagini până dăm de act.
-    for (var p = 1; p <= 5 && !(c.an != null && gasit()); p++) {
+    for (
+      var p = 1;
+      p <= 5 && !(c.an != null && gasit()) && !gasitCuCuvinte();
+      p++
+    ) {
       final r = await _cautaPagina(CerereLegislatie(titlu: titlu, an: c.an), p);
       adauga(r.acte);
       if (!r.maiSunt) break;
     }
     // Rezervă: după număr, cum cere serviciul.
-    for (var p = 1; p <= 2 && !gasit(); p++) {
+    for (var p = 1; p <= 2 && !gasit() && !gasitCuCuvinte(); p++) {
       final r = await _cautaPagina(CerereLegislatie(numar: n, an: c.an), p);
       adauga(r.acte);
       if (!r.maiSunt) break;
     }
 
-    final radacini = radaciniCautare(c.cuvinte);
-    int cuCuvinte(ActNormativ a) =>
-        radacini.isNotEmpty && titluContineToate(a.titlu, radacini) ? 1 : 0;
     final potrivite = toate.where(potrivit).toList()
       ..sort((x, y) {
         final w = cuCuvinte(y).compareTo(cuCuvinte(x));
@@ -577,6 +605,14 @@ class LegislatieService {
           x.dataVigoare ?? DateTime(0),
         );
       });
+    // Concis: când actul cu numărul și cuvintele căutate există, doar el
+    // (și formele lui) apar, fără celelalte acte cu același număr.
+    if (gasitCuCuvinte()) {
+      return PaginaLegislatie(
+        potrivite.where((a) => cuCuvinte(a) == 1).toList(),
+        false,
+      );
+    }
     final restul = toate.where((a) => !potrivit(a));
     return PaginaLegislatie([...potrivite, ...restul], false);
   }
@@ -1320,12 +1356,13 @@ String titluPentruNumar(String numar, String? tip) {
     _ => '',
   };
   // Titlurile scriu numerele mari cu punct: „DECRET nr. 1.212 din”.
-  final cuPunct = numar.replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+$)'),
-    (_) => '.',
-  );
+  final cuPunct = numarCuPunct(numar);
   return '${prefix}nr. $cuPunct din';
 }
+
+/// „1045” → „1.045”, cum apar numerele mari în titluri.
+String numarCuPunct(String numar) =>
+    numar.replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => '.');
 
 int _eRepublicat(ActNormativ a) =>
     fataDiacritice(a.titlu.toLowerCase()).contains('republicat') ? 1 : 0;
