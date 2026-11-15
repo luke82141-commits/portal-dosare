@@ -15,6 +15,9 @@ ora României; cererile au fost reverificate live în aceeași seară, vezi mai 
 | `actiuni_73657.json.gz` | `POST https://legislatie.just.ro/Public/actiuniSuferite`, `contor=73657` | Legea 307/2006 | 30976 | `3bab3a8679795e7177450e8d2eddd63587864a22bffda4576434b5dcd7aba399` |
 | `actiuni_39374.json.gz` | `POST https://legislatie.just.ro/Public/actiuniSuferite`, `contor=39374` | Codul de procedură civilă (1865, republicat) — titlul paginii: „COD PR. CIVILA (R) 24/02/1948” | 243570 | `af407a6645ab691022160035e786e2bec88f71dc1b25fa549f1c54f3680adc98` |
 | `actiuni_4822.json.gz` | `POST https://legislatie.just.ro/Public/actiuniSuferite`, `contor=4822` | HG 273/1994 | 8932 | `58c6f2e0c3b5eb1014cce68081bdafe514407b695592f9d8fc6b4d4592b76883` |
+| `cpc1865_consolidat.html.gz` | `GET https://legislatie.just.ro/Public/DetaliiDocument/39374` | Codul de procedură civilă (1865, republicat, **abrogat**) — titlul paginii: „COD PR. CIVILA (R) 24/02/1948”, `id_act` = 145078 | 2481069 | `b4f96fae40b415b16e475344cf9d8a4aa478b1fa86d6e20c0e0798927fe82858` |
+| `abrogat_1515.html.gz` | `GET https://legislatie.just.ro/Public/DetaliiDocument/1515` | Legea 50/1991 (autorizarea executării construcțiilor, **abrogată**) — titlul paginii: „LEGE 50 29/07/1991”, forma consolidată cu `id_act` = 311797 | 893308 | `c9f67c29a07729a3d7c175d491b16e0a0985a5ebc73f7024de31b2df35207745` |
+| `actiuni_1515.json.gz` | `POST https://legislatie.just.ro/Public/actiuniSuferite`, `contor=1515` | Legea 50/1991 — conține rândul „Actul \| ABROGAT DE \| COD 05/08/2026” | 16940 | `8c596719fdd0e903830b05268df6572461722a0b3b09fd01dba03b5f43e80452` |
 
 ## Cererea pentru DetaliiDocument (pagina actului)
 
@@ -71,4 +74,19 @@ Observație: copiile locale inițiale ale fișierelor `307_consolidat.html`,
 adăugat la salvarea pe disc, nu trimis de server. Am eliminat BOM-ul înainte
 de comprimare, ca fixture-urile să conțină exact octeții primiți.
 
-Nu sunt incluse aici: pagina Codului de procedură civilă și XML-ul de căutare SOAP.
+## Acte abrogate (adăugate 15.11.2026, ~23:55)
+
+- `cpc1865_consolidat.html.gz`: pagina Codului de procedură civilă din 1865,
+  salvată pe 15.11.2026 la 23:38. Copia locală avea un BOM UTF-8 adăugat la
+  salvare; l-am eliminat înainte de comprimare. Comparată cu o descărcare
+  live din aceeași seară: diferă doar tokenul „Forma printabilă” (24 de octeți).
+- `abrogat_1515.html.gz` și `actiuni_1515.json.gz`: Legea 50/1991, descărcate
+  live pe 15.11.2026 (fără BOM de la server). ID-urile 1515, 1516 (forma
+  republicată) și 55794 duc toate la aceeași formă consolidată
+  (`id_act` = 311797); în „Acțiuni suferite” toate trei au rândul
+  „Actul | ABROGAT DE | COD 05/08/2026”.
+- Candidații pentru Legea 10/1995 (5729, 171277, 182108) **nu** au un rând
+  „Actul | ABROGAT DE” (doar articole abrogate), deci nu au fost incluși.
+- Observație: serverul răspunde acum `403 Forbidden` (nginx) la cererile fără
+  antet `User-Agent` de browser (ex. `curl` implicit); cu
+  `User-Agent: Mozilla/5.0` răspunsul este `200`.
