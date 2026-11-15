@@ -278,6 +278,46 @@ void main() {
       expect(b[11].tip, TipBloc.text);
     });
 
+    test('textul real de pe portal: „+”, denumiri și alineate lipite', () {
+      const real =
+          'Aplicarea legii penale în timp\n+\nArticolul 3 Activitatea legii penale Legea penală se '
+          'aplică infracţiunilor săvârșite în timpul cât ea se află în vigoare.\n+\n'
+          'Articolul 4 Aplicarea legii penale de dezincriminare Legea penală nu se aplică '
+          'faptelor săvârșite sub legea veche, dacă nu mai sunt prevăzute de legea nouă. În acest '
+          'caz, executarea pedepselor, a măsurilor educative și a măsurilor de siguranţă, '
+          'pronunţate în baza legii vechi, precum și toate consecinţele penale ale hotărârilor '
+          'judecătorești privitoare la aceste fapte încetează prin intrarea în vigoare a legii noi.\n+\n'
+          'Articolul 5 Aplicarea legii penale mai favorabile până la judecarea definitivă a cauzei '
+          '(1) În cazul în care au intervenit una sau mai multe legi penale, se aplică legea mai '
+          'favorabilă. (2) Dispoziţiile alin. (1) se aplică și actelor normative următoare: '
+          'a) declarate neconstituţionale; b) aprobate cu modificări.\n+\n'
+          'Articolul 6 Prezenta lege intră în vigoare la data publicării în Monitorul Oficial.';
+      final r = structureazaAct(real);
+      expect(r.where((x) => x.textComplet == '+'), isEmpty);
+      final art = r.where((x) => x.tip == TipBloc.articol).toList();
+      expect(art.map((x) => x.eticheta), [
+        'Art. 3',
+        'Art. 4',
+        'Art. 5',
+        'Art. 6',
+      ]);
+      expect(art[0].titlu, 'Activitatea legii penale');
+      expect(art[1].titlu, 'Aplicarea legii penale de dezincriminare');
+      expect(
+        art[2].titlu,
+        'Aplicarea legii penale mai favorabile până la judecarea definitivă a cauzei',
+      );
+      expect(art[3].titlu, isEmpty);
+      final i5 = indiceArticol(r, '5')!;
+      final b5 = blocuriArticol(r, i5);
+      expect(b5.map((x) => x.eticheta), ['Art. 5', '(1)', '(2)', 'a)', 'b)']);
+      expect(b5[2].text, startsWith('Dispoziţiile alin. (1) se aplică'));
+      expect(
+        r[indiceArticol(r, '4')! + 1].text,
+        startsWith('Legea penală nu se aplică'),
+      );
+    });
+
     test('mergi la articol, inclusiv „5^1”', () {
       expect(indiceArticol(b, '2'), 6);
       expect(indiceArticol(b, 'art. 5^1'), 10);

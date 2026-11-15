@@ -21,10 +21,17 @@ class BlocAct {
   /// blocurile de structură e articolul următor sau null.
   final String? articol;
 
-  const BlocAct(this.tip, {this.eticheta = '', this.titlu = '', this.text = '', this.articol});
+  const BlocAct(
+    this.tip, {
+    this.eticheta = '',
+    this.titlu = '',
+    this.text = '',
+    this.articol,
+  });
 
   /// Tot textul blocului, pentru căutare și copiere.
-  String get textComplet => [eticheta, titlu, text].where((s) => s.isNotEmpty).join(' ');
+  String get textComplet =>
+      [eticheta, titlu, text].where((s) => s.isNotEmpty).join(' ');
 }
 
 final _reStructura = RegExp(
@@ -39,7 +46,9 @@ final _reArticol = RegExp(
   r'^(?:Art\.|ART\.|Articolul|ARTICOLUL|Art)\s*(\d+(?:\s*\^\s*\d+)?)\s*[.:]?\s*(?:[-–—]\s*)?(.*)$',
 );
 final _reAlineat = RegExp(r'^\((\d+(?:\^\d+)?)\)\s*(.*)$');
-final _reLitera = RegExp(r'^([a-z]{1,2}(?:\^\d+)?\)|\d{1,3}(?:\^\d+)?\.)\s+(.+)$');
+final _reLitera = RegExp(
+  r'^([a-z]{1,2}(?:\^\d+)?\)|\d{1,3}(?:\^\d+)?\.)\s+(.+)$',
+);
 final _reNota = RegExp(
   r'^(\(la \d{1,2}[-.]\d{1,2}[-.]\d{4}|Not[aă]\b|NOT[AĂ]\b|\(\*|\*\)|Text actualizat|Reglementări)',
 );
@@ -53,20 +62,131 @@ String spargeRanduri(String text) {
   final randuri = '\n'.allMatches(t).length;
   if (t.length < 400 || randuri * 600 > t.length) return t;
   return t
-      .replaceAllMapped(RegExp(r'\s+(Art\.\s*\d+(?:\^\d+)?\s*\.?\s*[-–])'), (m) => '\n${m[1]}')
+      .replaceAllMapped(
+        RegExp(r'\s+(Art\.\s*\d+(?:\^\d+)?\s*\.?\s*[-–])'),
+        (m) => '\n${m[1]}',
+      )
       .replaceAllMapped(RegExp(r'\s+(Articolul\s+\d+)'), (m) => '\n${m[1]}')
       .replaceAllMapped(RegExp(r'\s+(\(\d+(?:\^\d+)?\)\s)'), (m) => '\n${m[1]}')
       .replaceAllMapped(
-        RegExp(r'\s+((?:TITLUL|CAPITOLUL|SECȚIUNEA|SECŢIUNEA|CARTEA|PARTEA)\s+[IVXLCDM\d]+)'),
+        RegExp(
+          r'\s+((?:TITLUL|CAPITOLUL|SECȚIUNEA|SECŢIUNEA|CARTEA|PARTEA)\s+[IVXLCDM\d]+)',
+        ),
         (m) => '\n${m[1]}',
       );
+}
+
+/// Textul de pe legislatie.just.ro vine cu „+” pe rânduri separate (butoanele
+/// de pliere din pagină) și cu denumirea articolului, alineatele și literele
+/// lipite pe același rând: „Articolul 5 Aplicarea legii penale mai favorabile
+/// (1) În cazul în care...”. Le despărțim, oricâte rânduri noi ar avea textul.
+String _preproceseaza(String text) {
+  final faraPlus = text
+      .replaceAll('\r\n', '\n')
+      .split('\n')
+      .map((l) => l.replaceFirst(RegExp(r'^\s*\+(\s+|$)'), ''))
+      .where((l) => l.trim().isNotEmpty)
+      .join('\n');
+  final dupaArticole = faraPlus.replaceAllMapped(
+    RegExp(r'[ \t\u00a0]+(Articolul\s+\d+(?:\s*\^\s*\d+)?(?![\d^]))'),
+    (m) => '\n${m[1]}',
+  );
+  final dupaAlineate = dupaArticole.replaceAllMapped(
+    RegExp(r'(\S+)[ \t\u00a0]+(\(\d+(?:\^\d+)?\)[ \u00a0]+[A-ZĂÂÎȘŞȚŢ])'),
+    (m) {
+      final inainte = fataDiacritice(m[1]!.toLowerCase());
+      final referinta = RegExp(
+        r'^(alin\.?|alineatul|alineatele|art\.?|si|sau|la|nr\.?)$',
+      );
+      if (referinta.hasMatch(inainte)) return m[0]!;
+      return '${m[1]}\n${m[2]}';
+    },
+  );
+  return dupaAlineate.replaceAllMapped(
+    RegExp(r'([:;])[ \t\u00a0]+([a-z]{1,2}\)[ \u00a0])'),
+    (m) => '${m[1]}\n${m[2]}',
+  );
+}
+
+const _legaturi = {
+  'si',
+  'sau',
+  'de',
+  'la',
+  'in',
+  'din',
+  'cu',
+  'pe',
+  'a',
+  'al',
+  'ale',
+  'ai',
+  'pentru',
+  'privind',
+  'prin',
+  'catre',
+  'fata',
+  'asupra',
+  'intre',
+  'sub',
+  'dupa',
+  'fara',
+};
+const _verbe = {
+  'se',
+  'este',
+  'sunt',
+  'are',
+  'au',
+  'va',
+  'vor',
+  'poate',
+  'pot',
+  'intra',
+  'trebuie',
+  'constituie',
+  'reprezinta',
+  'cuprinde',
+  'aproba',
+  'abroga',
+  'modifica',
+  'face',
+  'fi',
+};
+
+/// Desparte „Aplicarea legii penale de dezincriminare Legea penală nu se
+/// aplică...” în denumire și text: denumirea se termină înaintea primului
+/// cuvânt cu majusculă care începe o frază. Null când nu pare să aibă denumire.
+({String titlu, String corp})? _despartDenumire(String rest) {
+  final cuvinte = rest.split(' ');
+  for (var k = 1; k < cuvinte.length && k <= 14; k++) {
+    final w = cuvinte[k];
+    if (w.isEmpty || !RegExp(r'^[A-ZĂÂÎȘŞȚŢ][a-zăâîșşțţ]').hasMatch(w))
+      continue;
+    final prec = cuvinte[k - 1];
+    if (RegExp(r'[,.;:]$').hasMatch(prec)) continue;
+    // „Monitorul Oficial”, „Codul civil”: substantive proprii în denumire.
+    if (RegExp(r'^[A-ZĂÂÎȘŞȚŢ]').hasMatch(prec) && k > 1) continue;
+    final titlu = cuvinte.sublist(0, k);
+    final norm = titlu.map((x) => fataDiacritice(x.toLowerCase())).toList();
+    if (_legaturi.contains(norm.last)) continue;
+    if (norm.any(_verbe.contains)) return null;
+    if (titlu.any((x) => RegExp(r'\d').hasMatch(x))) return null;
+    final corp = cuvinte.sublist(k).join(' ');
+    if (corp.length < 15) return null;
+    return (titlu: titlu.join(' '), corp: corp);
+  }
+  return null;
 }
 
 bool _eDenumire(String s) {
   final t = s.trim();
   if (t.isEmpty || t.length > 140) return false;
-  if (t.endsWith('.') || t.endsWith(';') || t.endsWith(':') || t.endsWith(',')) return false;
-  if (_reArticol.hasMatch(t) || _reAlineat.hasMatch(t) || _reStructura.hasMatch(t)) {
+  if (t.endsWith('.') || t.endsWith(';') || t.endsWith(':') || t.endsWith(','))
+    return false;
+  if (_reArticol.hasMatch(t) ||
+      _reAlineat.hasMatch(t) ||
+      _reStructura.hasMatch(t)) {
     return false;
   }
   if (_reLitera.hasMatch(t) || _reNota.hasMatch(t)) return false;
@@ -75,7 +195,7 @@ bool _eDenumire(String s) {
 
 /// Transformă textul actului în blocuri.
 List<BlocAct> structureazaAct(String text) {
-  final linii = spargeRanduri(text)
+  final linii = _preproceseaza(spargeRanduri(text))
       .split('\n')
       .map((l) => l.replaceAll(RegExp(r'[ \t ]+'), ' ').trim())
       .where((l) => l.isNotEmpty)
@@ -90,7 +210,9 @@ List<BlocAct> structureazaAct(String text) {
     final anexa = _reAnexa.firstMatch(l);
     final restStructura = (s?[4] ?? '').trim();
     if (anexa != null ||
-        (s != null && restStructura.length <= 140 && !restStructura.endsWith('.'))) {
+        (s != null &&
+            restStructura.length <= 140 &&
+            !restStructura.endsWith('.'))) {
       final eticheta = anexa != null
           ? l.replaceAll(RegExp(r'\s*[-–.:]\s*$'), '')
           : '${s![1]} ${s[2]}${s[3] ?? ''}';
@@ -100,13 +222,22 @@ List<BlocAct> structureazaAct(String text) {
         titlu = linii[i + 1];
         i++;
       }
-      blocuri.add(BlocAct(TipBloc.structura, eticheta: eticheta.toUpperCase(), titlu: titlu));
+      blocuri.add(
+        BlocAct(
+          TipBloc.structura,
+          eticheta: eticheta.toUpperCase(),
+          titlu: titlu,
+        ),
+      );
       i++;
       continue;
     }
 
     final a = _reArticol.firstMatch(l);
-    if (a != null && (l.length < 400 || RegExp(r'^Art\.\s*\d+\s*\.?\s*[-–]').hasMatch(l))) {
+    if (a != null &&
+        (l.length < 400 ||
+            RegExp(r'^(Art\.\s*\d+\s*\.?\s*[-–]|Articolul\s+\d)')
+                .hasMatch(l))) {
       articol = _nrArticol(a[1]!);
       var rest = (a[2] ?? '').trim();
       var titlu = '';
@@ -118,11 +249,19 @@ List<BlocAct> structureazaAct(String text) {
         }
       } else if (_eDenumire(rest)) {
         titlu = rest;
+      } else if (_despartDenumire(rest) case final d?) {
+        titlu = d.titlu;
+        corp = d.corp;
       } else {
         corp = rest;
       }
       blocuri.add(
-        BlocAct(TipBloc.articol, eticheta: 'Art. $articol', titlu: titlu, articol: articol),
+        BlocAct(
+          TipBloc.articol,
+          eticheta: 'Art. $articol',
+          titlu: titlu,
+          articol: articol,
+        ),
       );
       if (corp.isNotEmpty) blocuri.addAll(_blocuriCorp(corp, articol));
       i++;
@@ -139,13 +278,26 @@ List<BlocAct> _blocuriCorp(String l, String? articol) {
   final al = _reAlineat.firstMatch(l);
   if (al != null) {
     return [
-      BlocAct(TipBloc.alineat, eticheta: '(${al[1]})', text: al[2]!.trim(), articol: articol),
+      BlocAct(
+        TipBloc.alineat,
+        eticheta: '(${al[1]})',
+        text: al[2]!.trim(),
+        articol: articol,
+      ),
     ];
   }
-  if (_reNota.hasMatch(l)) return [BlocAct(TipBloc.nota, text: l, articol: articol)];
+  if (_reNota.hasMatch(l))
+    return [BlocAct(TipBloc.nota, text: l, articol: articol)];
   final lit = _reLitera.firstMatch(l);
   if (lit != null && articol != null) {
-    return [BlocAct(TipBloc.litera, eticheta: lit[1]!, text: lit[2]!.trim(), articol: articol)];
+    return [
+      BlocAct(
+        TipBloc.litera,
+        eticheta: lit[1]!,
+        text: lit[2]!.trim(),
+        articol: articol,
+      ),
+    ];
   }
   return [BlocAct(TipBloc.text, text: l, articol: articol)];
 }
@@ -155,7 +307,9 @@ int? indiceArticol(List<BlocAct> blocuri, String nr) {
   final m = RegExp(r'(\d+(?:\s*\^\s*\d+)?)').firstMatch(nr);
   if (m == null) return null;
   final cautat = _nrArticol(m[1]!);
-  final i = blocuri.indexWhere((b) => b.tip == TipBloc.articol && b.articol == cautat);
+  final i = blocuri.indexWhere(
+    (b) => b.tip == TipBloc.articol && b.articol == cautat,
+  );
   return i < 0 ? null : i;
 }
 
@@ -178,7 +332,8 @@ String textArticol(List<BlocAct> blocuri, int start, String sursa) {
   final linii = [
     [antet.eticheta, if (antet.titlu.isNotEmpty) antet.titlu].join(' - '),
     for (final x in b.skip(1))
-      if (x.tip != TipBloc.nota) [x.eticheta, x.text].where((s) => s.isNotEmpty).join(' '),
+      if (x.tip != TipBloc.nota)
+        [x.eticheta, x.text].where((s) => s.isNotEmpty).join(' '),
   ];
   return '${linii.join('\n')}\n\n(${antet.eticheta.toLowerCase()} din $sursa)';
 }
@@ -307,7 +462,9 @@ FragmentAct? _fragment(String textAct, String termen, int latime) {
     for (var k = i; k >= 0 && k > i - 60; k--) {
       final l = linii[k].trim();
       if (_reArticol.hasMatch(l) && l.length < 400) {
-        final bucata = structureazaAct(linii.sublist(k, (k + 2).clamp(0, linii.length)).join('\n'));
+        final bucata = structureazaAct(
+          linii.sublist(k, (k + 2).clamp(0, linii.length)).join('\n'),
+        );
         final a = bucata.where((b) => b.tip == TipBloc.articol).firstOrNull;
         if (a != null) {
           articol = [a.eticheta, if (a.titlu.isNotEmpty) a.titlu].join(' · ');
@@ -331,8 +488,9 @@ FragmentAct? _fragment(String textAct, String termen, int latime) {
     }
     final linieCorp = corp;
     var start = 0;
-    final m = RegExp(r'^(?:Art\.\s*\d+(?:\^\d+)?\s*\.?\s*[-–]\s*|\(\d+(?:\^\d+)?\)\s*|[a-z]\)\s*)')
-        .firstMatch(linieCorp);
+    final m = RegExp(
+      r'^(?:Art\.\s*\d+(?:\^\d+)?\s*\.?\s*[-–]\s*|\(\d+(?:\^\d+)?\)\s*|[a-z]\)\s*)',
+    ).firstMatch(linieCorp);
     if (m != null && (m.end <= pozCorp || inlocuit)) start = m.end;
     corp = linieCorp.substring(start);
     final p = (pozCorp - start).clamp(0, corp.length).toInt();
