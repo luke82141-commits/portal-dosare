@@ -540,6 +540,20 @@ void main() {
       expect(numeCodAnexat(rezultate[1]), isNull);
     });
 
+    test('„legea 307” fără an: tipul și numărul, din toți anii', () {
+      final d = CerereLegislatie.dinText('legea 307');
+      expect(d.cerere.numar, '307');
+      expect(d.cerere.an, isNull);
+      expect(d.tip, 'LEGE');
+      final s = sugestii('legea 307').first;
+      expect(s.titlu, 'Lege nr. 307');
+      expect(s.deschideDirect, isFalse);
+      expect(
+        CerereLegislatie.dinText('codul civil 2').cerere.text,
+        'codul civil 2',
+      );
+    });
+
     test('potrivirea exactă', () {
       final acte = parseazaRaspunsCautare(
         _raspunsCautare([_lege(tip: 'HOTARARE'), _lege()]),

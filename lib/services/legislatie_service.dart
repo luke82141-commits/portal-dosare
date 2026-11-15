@@ -107,6 +107,18 @@ class CerereLegislatie {
         tip: tip,
       );
     }
+    // „legea 307”, „oug nr. 195”: tipul și numărul, din toți anii.
+    final f = RegExp(
+      r'^(?<tip>[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ\. ]+?)\s*(?:nr\.?\s*)?(?<nr>\d{1,5})$',
+      caseSensitive: false,
+    ).firstMatch(s);
+    final tipFaraAn = f == null ? null : tipDinAbreviere(f.namedGroup('tip')!);
+    if (tipFaraAn != null) {
+      return (
+        cerere: CerereLegislatie(numar: f!.namedGroup('nr')!),
+        tip: tipFaraAn,
+      );
+    }
     return (cerere: CerereLegislatie(text: s), tip: null);
   }
 }
@@ -808,12 +820,15 @@ List<SugestieLegislatie> sugestii(
     r.add(
       SugestieLegislatie(
         FelSugestie.numar,
-        '${tip == null ? 'Actul' : etichetaTip(tip)} nr. ${nr.cerere.numar}/${nr.cerere.an}$faraArt',
-        'Caută actul exact',
+        '${tip == null ? 'Actul' : etichetaTip(tip)} nr. ${nr.cerere.numar}'
+        '${nr.cerere.an == null ? '' : '/${nr.cerere.an}'}$faraArt',
+        nr.cerere.an == null
+            ? 'Toate actele cu acest număr, din toți anii'
+            : 'Caută actul exact',
         nr.cerere,
         tip: tip,
         articol: articol,
-        deschideDirect: tip != null,
+        deschideDirect: tip != null && nr.cerere.an != null,
       ),
     );
   }
