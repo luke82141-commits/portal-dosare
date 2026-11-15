@@ -258,3 +258,103 @@ List<IntrareCuprins> cuprins(List<BlocAct> blocuri, {bool cuArticole = true}) {
   }
   return r;
 }
+
+/// Locul din act unde apare termenul căutat, pentru cardul de rezultat:
+/// articolul („Art. 930 · Uzucapiunea extratabulară”) și o bucată curată
+/// din paragraf, tăiată la margini de cuvânt.
+class FragmentAct {
+  final String? articol;
+
+  /// Numărul articolului („930”), ca să deschidem actul direct acolo.
+  final String? nrArticol;
+  final String text;
+  final bool inceputTaiat;
+  final bool sfarsitTaiat;
+
+  const FragmentAct(
+    this.articol,
+    this.text, {
+    this.nrArticol,
+    this.inceputTaiat = false,
+    this.sfarsitTaiat = false,
+  });
+}
+
+final _cacheFragmente = <(int, String), FragmentAct?>{};
+
+/// Ca [_fragment], dar ținut minte: cardurile se redesenează des, iar
+/// textele mari (Codul civil) au câțiva MB.
+FragmentAct? fragmentDinAct(String textAct, String termen, {int latime = 150}) {
+  final cheie = (identityHashCode(textAct) ^ textAct.length, termen);
+  if (_cacheFragmente.containsKey(cheie)) return _cacheFragmente[cheie];
+  if (_cacheFragmente.length > 200) _cacheFragmente.clear();
+  return _cacheFragmente[cheie] = _fragment(textAct, termen, latime);
+}
+
+FragmentAct? _fragment(String textAct, String termen, int latime) {
+  final t = fataDiacritice(termen.trim().toLowerCase());
+  if (t.length < 3 || textAct.isEmpty) return null;
+  final linii = spargeRanduri(textAct).split('\n');
+  for (var i = 0; i < linii.length; i++) {
+    final linie = linii[i].replaceAll(RegExp(r'\s+'), ' ').trim();
+    final baza = fataDiacritice(linie.toLowerCase());
+    final poz = baza.indexOf(t);
+    if (poz < 0 || baza.length != linie.length) continue;
+
+    // Articolul în care se află: căutăm înapoi titlul lui.
+    String? articol;
+    String? nrArticol;
+    for (var k = i; k >= 0 && k > i - 60; k--) {
+      final l = linii[k].trim();
+      if (_reArticol.hasMatch(l) && l.length < 400) {
+        final bucata = structureazaAct(linii.sublist(k, (k + 2).clamp(0, linii.length)).join('\n'));
+        final a = bucata.where((b) => b.tip == TipBloc.articol).firstOrNull;
+        if (a != null) {
+          articol = [a.eticheta, if (a.titlu.isNotEmpty) a.titlu].join(' · ');
+          nrArticol = a.articol;
+        }
+        break;
+      }
+    }
+
+    // Termenul e chiar în titlul articolului: arătăm primul rând din corp.
+    var corp = linie;
+    var pozCorp = poz;
+    var inlocuit = false;
+    if (articol != null && _reArticol.hasMatch(linie) && i + 1 < linii.length) {
+      final urm = linii[i + 1].replaceAll(RegExp(r'\s+'), ' ').trim();
+      if (urm.isNotEmpty && !_reArticol.hasMatch(urm)) {
+        corp = urm;
+        pozCorp = 0;
+        inlocuit = true;
+      }
+    }
+    final linieCorp = corp;
+    var start = 0;
+    final m = RegExp(r'^(?:Art\.\s*\d+(?:\^\d+)?\s*\.?\s*[-–]\s*|\(\d+(?:\^\d+)?\)\s*|[a-z]\)\s*)')
+        .firstMatch(linieCorp);
+    if (m != null && (m.end <= pozCorp || inlocuit)) start = m.end;
+    corp = linieCorp.substring(start);
+    final p = (pozCorp - start).clamp(0, corp.length).toInt();
+    final lungimeT = inlocuit ? 0 : t.length;
+
+    var a = (p - latime ~/ 3).clamp(0, corp.length);
+    var b = (p + lungimeT + latime).clamp(0, corp.length);
+    if (a > 0) {
+      final s = corp.indexOf(' ', a);
+      a = s < 0 || s > p ? a : s + 1;
+    }
+    if (b < corp.length) {
+      final s = corp.lastIndexOf(' ', b);
+      b = s <= p + lungimeT ? b : s;
+    }
+    return FragmentAct(
+      articol,
+      corp.substring(a, b).trim(),
+      nrArticol: nrArticol,
+      inceputTaiat: a > 0,
+      sfarsitTaiat: b < corp.length,
+    );
+  }
+  return null;
+}

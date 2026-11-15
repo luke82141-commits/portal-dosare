@@ -277,6 +277,76 @@ void main() {
     });
   });
 
+  group('fragmentul din rezultat', () {
+    const text =
+        'CARTEA a III-a\nDespre bunuri\nArt. 930. - Uzucapiunea extratabulară\n'
+        '(1) Dreptul de proprietate asupra unui imobil se poate înscrie în cartea funciară, '
+        'în temeiul uzucapiunii, în folosul celui care l-a posedat timp de 10 ani.\n'
+        'Art. 931. - Alte cazuri\n(1) Drepturile asupra unui imobil se dobândesc prin uzucapiune.';
+
+    test('termenul în titlul articolului: arată articolul și primul alineat', () {
+      final f = fragmentDinAct(text, 'uzucapiune')!;
+      expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
+      expect(f.text, startsWith('Dreptul de proprietate'));
+      expect(f.inceputTaiat, isFalse);
+    });
+
+    test('termenul în corp: fără „(1)”, tăiat la cuvinte întregi', () {
+      final f = fragmentDinAct(text, 'posedat', latime: 20)!;
+      expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
+      expect(f.text, isNot(startsWith('(1)')));
+      expect(f.text, contains('posedat'));
+      expect(f.inceputTaiat, isTrue);
+      expect(f.text.split(' ').first, isNot(isEmpty));
+    });
+
+    test('fără potrivire', () => expect(fragmentDinAct(text, 'divorț'), isNull));
+  });
+
+  group('titlul din card', () {
+    ActNormativ act(String tip, String nr, String titlu) =>
+        parseazaRaspunsCautare(_raspunsCautare([_lege(tip: tip, numar: nr, titlu: titlu)])).single;
+
+    test('codul: nume scurt, data și „republicat” dedesubt', () {
+      final t = titluPrezentare(
+        act('LEGE', '287', 'CODUL CIVIL din 17 iulie 2009 (**republicat**)'),
+      );
+      expect(t.principal, 'Codul civil');
+      expect(t.secundar, 'din 17 iulie 2009 · republicat');
+    });
+
+    test('legea: fără tip și număr repetate', () {
+      final t = titluPrezentare(
+        act(
+          'LEGE',
+          '7',
+          'LEGE nr. 7 din 13 martie 1996 a cadastrului și a publicității imobiliare',
+        ),
+      );
+      expect(t.principal, 'Legea cadastrului și a publicității imobiliare');
+      expect(t.secundar, 'din 13 martie 1996');
+    });
+
+    test('OUG și hotărâre', () {
+      expect(
+        titluPrezentare(
+          act(
+            'ORDONANTA DE URGENTA',
+            '195',
+            'ORDONANȚĂ DE URGENȚĂ nr. 195 din 12 decembrie 2002 privind circulația pe drumurile publice',
+          ),
+        ).principal,
+        'Codul rutier',
+      );
+      expect(
+        titluPrezentare(
+          act('HOTARARE', '700', 'HOTĂRÂRE nr. 700 din 4 iulie 2012 pentru modificarea normelor'),
+        ).principal,
+        'Hotărârea pentru modificarea normelor',
+      );
+    });
+  });
+
   group('sugestii', () {
     test('„codul civ” propune Codul civil primul, apoi procedura civilă', () {
       final s = sugestii('codul civ');
@@ -432,12 +502,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Coduri și legi des folosite'), findsOneWidget);
+      expect(find.text('Coduri și legi uzuale'), findsOneWidget);
 
       await tester.tap(find.byType(TextField));
       await tester.enterText(find.byType(TextField), 'codul civ');
       await tester.pump();
-      expect(find.text('SUGESTII'), findsOneWidget);
+      expect(find.byType(Card), findsWidgets);
       expect(find.text('Legea nr. 287/2009'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'Legea 85/2014 art. 2');
