@@ -94,7 +94,8 @@ class CerereLegislatie {
   static ({CerereLegislatie cerere, String? tip}) dinText(String intrare) {
     final s = intrare.trim();
     final m = RegExp(
-      r'^(?:(?<tip>[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ\. ]+?)\s*(?:nr\.?\s*)?)?(?<nr>\d{1,5})\s*/\s*(?<an>\d{4})$',
+      r'^(?:(?<tip>[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ\. ]+?)\s*(?:nr\.?\s*)?)?(?<nr>\d{1,5})'
+      r'(?:\s*/\s*|\s+din\s+|\s+)(?<an>(?:18|19|20)\d{2})$',
       caseSensitive: false,
     ).firstMatch(s);
     if (m != null) {
@@ -584,10 +585,22 @@ class FiltreLegislatie {
 }
 
 bool _potrivesteTip(ActNormativ a, String tip) {
-  final t = fataDiacritice(a.tipAct).toUpperCase();
-  if (tip == 'ORDONANTA')
-    return t.startsWith('ORDONANTA') && !t.contains('URGENTA');
-  return t.startsWith(tip);
+  bool potriveste(String s) {
+    final t = fataDiacritice(s).toUpperCase().trim();
+    if (tip == 'ORDONANTA') {
+      return t.startsWith('ORDONANTA') && !t.startsWith('ORDONANTA DE URGENTA');
+    }
+    if (tip == 'ORDONANTA DE URGENTA')
+      return t.startsWith(tip) || t.startsWith('OUG');
+    return t.startsWith(tip);
+  }
+
+  // Tipul trimis de serviciu nu e mereu cel așteptat; titlul („LEGE nr. 307
+  // din 2006 ...”) spune sigur ce act e.
+  final tipCunoscut = tipuriActe.any(
+    (k) => fataDiacritice(a.tipAct).toUpperCase().trim().startsWith(k),
+  );
+  return tipCunoscut ? potriveste(a.tipAct) : potriveste(a.titlu);
 }
 
 List<ActNormativ> aplicaFiltre(List<ActNormativ> acte, FiltreLegislatie f) {

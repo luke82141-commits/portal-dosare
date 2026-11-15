@@ -18,7 +18,7 @@ import 'calendar_screen.dart';
 import 'cautare_screen.dart';
 import 'dosar_detaliu_screen.dart';
 import 'dosare_selectie_screen.dart';
-import 'instante_screen.dart';
+import 'legislatie_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
 import 'rezumat_zilnic_screen.dart';
@@ -87,7 +87,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// widgeturi, adunată într-o singură actualizare.
   void _programeazaWidgeturi() {
     _temporizatorWidgeturi?.cancel();
-    _temporizatorWidgeturi = Timer(const Duration(seconds: 2), actualizeazaWidgeturi);
+    _temporizatorWidgeturi = Timer(
+      const Duration(seconds: 2),
+      actualizeazaWidgeturi,
+    );
   }
 
   /// Atingerea unui widget: portaldosare://termene, ://actualizari,
@@ -99,7 +102,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     final Widget? ecran = switch (uri.host) {
       'termene' => const DosareSelectieScreen(selectie: SelectieDosare.termene),
-      'actualizari' => const DosareSelectieScreen(selectie: SelectieDosare.actualizari),
+      'actualizari' => const DosareSelectieScreen(
+        selectie: SelectieDosare.actualizari,
+      ),
       'widgeturi' => const WidgeturiScreen(),
       'dosar' => () {
         final cheie = uri.queryParameters['cheie'];
@@ -126,7 +131,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     BibliotecaService.instance.removeListener(_programeazaWidgeturi);
     ProService.instance.removeListener(_programeazaWidgeturi);
     WidgetsBinding.instance.removeObserver(this);
-    MonitorizareService.instance.deschideBiblioteca.removeListener(_laNotificare);
+    MonitorizareService.instance.deschideBiblioteca.removeListener(
+      _laNotificare,
+    );
     MonitorizareService.instance.deschideRezumat.removeListener(_laRezumat);
     super.dispose();
   }
@@ -151,14 +158,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // cereri: peste plafon verificăm la deschidere cel mult o dată pe oră.
       final multe = BibliotecaService.instance.dosare.length > plafonDosare;
       if (await monitorizare.eTimpulPentruVerificare(
-        interval: multe ? const Duration(hours: 1) : const Duration(minutes: 15),
+        interval: multe
+            ? const Duration(hours: 1)
+            : const Duration(minutes: 15),
       )) {
         await monitorizare.verificaToate();
       }
       // Termenele noi apărute pe portal ajung și în calendarul ales.
       final sync = CalendarSyncService.instance;
       if (sync.configurat) {
-        await sync.trimite([for (final s in BibliotecaService.instance.dosare) s.dosar]);
+        await sync.trimite([
+          for (final s in BibliotecaService.instance.dosare) s.dosar,
+        ]);
       }
     } catch (e) {
       // Fără rețea la pornire: rămân datele salvate, iar verificarea din
@@ -173,7 +184,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final semnal = MonitorizareService.instance.deschideRezumat;
     if (!semnal.value || !mounted) return;
     semnal.value = false;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RezumatZilnicScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const RezumatZilnicScreen()));
   }
 
   void _laNotificare() {
@@ -188,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // „Monitorizate” nu încape pe o filă din șase și se rupea în două.
     (Icons.bookmark_border, Icons.bookmark, 'Urmărite'),
     (Icons.calendar_month_outlined, Icons.calendar_month, 'Calendar'),
-    (Icons.account_balance_outlined, Icons.account_balance, 'Instanțe'),
+    (Icons.menu_book_outlined, Icons.menu_book, 'Legislație'),
     (Icons.notifications_none, Icons.notifications, 'Notificări'),
   ];
 
@@ -199,7 +211,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context, _) {
         final necitite = BibliotecaService.instance.totalNecitite;
         Widget iconita(IconData icon, int fila) => fila == _filaNotificari
-            ? Badge(isLabelVisible: necitite > 0, label: Text('$necitite'), child: Icon(icon))
+            ? Badge(
+                isLabelVisible: necitite > 0,
+                label: Text('$necitite'),
+                child: Icon(icon),
+              )
             : Icon(icon);
 
         return Scaffold(
@@ -214,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const MonitorizateScreen(),
                 const CalendarScreen(),
-                const InstanteScreen(),
+                const LegislatieScreen(),
                 const NotificariScreen(),
               ],
             ),
@@ -227,7 +243,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // Pe fila Căutare lupa chiar caută (și ascunde tastatura); pe
             // celelalte readuce bara de navigare.
             child: FloatingActionButton(
-              tooltip: _tab == _filaCautare ? 'Caută' : 'Arată bara de navigare',
+              tooltip: _tab == _filaCautare
+                  ? 'Caută'
+                  : 'Arată bara de navigare',
               onPressed: !_baraStransa
                   ? null
                   : _tab == _filaCautare
@@ -244,9 +262,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               curve: Curves.easeOut,
               child: NavigationBar(
                 selectedIndex: _tab,
-                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-                onDestinationSelected: (i) =>
-                    i == _file.length ? deschideUtilitati(context) : _alegeFila(i),
+                labelBehavior:
+                    NavigationDestinationLabelBehavior.onlyShowSelected,
+                onDestinationSelected: (i) => i == _file.length
+                    ? deschideUtilitati(context)
+                    : _alegeFila(i),
                 destinations: [
                   for (final (i, f) in _file.indexed)
                     NavigationDestination(

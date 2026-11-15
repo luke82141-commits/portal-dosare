@@ -599,17 +599,30 @@ class _CasetaCautare extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
             child: Row(
               children: [
-                const Text(
-                  'Caută în',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.onSurfaceVariant,
+                // Pe ecrane înguste (sau cu text mărit) se micșorează, nu ies din cadru.
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Caută în',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          mod('Tot textul', false),
+                          mod('Titluri', true),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                mod('Tot textul', false),
-                mod('Titluri', true),
-                const Spacer(),
                 IconButton.filled(
                   tooltip: 'Caută',
                   onPressed: onCauta,

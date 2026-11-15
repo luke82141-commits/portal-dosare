@@ -554,6 +554,39 @@ void main() {
       );
     });
 
+    test('„legea 307 2006” și „legea 307 din 2006” sunt număr și an', () {
+      for (final x in [
+        'legea 307 2006',
+        'Legea nr. 307 din 2006',
+        'legea 307/2006',
+      ]) {
+        final d = CerereLegislatie.dinText(x);
+        expect(d.cerere.numar, '307', reason: x);
+        expect(d.cerere.an, 2006, reason: x);
+        expect(d.tip, 'LEGE', reason: x);
+      }
+    });
+
+    test('filtrul de tip se uită și la titlu', () {
+      final acte = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(
+            tip: 'ACT',
+            numar: '307',
+            titlu: 'LEGE nr. 307 din 12 iulie 2006 privind apărarea',
+          ),
+        ]),
+      );
+      expect(
+        aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'LEGE'})),
+        hasLength(1),
+      );
+      expect(
+        aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'HOTARARE'})),
+        isEmpty,
+      );
+    });
+
     test('potrivirea exactă', () {
       final acte = parseazaRaspunsCautare(
         _raspunsCautare([_lege(tip: 'HOTARARE'), _lege()]),

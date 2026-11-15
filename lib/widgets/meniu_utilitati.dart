@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../screens/backup_screen.dart';
 import '../screens/calculator_termene_screen.dart';
 import '../screens/excel_screen.dart';
-import '../screens/legislatie_screen.dart';
+import '../screens/instante_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
 import '../screens/rezumat_zilnic_screen.dart';
@@ -17,12 +17,13 @@ import 'dosar_iccj.dart';
 /// Foaia „Utilități” din bara de jos: unelte folosite mai rar, ținute în afara
 /// ecranelor principale. Cele de sub „PRO” vor veni cu abonamentul;
 /// în perioada de lansare sunt gratuite pentru toți.
-Future<void> deschideUtilitati(BuildContext context) => showModalBottomSheet<void>(
-  context: context,
-  showDragHandle: true,
-  isScrollControlled: true,
-  builder: (_) => const _MeniuUtilitati(),
-);
+Future<void> deschideUtilitati(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => const _MeniuUtilitati(),
+    );
 
 class _MeniuUtilitati extends StatelessWidget {
   const _MeniuUtilitati();
@@ -43,7 +44,10 @@ class _MeniuUtilitati extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('Utilități', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Utilități',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
             ),
             _Unealta(
               icon: Icons.account_balance,
@@ -61,10 +65,10 @@ class _MeniuUtilitati extends StatelessWidget {
               },
             ),
             _Unealta(
-              icon: Icons.menu_book_outlined,
-              titlu: 'Legislație',
-              text: 'Caută legi, coduri și ordonanțe pe legislatie.just.ro',
-              onTap: () => _deschide(context, const LegislatieScreen()),
+              icon: Icons.account_balance_outlined,
+              titlu: 'Instanțe',
+              text: 'Toate instanțele din țară, cu contact și programul serviciilor',
+              onTap: () => _deschide(context, const InstanteScreen()),
             ),
             _Unealta(
               icon: Icons.person_search,
@@ -141,7 +145,8 @@ class _MeniuUtilitati extends StatelessWidget {
             _Unealta(
               icon: Icons.bar_chart,
               titlu: 'Statistici',
-              text: 'Termene, dosare și soluții pe ani, comparate cu anul trecut',
+              text:
+                  'Termene, dosare și soluții pe ani, comparate cu anul trecut',
               onTap: () => _deschide(context, const StatisticiScreen()),
             ),
             _Unealta(
@@ -163,7 +168,12 @@ class _Unealta extends StatelessWidget {
   final String text;
   final VoidCallback? onTap;
 
-  const _Unealta({required this.icon, required this.titlu, required this.text, this.onTap});
+  const _Unealta({
+    required this.icon,
+    required this.titlu,
+    required this.text,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
