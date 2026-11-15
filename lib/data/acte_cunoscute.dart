@@ -10,6 +10,10 @@ class ActCunoscut {
   /// Alte nume și abrevieri, fără diacritice, cu litere mici.
   final List<String> alias;
 
+  /// Anul intrării în vigoare, când e altul decât anul actului (serviciul
+  /// filtrează după el: Codul civil, Legea 287/2009, are 2011).
+  int? get anVigoare => _anVigoare['$numar/$an'];
+
   const ActCunoscut(
     this.nume,
     this.tip,
@@ -29,6 +33,18 @@ class ActCunoscut {
     return tip == 'CONSTITUTIE' ? 'Constituția României' : '$t nr. $numar/$an';
   }
 }
+
+const _anVigoare = {
+  '287/2009': 2011,
+  '134/2010': 2013,
+  '286/2009': 2014,
+  '135/2010': 2014,
+  '227/2015': 2016,
+  '207/2015': 2016,
+  '76/2012': 2013,
+  '187/2012': 2014,
+  '255/2013': 2014,
+};
 
 const acteCunoscute = <ActCunoscut>[
   ActCunoscut('Constituția României', 'CONSTITUTIE', '', 1991, ['constitutia']),

@@ -220,16 +220,38 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       _cautCod = true;
     });
     ActNormativ? gasit;
-    try {
-      final service = widget.service ?? LegislatieService.instance;
-      final p = await service.cauta(CerereLegislatie(titlu: nume));
-      gasit = alegeCodAnexat(p.acte, _act, nume);
-    } catch (_) {}
+    final service = widget.service ?? LegislatieService.instance;
+    // Codul are titlul „CODUL ... din 5 august 2026 ( Legea nr. 169/2026 )”.
+    final cereri = [
+      CerereLegislatie(titlu: nume),
+      if (_act.numar.isNotEmpty && _act.an != null)
+        CerereLegislatie(titlu: 'Legea nr. ${_act.numar}/${_act.an}'),
+    ];
+    for (final c in cereri) {
+      try {
+        final p = await service.cauta(c, simplu: true);
+        gasit = alegeCodAnexat(p.acte, _act, nume);
+      } catch (_) {}
+      if (gasit != null) break;
+    }
     if (!mounted) return;
     setState(() {
       _cod = gasit;
       _cautCod = false;
     });
+    // Legea are doar antetul: deschidem direct codul, în locul ei.
+    final cod = gasit;
+    if (cod != null && _act.text.length < 3000) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ActNormativScreen(
+            act: cod,
+            articolInitial: widget.articolInitial,
+            service: widget.service,
+          ),
+        ),
+      );
+    }
   }
 
   void _deschideCod() {

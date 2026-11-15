@@ -34,6 +34,10 @@ class ActNormativ {
   /// Anul actului: din titlu („din 26 iunie 2014”) sau din publicație,
   /// altfel din data intrării în vigoare.
   int? get an {
+    final dinTitlu = RegExp(
+      r'\bdin\s+\d{1,2}\s+[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ]+\s+((?:18|19|20)\d{2})',
+    ).firstMatch(titlu);
+    if (dinTitlu != null) return int.parse(dinTitlu.group(1)!);
     for (final sursa in [titlu, publicatie]) {
       final m = RegExp(r'\b(18|19|20)\d{2}\b').firstMatch(sursa);
       if (m != null) return int.parse(m.group(0)!);
@@ -78,11 +82,20 @@ class CerereLegislatie {
   final String numar;
   final int? an;
 
+  /// Tipul actului căutat după număr („LEGE”), ca să-l găsim după titlu.
+  final String? tip;
+
+  /// Anul intrării în vigoare, când diferă de anul actului (Codul civil
+  /// 287/2009 a intrat în vigoare în 2011); serviciul filtrează după el.
+  final int? anVigoare;
+
   const CerereLegislatie({
     this.text = '',
     this.titlu = '',
     this.numar = '',
     this.an,
+    this.tip,
+    this.anVigoare,
   });
 
   bool get goala =>
@@ -104,6 +117,7 @@ class CerereLegislatie {
         cerere: CerereLegislatie(
           numar: m.namedGroup('nr')!,
           an: int.parse(m.namedGroup('an')!),
+          tip: tip,
         ),
         tip: tip,
       );
@@ -116,7 +130,7 @@ class CerereLegislatie {
     final tipFaraAn = f == null ? null : tipDinAbreviere(f.namedGroup('tip')!);
     if (tipFaraAn != null) {
       return (
-        cerere: CerereLegislatie(numar: f!.namedGroup('nr')!),
+        cerere: CerereLegislatie(numar: f!.namedGroup('nr')!, tip: tipFaraAn),
         tip: tipFaraAn,
       );
     }
@@ -133,25 +147,34 @@ const tipuriActe = <String>[
   'DECRET',
   'ORDIN',
   'DECIZIE',
+  'COD',
   'REGULAMENT',
   'NORMA',
   'CONSTITUTIE',
 ];
 
 /// Eticheta afișată pentru un tip de act.
-String etichetaTip(String tip) => switch (tip) {
-  'LEGE' => 'Lege',
-  'ORDONANTA DE URGENTA' => 'OUG',
-  'ORDONANTA' => 'Ordonanță',
-  'HOTARARE' => 'Hotărâre',
-  'DECRET' => 'Decret',
-  'ORDIN' => 'Ordin',
-  'DECIZIE' => 'Decizie',
-  'REGULAMENT' => 'Regulament',
-  'NORMA' => 'Normă',
-  'CONSTITUTIE' => 'Constituție',
-  _ => _majusculaInitiala(tip),
-};
+String etichetaTip(String tip) =>
+    switch (fataDiacritice(tip).toUpperCase().trim()) {
+      'LEGE' => 'Lege',
+      'COD' || 'CODUL CIVIL' => 'Cod',
+      'CODUL DE ETICA' => 'Cod de etică',
+      'INSTRUCTIUNI' => 'Instrucțiuni',
+      'PROCEDURA' => 'Procedură',
+      'RECTIFICARE' => 'Rectificare',
+      'COMUNICAT' => 'Comunicat',
+      'STATUT' => 'Statut',
+      'ORDONANTA DE URGENTA' => 'OUG',
+      'ORDONANTA' => 'Ordonanță',
+      'HOTARARE' => 'Hotărâre',
+      'DECRET' => 'Decret',
+      'ORDIN' => 'Ordin',
+      'DECIZIE' => 'Decizie',
+      'REGULAMENT' => 'Regulament',
+      'NORMA' => 'Normă',
+      'CONSTITUTIE' => 'Constituție',
+      final t => _majusculaInitiala(t),
+    };
 
 /// „OUG”, „Legea”, „HG”, „O.U.G.” → tipul din [tipuriActe].
 String? tipDinAbreviere(String s) {
@@ -172,6 +195,7 @@ String? tipDinAbreviere(String s) {
   if (t.startsWith('DECRET')) return 'DECRET';
   if (t.startsWith('ORDIN')) return 'ORDIN';
   if (t.startsWith('DECIZI')) return 'DECIZIE';
+  if (t == 'COD' || t == 'CODUL') return 'COD';
   return null;
 }
 
@@ -224,8 +248,8 @@ class LegislatieService {
   static const _nsDate =
       'http://schemas.datacontract.org/2004/07/FreeWebService';
 
-  /// Serviciul întoarce cel mult 20 de acte pe pagină.
-  static const int rezultatePePagina = 20;
+  /// Serviciul întoarce cel mult 10 acte pe pagină, oricât i-am cere.
+  static const int rezultatePePagina = 10;
 
   /// Tokenul e reînnoit după 20 de minute.
   static const _durataToken = Duration(minutes: 20);
@@ -321,21 +345,34 @@ class LegislatieService {
   /// Caută acte normative. [pagina] începe de la 1. Rezultatele unei
   /// cereri identice sunt ținute în memorie cât e deschisă aplicația.
   ///
-  /// Pentru căutările din mai multe cuvinte („codul urbanismului”) serviciul
-  /// caută expresia exactă, care adesea nu apare nicăieri: titlul real e
-  /// „Codul amenajării teritoriului, urbanismului și construcțiilor”. Așa că,
-  /// pe prima pagină, mai cerem titlurile care conțin cuvântul cel mai rar
-  /// („urbanism”) și le punem în față pe cele care au toate cuvintele.
+  /// Serviciul are câteva ciudățenii (verificate pe 15.11.2026):
+  /// - întoarce cel mult 10 acte pe pagină, în ordinea datei intrării în
+  ///   vigoare, de la cele vechi spre cele noi;
+  /// - „anul” filtrează după data intrării în vigoare, nu după anul actului
+  ///   (Codul civil, Legea 287/2009, are 2011);
+  /// - titlul se caută ca expresie exactă: „codul urbanismului” nu găsește
+  ///   „Codul amenajării teritoriului, urbanismului și construcțiilor”.
+  /// De aceea actele cu număr le căutăm după titlu („LEGE nr. 307 din”), iar
+  /// căutările din mai multe cuvinte le completăm cu titlurile care au
+  /// cuvintele cele mai rare, păstrându-le pe cele care le au pe toate.
+  ///
+  /// Cu [simplu] se face doar cererea dată, fără completări.
   Future<PaginaLegislatie> cauta(
     CerereLegislatie cerere, {
     int pagina = 1,
+    bool simplu = false,
   }) async {
     if (cerere.goala) return const PaginaLegislatie([], false);
-    final expresie = cerere.numar.isEmpty
-        ? (cerere.text.isNotEmpty ? cerere.text : cerere.titlu)
-        : '';
-    final cuvant = pagina <= 1 ? cuvantPentruTitlu(expresie) : null;
-    if (cuvant == null) return _cautaPagina(cerere, pagina);
+    if (simplu) return _cautaPagina(cerere, pagina);
+    if (cerere.numar.trim().isNotEmpty) {
+      if (pagina > 1) return const PaginaLegislatie([], false);
+      return _cautaDupaNumar(cerere);
+    }
+    final expresie = cerere.text.isNotEmpty ? cerere.text : cerere.titlu;
+    final cuvinte = pagina <= 1 && cerere.an == null
+        ? cuvinteCheie(expresie)
+        : const <String>[];
+    if (cuvinte.isEmpty) return _cautaPagina(cerere, pagina);
 
     PaginaLegislatie? principala;
     Object? eroare;
@@ -347,12 +384,19 @@ class LegislatieService {
     final radacini = radaciniCautare(expresie);
     final dinTitluri = <ActNormativ>[];
     try {
-      for (var p = 1; p <= 2; p++) {
-        final r = await _cautaPagina(CerereLegislatie(titlu: cuvant), p);
-        dinTitluri.addAll(
-          r.acte.where((a) => titluContineToate(a.titlu, radacini)),
-        );
-        if (!r.maiSunt) break;
+      final incercari = [
+        ...cuvinte,
+        radacinaCuvant(fataDiacritice(cuvinte.first)),
+      ];
+      for (final cuvant in incercari.toSet()) {
+        for (var p = 1; p <= 2; p++) {
+          final r = await _cautaPagina(CerereLegislatie(titlu: cuvant), p);
+          dinTitluri.addAll(
+            r.acte.where((a) => titluContineToate(a.titlu, radacini)),
+          );
+          if (!r.maiSunt) break;
+        }
+        if (dinTitluri.isNotEmpty) break;
       }
     } catch (_) {
       // Căutarea suplimentară e un bonus; dacă pică, rămâne cea principală.
@@ -364,6 +408,53 @@ class LegislatieService {
       ...?principala?.acte,
     ].where((a) => vazute.add(a.cheie)).toList();
     return PaginaLegislatie(acte, principala?.maiSunt ?? false);
+  }
+
+  /// „Legea 307/2006”, „legea 307”: întâi după titlu („LEGE nr. 307 din”),
+  /// an cu an de la anul actului (serviciul filtrează după anul intrării în
+  /// vigoare); dacă nu iese nimic, după număr. Actele potrivite vin primele.
+  Future<PaginaLegislatie> _cautaDupaNumar(CerereLegislatie c) async {
+    final n = c.numar.replaceAll('.', '').trim();
+    final titlu = titluPentruNumar(n, c.tip);
+    bool potrivit(ActNormativ a) =>
+        a.numar.replaceAll('.', '').trim() == n &&
+        (c.an == null || a.an == c.an) &&
+        (c.tip == null || _potrivesteTip(a, c.tip!));
+
+    final toate = <ActNormativ>[];
+    final vazute = <String>{};
+    void adauga(List<ActNormativ> acte) =>
+        toate.addAll(acte.where((a) => vazute.add(a.cheie)));
+    bool gasit() => toate.any(potrivit);
+
+    // La căutarea după titlu, anul e o limită de jos pentru data intrării în
+    // vigoare (care nu e niciodată înaintea actului), iar ordinea e
+    // amestecată: răsfoim câteva pagini până dăm de act.
+    for (var p = 1; p <= 5 && !(c.an != null && gasit()); p++) {
+      final r = await _cautaPagina(CerereLegislatie(titlu: titlu, an: c.an), p);
+      adauga(r.acte);
+      if (!r.maiSunt) break;
+    }
+    // Rezervă: după număr, cum cere serviciul.
+    for (var p = 1; p <= 2 && !gasit(); p++) {
+      final r = await _cautaPagina(CerereLegislatie(numar: n, an: c.an), p);
+      adauga(r.acte);
+      if (!r.maiSunt) break;
+    }
+
+    final potrivite = toate.where(potrivit).toList()
+      ..sort((x, y) {
+        // Cele mai noi întâi; la același act, forma republicată.
+        final a = (y.an ?? 0).compareTo(x.an ?? 0);
+        if (a != 0) return a;
+        final r = _eRepublicat(y).compareTo(_eRepublicat(x));
+        if (r != 0) return r;
+        return (y.dataVigoare ?? DateTime(0)).compareTo(
+          x.dataVigoare ?? DateTime(0),
+        );
+      });
+    final restul = toate.where((a) => !potrivit(a));
+    return PaginaLegislatie([...potrivite, ...restul], false);
   }
 
   Future<PaginaLegislatie> _cautaPagina(
@@ -489,11 +580,11 @@ List<ActNormativ> parseazaRaspunsCautare(String body) {
     var link = text(e, 'LinkHtml');
     if (link.startsWith('http://')) link = 'https://${link.substring(7)}';
     return ActNormativ(
-      tipAct: text(e, 'TipAct').toUpperCase(),
+      tipAct: fataDiacritice(text(e, 'TipAct')).toUpperCase().trim(),
       numar: text(e, 'Numar'),
       dataVigoare: _data(text(e, 'DataVigoare')),
       titlu: titluFaraAntet(text(e, 'Titlu')),
-      emitent: text(e, 'Emitent'),
+      emitent: emitentReparat(text(e, 'Emitent')),
       publicatie: text(e, 'Publicatie'),
       linkHtml: link,
       text: textFaraAntet(curataText(text(e, 'Text'))),
@@ -814,8 +905,14 @@ List<ActCunoscut> acteCunoscutePotrivite(String intrare) {
 }
 
 CerereLegislatie cerereActCunoscut(ActCunoscut a) => a.numar.isEmpty
-    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI')
-    : CerereLegislatie(numar: a.numar, an: a.an);
+    // Anul scoate Constituția din 1923 (anul e limita de jos a intrării în vigoare).
+    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI', an: 1991)
+    : CerereLegislatie(
+        numar: a.numar,
+        an: a.an,
+        tip: a.tip,
+        anVigoare: a.anVigoare,
+      );
 
 List<SugestieLegislatie> sugestii(
   String intrare, {
@@ -988,27 +1085,48 @@ bool titluContineToate(String titlu, List<String> radacini) {
   return radacini.isNotEmpty && radacini.every(t.contains);
 }
 
-/// Cuvântul trimis serviciului ca titlu când căutarea are mai multe cuvinte:
-/// cel mai lung cuvânt necomun, tăiat înainte de prima diacritică (serviciul
-/// face diferența între „ş” și „ș”) și redus la rădăcină. Null când nu e cazul.
-String? cuvantPentruTitlu(String interogare) {
+/// Cuvintele căutate separat în titluri când căutarea are mai multe cuvinte:
+/// cele mai lungi două cuvinte necomune, așa cum au fost scrise (serviciul
+/// nu ține cont de diacritice și majuscule). Gol când nu e cazul.
+List<String> cuvinteCheie(String interogare) {
   final cuvinte = interogare
       .toLowerCase()
       .split(RegExp(r'[^a-zăâîșşțţ0-9]+'))
       .where((c) => c.isNotEmpty)
       .toList();
-  if (cuvinte.length < 2) return null;
-  String? ales;
-  for (final c in cuvinte) {
-    if (_cuvinteComune.contains(fataDiacritice(c))) continue;
-    final d = RegExp('[ăâîșşțţ]').firstMatch(c);
-    var t = d == null ? c : c.substring(0, d.start);
-    if (d == null) t = radacinaCuvant(t);
-    if (t.length < 5) continue;
-    if (ales == null || t.length > ales.length) ales = t;
-  }
-  return ales;
+  if (cuvinte.length < 2) return const [];
+  final rare =
+      cuvinte
+          .where(
+            (c) => !_cuvinteComune.contains(fataDiacritice(c)) && c.length >= 5,
+          )
+          .toSet()
+          .toList()
+        ..sort((a, b) => b.length.compareTo(a.length));
+  return rare.take(2).toList();
 }
+
+/// Titlul după care căutăm un act cu număr: „LEGE nr. 307 din”. La tipurile
+/// scrise în mai multe feluri („HOTĂRÎRE”, „ORDINUL”, „DECIZIA”) doar
+/// „nr. 307 din”, iar tipul îl verificăm în aplicație.
+String titluPentruNumar(String numar, String? tip) {
+  final prefix = switch (tip) {
+    'LEGE' => 'LEGE ',
+    'ORDONANTA DE URGENTA' => 'URGENTA ',
+    'ORDONANTA' => 'ORDONANTA ',
+    'DECRET' => 'DECRET ',
+    _ => '',
+  };
+  // Titlurile scriu numerele mari cu punct: „DECRET nr. 1.212 din”.
+  final cuPunct = numar.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+$)'),
+    (_) => '.',
+  );
+  return '${prefix}nr. $cuPunct din';
+}
+
+int _eRepublicat(ActNormativ a) =>
+    fataDiacritice(a.titlu.toLowerCase()).contains('republicat') ? 1 : 0;
 
 /// Ordinea „Relevanță”: întâi actele cu toată expresia în titlu, apoi cele
 /// cu cele mai multe cuvinte căutate în titlu; legile și codurile înaintea
@@ -1035,6 +1153,13 @@ List<ActNormativ> ordoneazaDupaRelevanta(
         t.contains('rectificare'))
       s -= 3;
     if (t.contains('abrogarea')) s -= 3;
+    if (t.contains('promulgarea') ||
+        t.contains('exceptia de neconstitutionalitate'))
+      s -= 4;
+    if (a.tipAct == 'RECTIFICARE' || a.tipAct == 'COMUNICAT') s -= 3;
+    if (q.startsWith('cod') && a.tipAct.startsWith('COD')) s += 6;
+    if (t.startsWith('cod') && q.startsWith('cod')) s += 3;
+    s -= t.length ~/ 120;
     if (a.tipAct.startsWith('LEGE') || a.tipAct.startsWith('ORDONANTA')) s += 1;
     return s;
   }
@@ -1056,11 +1181,22 @@ ActNormativ? potrivireExacta(
   for (final a in acte) {
     if (tip != null && !_potrivesteTip(a, tip)) continue;
     if (c.numar.isNotEmpty) {
-      if (a.numar.trim() != c.numar.trim()) continue;
+      if (a.numar.replaceAll('.', '').trim() !=
+          c.numar.replaceAll('.', '').trim())
+        continue;
       if (c.an != null && a.an != c.an) continue;
       return a;
     }
-    if (tip == 'CONSTITUTIE') return a;
+  }
+  if (tip == 'CONSTITUTIE') {
+    // Forma cea mai nouă (republicată în 2003).
+    final c = acte.where((a) => _potrivesteTip(a, tip!)).toList()
+      ..sort(
+        (x, y) => (y.dataVigoare ?? DateTime(0)).compareTo(
+          x.dataVigoare ?? DateTime(0),
+        ),
+      );
+    return c.firstOrNull;
   }
   return null;
 }
@@ -1181,15 +1317,37 @@ class ActeSalvateService extends ChangeNotifier {
 
 /// Titlul vine uneori cu antetul paginii lipit: „LEGE nr. 169 ... construcţiilor
 /// EMITENT Parlamentul PUBLICAT ÎN Monitorul Oficial nr. 661 ...”.
-String titluFaraAntet(String titlu) =>
-    titlu.replaceFirst(RegExp(r'\s+EMITENT\b[\s\S]*$'), '').trim();
+String titluFaraAntet(String titlu) => titlu
+    .replaceAll('\uFEFF', '')
+    // Scăpări RTF: „G\\'f6nczi” → „Gönczi”.
+    .replaceAllMapped(
+      RegExp(r"\\'([0-9a-fA-F]{2})"),
+      (m) => String.fromCharCode(int.parse(m[1]!, radix: 16)),
+    )
+    .replaceFirst(RegExp(r'\s+EMITENT\b[\s\S]*$'), '')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
+/// Serviciul strică „ș” și „ț” din emitent în „?” („Pre?edintele României”,
+/// „Curtea Constitu?ională”). Le refacem după cum arată cuvântul.
+String emitentReparat(String e) {
+  if (!e.contains('?')) return e.trim();
+  return e
+      .replaceAllMapped(RegExp(r'(^|\s)\?i(?=\s|$)'), (m) => '${m[1]}și')
+      .replaceAll('Pre?edinte', 'Președinte')
+      .replaceAll('?coal', 'școal')
+      .replaceAll('?tiin', 'științ')
+      .replaceAll('Mini?tri', 'Miniștri')
+      .replaceAll('?', 'ț')
+      .trim();
+}
 
 /// Textul începe uneori cu același antet („... EMITENT PARLAMENTUL ROMÂNIEI
 /// Publicat în MONITORUL OFICIAL nr. 661 din 10 august 2026”), care e deja
 /// afișat frumos deasupra; îl scoatem.
 String textFaraAntet(String text) {
   final m = RegExp(
-    r'^[\s\S]{0,700}?\bEMITENT\b[\s\S]{0,300}?MONITORUL OFICIAL\s+(?:nr\.\s*)?\d+\s+din\s+\d{1,2}\s+\S+\s+\d{4}\s*',
+    r'^[\s\S]{0,900}?\bEMITENT\b[\s\S]{0,300}?MONITORUL OFICIAL(?:\s+al\s+Rom\S*)?,?(?:\s+Partea)?(?:\s+I)?\s+(?:nr\.\s*)?\d+\s+din\s+\d{1,2}\s+\S+\s+\d{4}[ \t\u00a0]*',
     caseSensitive: false,
   ).firstMatch(text);
   return m == null ? text : text.substring(m.end).trim();
@@ -1227,8 +1385,11 @@ ActNormativ? alegeCodAnexat(
         (a) => a.cheie != lege.cheie && titluContineToate(a.titlu, radacini),
       )
       .toList();
-  return potrivite.where((a) => _norm(a.titlu).startsWith('cod')).firstOrNull ??
-      potrivite.where((a) => !_norm(a.titlu).startsWith('lege')).firstOrNull;
+  return potrivite
+      .where(
+        (a) => a.tipAct.startsWith('COD') || _norm(a.titlu).startsWith('cod'),
+      )
+      .firstOrNull;
 }
 
 /// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”).
