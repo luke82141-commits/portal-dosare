@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xml/xml.dart';
+
+import '../data/acte_cunoscute.dart';
 
 /// Un act normativ din Portalul Legislativ al Ministerului Justiției
 /// (legislatie.just.ro).
@@ -601,4 +605,308 @@ List<TrimitereLegala> trimiteriDinObiect(String obiect) {
     if (curat.isNotEmpty) adauga(TrimitereLegala('„$curat”', CerereLegislatie(text: curat)));
   }
   return rezultat;
+}
+
+// ---------------------------------------------------------------------------
+// Sugestii în timp ce scrii
+
+enum FelSugestie { actCunoscut, numar, text, titlu, recenta }
+
+class SugestieLegislatie {
+  final FelSugestie fel;
+  final String titlu;
+  final String subtitlu;
+  final CerereLegislatie cerere;
+
+  /// Filtrul de tip pus odată cu sugestia (ex. „LEGE” pentru Codul civil).
+  final String? tip;
+
+  /// Articolul cerut („codul civil art. 1357”), deschis direct.
+  final String? articol;
+
+  /// Deschide singur actul când căutarea găsește potrivirea exactă.
+  final bool deschideDirect;
+
+  const SugestieLegislatie(
+    this.fel,
+    this.titlu,
+    this.subtitlu,
+    this.cerere, {
+    this.tip,
+    this.articol,
+    this.deschideDirect = false,
+  });
+}
+
+String _norm(String s) =>
+    fataDiacritice(s.toLowerCase())
+        .replaceAll(RegExp(r'[^a-z0-9/ ]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+/// Desparte „codul civil art. 1357” în „codul civil” și articolul „1357”.
+({String rest, String? articol}) extrageArticol(String intrare) {
+  final m = RegExp(
+    r'[\s,]+(?:art(?:icolul|\.)?|articol)\s*(\d+(?:\s*\^\s*\d+)?)\s*$',
+    caseSensitive: false,
+  ).firstMatch(intrare);
+  if (m == null) return (rest: intrare.trim(), articol: null);
+  return (rest: intrare.substring(0, m.start).trim(), articol: m[1]!.replaceAll(' ', ''));
+}
+
+/// Actele cunoscute care se potrivesc cu ce s-a scris: fiecare cuvânt
+/// scris trebuie să fie începutul unui cuvânt din nume, alias sau trimitere.
+List<ActCunoscut> acteCunoscutePotrivite(String intrare) {
+  final cuvinte = _norm(intrare).split(' ').where((c) => c.isNotEmpty).toList();
+  if (cuvinte.isEmpty) return const [];
+  final rezultat = <(ActCunoscut, int)>[];
+  for (final a in acteCunoscute) {
+    var cel = 1 << 30;
+    for (final forma in [a.nume, ...a.alias, a.trimitere]) {
+      final f = _norm(forma);
+      final w = f.split(' ');
+      final toate = cuvinte.every((c) => w.any((x) => x.startsWith(c)) || f.startsWith(c));
+      if (toate) {
+        final scor = w.length - cuvinte.length + (f.startsWith(cuvinte.first) ? 0 : 5);
+        if (scor < cel) cel = scor;
+      }
+    }
+    if (cel < (1 << 30)) rezultat.add((a, cel));
+  }
+  rezultat.sort((x, y) => x.$2.compareTo(y.$2));
+  return rezultat.map((r) => r.$1).toList();
+}
+
+CerereLegislatie cerereActCunoscut(ActCunoscut a) => a.numar.isEmpty
+    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI')
+    : CerereLegislatie(numar: a.numar, an: a.an);
+
+List<SugestieLegislatie> sugestii(String intrare, {List<String> recente = const []}) {
+  final s = intrare.trim();
+  if (s.isEmpty) return const [];
+  final (:rest, :articol) = extrageArticol(s);
+  final faraArt = articol == null ? '' : ' · art. $articol';
+  final r = <SugestieLegislatie>[];
+
+  final nr = CerereLegislatie.dinText(rest);
+  if (nr.cerere.numar.isNotEmpty) {
+    final tip = nr.tip;
+    r.add(
+      SugestieLegislatie(
+        FelSugestie.numar,
+        '${tip == null ? 'Actul' : etichetaTip(tip)} nr. ${nr.cerere.numar}/${nr.cerere.an}$faraArt',
+        'Caută actul exact',
+        nr.cerere,
+        tip: tip,
+        articol: articol,
+        deschideDirect: tip != null,
+      ),
+    );
+  }
+
+  for (final a in acteCunoscutePotrivite(rest).take(5)) {
+    r.add(
+      SugestieLegislatie(
+        FelSugestie.actCunoscut,
+        '${a.nume}$faraArt',
+        a.trimitere,
+        cerereActCunoscut(a),
+        tip: a.tip,
+        articol: articol,
+        deschideDirect: true,
+      ),
+    );
+  }
+
+  final n = _norm(s);
+  for (final x in recente) {
+    if (r.length >= 8) break;
+    if (_norm(x) != n && _norm(x).contains(n)) {
+      final ex = extrageArticol(x);
+      final d = CerereLegislatie.dinText(ex.rest);
+      r.add(
+        SugestieLegislatie(
+          FelSugestie.recenta,
+          x,
+          'Căutare recentă',
+          d.cerere,
+          tip: d.tip,
+          articol: ex.articol,
+        ),
+      );
+    }
+  }
+
+  if (nr.cerere.numar.isEmpty && rest.length >= 2) {
+    r.add(
+      SugestieLegislatie(
+        FelSugestie.text,
+        '„$rest”',
+        'Caută în textul actelor',
+        CerereLegislatie(text: rest),
+      ),
+    );
+    r.add(
+      SugestieLegislatie(
+        FelSugestie.titlu,
+        '„$rest”',
+        'Caută doar în titlurile actelor',
+        CerereLegislatie(titlu: rest),
+      ),
+    );
+  }
+  return r;
+}
+
+/// Ordinea „Relevanță”: întâi actele cu toată expresia în titlu, apoi cele
+/// cu cele mai multe cuvinte căutate în titlu; legile și codurile înaintea
+/// actelor care doar le modifică.
+List<ActNormativ> ordoneazaDupaRelevanta(List<ActNormativ> acte, String interogare) {
+  final q = _norm(interogare);
+  if (q.isEmpty) return acte;
+  // Rădăcini: „insolvență” trebuie să prindă și „insolvenței”.
+  String radacina(String c) => c.length > 5 ? c.substring(0, c.length - 2) : c;
+  final cuvinte = q.split(' ').where((c) => c.length > 2).map(radacina).toList();
+  int scor(ActNormativ a) {
+    final t = _norm(a.titlu);
+    var s = 0;
+    if (t.contains(q)) s += 20;
+    for (final c in cuvinte) {
+      if (t.contains(c)) s += 4;
+    }
+    if (t.contains('modificarea') || t.contains('completarea') || t.contains('rectificare')) s -= 3;
+    if (t.contains('abrogarea')) s -= 3;
+    if (a.tipAct.startsWith('LEGE') || a.tipAct.startsWith('ORDONANTA')) s += 1;
+    return s;
+  }
+
+  final indexate = acte.indexed.toList()
+    ..sort((x, y) {
+      final d = scor(y.$2).compareTo(scor(x.$2));
+      return d != 0 ? d : x.$1.compareTo(y.$1);
+    });
+  return indexate.map((e) => e.$2).toList();
+}
+
+/// Potrivirea exactă dintr-o pagină de rezultate (pentru deschidere directă).
+ActNormativ? potrivireExacta(List<ActNormativ> acte, CerereLegislatie c, String? tip) {
+  for (final a in acte) {
+    if (tip != null && !_potrivesteTip(a, tip)) continue;
+    if (c.numar.isNotEmpty) {
+      if (a.numar.trim() != c.numar.trim()) continue;
+      if (c.an != null && a.an != c.an) continue;
+      return a;
+    }
+    if (tip == 'CONSTITUTIE') return a;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Acte salvate (favorite)
+
+class ActSalvat {
+  final String tipAct;
+  final String numar;
+  final int? an;
+  final String titlu;
+  final String denumire;
+
+  const ActSalvat({
+    required this.tipAct,
+    required this.numar,
+    required this.an,
+    required this.titlu,
+    required this.denumire,
+  });
+
+  factory ActSalvat.din(ActNormativ a) => ActSalvat(
+    tipAct: a.tipAct,
+    numar: a.numar,
+    an: a.an,
+    titlu: a.titlu,
+    denumire: a.denumireScurta,
+  );
+
+  String get cheie => '$tipAct|$numar|$an';
+
+  CerereLegislatie get cerere => numar.trim().isEmpty || numar == '0'
+      ? CerereLegislatie(titlu: titlu)
+      : CerereLegislatie(numar: numar, an: an);
+
+  String? get tip {
+    for (final t in tipuriActe) {
+      if (fataDiacritice(tipAct).toUpperCase().startsWith(t)) {
+        if (t == 'ORDONANTA' && tipAct.contains('URGENT')) return 'ORDONANTA DE URGENTA';
+        return t;
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'tipAct': tipAct,
+    'numar': numar,
+    'an': an,
+    'titlu': titlu,
+    'denumire': denumire,
+  };
+
+  factory ActSalvat.fromJson(Map<String, dynamic> j) => ActSalvat(
+    tipAct: j['tipAct'] as String? ?? '',
+    numar: j['numar'] as String? ?? '',
+    an: j['an'] as int?,
+    titlu: j['titlu'] as String? ?? '',
+    denumire: j['denumire'] as String? ?? '',
+  );
+}
+
+class ActeSalvateService extends ChangeNotifier {
+  ActeSalvateService._();
+  static final instance = ActeSalvateService._();
+
+  static const _cheie = 'legislatie_acte_salvate';
+  List<ActSalvat> _acte = [];
+  bool _incarcat = false;
+
+  List<ActSalvat> get acte => List.unmodifiable(_acte);
+
+  Future<void> incarca() async {
+    if (_incarcat) return;
+    try {
+      final p = await SharedPreferences.getInstance();
+      final s = p.getString(_cheie);
+      if (s != null) {
+        _acte = (jsonDecode(s) as List)
+            .map((e) => ActSalvat.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+    _incarcat = true;
+    notifyListeners();
+  }
+
+  /// Pentru teste.
+  void reseteaza() {
+    _acte = [];
+    _incarcat = false;
+  }
+
+  bool esteSalvat(ActNormativ a) => _acte.any((x) => x.cheie == ActSalvat.din(a).cheie);
+
+  Future<bool> comuta(ActNormativ a) async {
+    final s = ActSalvat.din(a);
+    final salvat = esteSalvat(a);
+    if (salvat) {
+      _acte.removeWhere((x) => x.cheie == s.cheie);
+    } else {
+      _acte.insert(0, s);
+    }
+    notifyListeners();
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(_cheie, jsonEncode(_acte.map((e) => e.toJson()).toList()));
+    } catch (_) {}
+    return !salvat;
+  }
 }
