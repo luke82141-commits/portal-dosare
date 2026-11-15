@@ -38,25 +38,37 @@ class IntervalRaport {
     return switch (perioada) {
       PerioadaRaport.saptamanal => () {
         final luni = DateTime(z.year, z.month, z.day - (z.weekday - 1));
-        return IntervalRaport._(perioada, luni, DateTime(luni.year, luni.month, luni.day + 7));
+        return IntervalRaport._(
+          perioada,
+          luni,
+          DateTime(luni.year, luni.month, luni.day + 7),
+        );
       }(),
       PerioadaRaport.lunar => IntervalRaport._(
         perioada,
         DateTime(z.year, z.month),
         DateTime(z.year, z.month + 1),
       ),
-      PerioadaRaport.anual => IntervalRaport._(perioada, DateTime(z.year), DateTime(z.year + 1)),
+      PerioadaRaport.anual => IntervalRaport._(
+        perioada,
+        DateTime(z.year),
+        DateTime(z.year + 1),
+      ),
     };
   }
 
-  IntervalRaport get precedent =>
-      IntervalRaport.pentru(perioada, inceput.subtract(const Duration(days: 1)));
+  IntervalRaport get precedent => IntervalRaport.pentru(
+    perioada,
+    inceput.subtract(const Duration(days: 1)),
+  );
   IntervalRaport get urmator => IntervalRaport.pentru(perioada, sfarsit);
 
   /// Ultima zi inclusă.
-  DateTime get ultimaZi => DateTime(sfarsit.year, sfarsit.month, sfarsit.day - 1);
+  DateTime get ultimaZi =>
+      DateTime(sfarsit.year, sfarsit.month, sfarsit.day - 1);
 
-  bool contine(DateTime? d) => d != null && !d.isBefore(inceput) && d.isBefore(sfarsit);
+  bool contine(DateTime? d) =>
+      d != null && !d.isBefore(inceput) && d.isBefore(sfarsit);
 
   /// „01.11.2026 – 30.11.2026”.
   String get text => '${formateazaData(inceput)} – ${formateazaData(ultimaZi)}';
@@ -64,7 +76,8 @@ class IntervalRaport {
   /// Eticheta scurtă din ecran: „9 – 15 nov. 2026”, „Noiembrie 2026”, „Anul 2026”.
   String get eticheta => switch (perioada) {
     PerioadaRaport.saptamanal => text,
-    PerioadaRaport.lunar => '${_majuscula(lunileAnului[inceput.month - 1])} ${inceput.year}',
+    PerioadaRaport.lunar =>
+      '${_majuscula(lunileAnului[inceput.month - 1])} ${inceput.year}',
     PerioadaRaport.anual => 'Anul ${inceput.year}',
   };
 
@@ -76,7 +89,8 @@ class IntervalRaport {
   };
 }
 
-String _majuscula(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+String _majuscula(String s) =>
+    s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
 enum TipSolutie { admite, admiteInParte, respinge, amanare, alta }
 
@@ -97,10 +111,12 @@ TipSolutie tipSolutie(Sedinta s) {
   for (final text in [s.solutie, s.solutieSumar]) {
     final t = _fara(text).trim();
     if (t.isEmpty) continue;
-    if (RegExp(r'^admi(te|sa|s)\w*\s+in\s+parte').hasMatch(t)) return TipSolutie.admiteInParte;
+    if (RegExp(r'^admi(te|sa|s)\w*\s+in\s+parte').hasMatch(t))
+      return TipSolutie.admiteInParte;
     if (RegExp(r'^admi(te|sa|s)').hasMatch(t)) return TipSolutie.admite;
     if (RegExp(r'^respin').hasMatch(t)) return TipSolutie.respinge;
-    if (RegExp(r'^(amana|amanare|amanarea)').hasMatch(t)) return TipSolutie.amanare;
+    if (RegExp(r'^(amana|amanare|amanarea)').hasMatch(t))
+      return TipSolutie.amanare;
     return TipSolutie.alta;
   }
   return TipSolutie.alta;
@@ -114,7 +130,9 @@ bool esteHotarare(Sedinta s) {
   if (tip == TipSolutie.amanare) return false;
   if (tip != TipSolutie.alta) return true;
   final doc = _fara(s.document);
-  return doc.contains('hotarare') || doc.contains('sentinta') || doc.contains('decizie');
+  return doc.contains('hotarare') ||
+      doc.contains('sentinta') ||
+      doc.contains('decizie');
 }
 
 /// Un termen de judecată, pentru tabelele raportului.
@@ -139,11 +157,14 @@ class RandTermen {
 
   /// Cel mult trei părți, debitorul întâi la insolvență.
   List<String> get parti => [
-    for (final r in rezumatParti(dosar, max: 3).skip(1)) r.replaceFirst('• ', ''),
+    for (final r in rezumatParti(dosar, max: 3).skip(1))
+      r.replaceFirst('• ', ''),
   ];
 
-  String get solutie =>
-      scurteaza(sedinta.solutieSumar.isNotEmpty ? sedinta.solutieSumar : sedinta.solutie, 220);
+  String get solutie => scurteaza(
+    sedinta.solutieSumar.isNotEmpty ? sedinta.solutieSumar : sedinta.solutie,
+    220,
+  );
 
   DateTime get dataHotarare => sedinta.dataPronuntare ?? sedinta.data!;
 
@@ -213,9 +234,11 @@ class Raport {
 
   bool get anual => interval.perioada == PerioadaRaport.anual;
 
-  int _numara(TipSolutie tip) => hotarari.where((h) => tipSolutie(h.sedinta) == tip).length;
+  int _numara(TipSolutie tip) =>
+      hotarari.where((h) => tipSolutie(h.sedinta) == tip).length;
 
-  int get amanari => termene.where((t) => tipSolutie(t.sedinta) == TipSolutie.amanare).length;
+  int get amanari =>
+      termene.where((t) => tipSolutie(t.sedinta) == TipSolutie.amanare).length;
 
   /// Tabelul „Sinteză”: (indicator, valoare, subordonat).
   List<(String, String, bool)> get indicatori {
@@ -226,11 +249,19 @@ class Raport {
         _numara(TipSolutie.respinge);
     return [
       ('Dosare monitorizate la data întocmirii', '$dosareMonitorizate', false),
-      ('Termene de judecată în perioada de referință', '${termene.length}', false),
+      (
+        'Termene de judecată în perioada de referință',
+        '${termene.length}',
+        false,
+      ),
       ('Termene amânate', '$amanari', false),
       ('Hotărâri pronunțate', '${hotarari.length}', false),
       ('din care: admite', '${_numara(TipSolutie.admite)}', true),
-      ('din care: admite în parte', '${_numara(TipSolutie.admiteInParte)}', true),
+      (
+        'din care: admite în parte',
+        '${_numara(TipSolutie.admiteInParte)}',
+        true,
+      ),
       ('din care: respinge', '${_numara(TipSolutie.respinge)}', true),
       if (alte > 0) ('din care: alte soluții', '$alte', true),
       ('Căi de atac declarate', '${caiAtac.length}', false),
@@ -241,13 +272,18 @@ class Raport {
   String get _eticheteUrmatoare => switch (interval.perioada) {
     PerioadaRaport.saptamanal => 'Termene stabilite în săptămâna următoare',
     PerioadaRaport.lunar => 'Termene stabilite în luna următoare',
-    PerioadaRaport.anual => 'Termene stabilite în primele 30 de zile ale anului următor',
+    PerioadaRaport.anual =>
+      'Termene stabilite în primele 30 de zile ale anului următor',
   };
 
   /// Fraza de început a sintezei, în limbajul raportului.
   String get introducere {
-    final d = dosareMonitorizate == 1 ? 'un dosar' : numarCu(dosareMonitorizate, 'dosare');
-    final i = instante == 1 ? 'unei singure instanțe' : 'a ${numarCu(instante, 'instanțe')}';
+    final d = dosareMonitorizate == 1
+        ? 'un dosar'
+        : numarCu(dosareMonitorizate, 'dosare');
+    final i = instante == 1
+        ? 'unei singure instanțe'
+        : 'a ${numarCu(instante, 'instanțe')}';
     return 'În perioada de referință au fost monitorizate $d, aflate pe rolul $i. '
         'Situația se prezintă după cum urmează:';
   }
@@ -283,7 +319,8 @@ Raport construiesteRaport(
     for (final s in d.sedinte) {
       if (s.data == null) continue;
       if (interval.contine(s.data)) termene.add(RandTermen(d, s));
-      if (!s.data!.isBefore(interval.sfarsit) && s.data!.isBefore(finalUrmatoare)) {
+      if (!s.data!.isBefore(interval.sfarsit) &&
+          s.data!.isBefore(finalUrmatoare)) {
         urmatoare.add(RandTermen(d, s));
       }
       if (esteHotarare(s) && interval.contine(s.dataPronuntare ?? s.data)) {
@@ -297,7 +334,9 @@ Raport construiesteRaport(
   termene.sort((a, b) => a.moment.compareTo(b.moment));
   urmatoare.sort((a, b) => a.moment.compareTo(b.moment));
   hotarari.sort((a, b) => a.dataHotarare.compareTo(b.dataHotarare));
-  caiAtac.sort((a, b) => a.cale.dataDeclarare!.compareTo(b.cale.dataDeclarare!));
+  caiAtac.sort(
+    (a, b) => a.cale.dataDeclarare!.compareTo(b.cale.dataDeclarare!),
+  );
 
   final peLuni = <Repartizare>[];
   final peInstante = <Repartizare>[];

@@ -86,19 +86,32 @@ void main() {
     );
     expect(mesaj, contains('03:30'));
     expect(iccj.cereri, 0);
-    expect(esteIccjInAsteptare(BibliotecaService.instance.dosare.single.dosar), isTrue);
+    expect(
+      esteIccjInAsteptare(BibliotecaService.instance.dosare.single.dosar),
+      isTrue,
+    );
 
     final soap = _SoapGol();
     final monitor = MonitorizareService.instance;
     expect(
-      await monitor.verificaToate(soap: soap, iccj: iccj, acum: DateTime(2026, 11, 14, 16)),
+      await monitor.verificaToate(
+        soap: soap,
+        iccj: iccj,
+        acum: DateTime(2026, 11, 14, 16),
+      ),
       isEmpty,
     );
     expect(iccj.cereri, 0);
     expect(soap.numere, isNot(contains('1234/1/2026')));
 
-    final r = await monitor.verificaToate(soap: soap, iccj: iccj, acum: DateTime(2026, 11, 15, 4));
-    expect(r.single.schimbari, ['Datele dosarului au fost aduse de la ÎCCJ (1 termen)']);
+    final r = await monitor.verificaToate(
+      soap: soap,
+      iccj: iccj,
+      acum: DateTime(2026, 11, 15, 4),
+    );
+    expect(r.single.schimbari, [
+      'Datele dosarului au fost aduse de la ÎCCJ (1 termen)',
+    ]);
     final salvat = BibliotecaService.instance.dosare.single.dosar;
     expect(esteIccjInAsteptare(salvat), isFalse);
     expect(salvat.stadiuProcesual, 'Recurs');
@@ -119,6 +132,9 @@ void main() {
       iccj: _IccjFals(_raspuns, esueaza: true),
       acum: DateTime(2026, 11, 15, 4),
     );
-    expect(esteIccjInAsteptare(BibliotecaService.instance.dosare.single.dosar), isTrue);
+    expect(
+      esteIccjInAsteptare(BibliotecaService.instance.dosare.single.dosar),
+      isTrue,
+    );
   });
 }

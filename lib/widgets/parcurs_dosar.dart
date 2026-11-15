@@ -25,9 +25,9 @@ class ParcursDosar {
         .cautaDosare(numarDosar: numar)
         .then((r) => ordoneaza(r.dosare))
         .catchError((Object e) {
-      _cache.remove(numar);
-      throw e;
-    });
+          _cache.remove(numar);
+          throw e;
+        });
   }
 
   static void golesteCache() => _cache.clear();
@@ -55,10 +55,10 @@ class ParcursDosar {
     }
 
     return [...dosare]..sort((a, b) {
-        final n = nivel(a).compareTo(nivel(b));
-        if (n != 0) return n;
-        return (a.data ?? DateTime(0)).compareTo(b.data ?? DateTime(0));
-      });
+      final n = nivel(a).compareTo(nivel(b));
+      if (n != 0) return n;
+      return (a.data ?? DateTime(0)).compareTo(b.data ?? DateTime(0));
+    });
   }
 }
 
@@ -78,8 +78,9 @@ class ParcursDosarCard extends StatefulWidget {
 class _ParcursDosarCardState extends State<ParcursDosarCard> {
   late Future<List<Dosar>> _viitor = ParcursDosar.cauta(widget.dosar.numar);
 
-  void _reincearca() =>
-      setState(() => _viitor = ParcursDosar.cauta(widget.dosar.numar, reincarca: true));
+  void _reincearca() => setState(
+    () => _viitor = ParcursDosar.cauta(widget.dosar.numar, reincarca: true),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -105,20 +106,28 @@ class _ParcursDosarCardState extends State<ParcursDosarCard> {
           // Un dosar la fond, fără cale de atac declarată, nu are parcurs.
           // Dacă e în cale de atac sau are una declarată, spunem ce lipsește.
           final d = widget.dosar;
-          final inCaleDeAtac = !d.stadiuProcesual.toLowerCase().startsWith('fond');
-          if (!inCaleDeAtac && d.caiAtac.isEmpty) return const SizedBox.shrink();
+          final inCaleDeAtac = !d.stadiuProcesual.toLowerCase().startsWith(
+            'fond',
+          );
+          if (!inCaleDeAtac && d.caiAtac.isEmpty)
+            return const SizedBox.shrink();
           return _CardMic(
             icon: Icons.info_outline,
             text: inCaleDeAtac
                 ? 'Pe portal, dosarul ${d.numar} apare doar la ${d.instanta}. '
-                    'Instanța anterioară nu a fost găsită după acest număr.'
+                      'Instanța anterioară nu a fost găsită după acest număr.'
                 : 'Calea de atac declarată nu apare încă pe portal la altă instanță.',
             actiune: 'Reîncearcă',
             onActiune: _reincearca,
           );
         }
-        final etape = toate.any((d) => d.cheie == widget.dosar.cheie) ? toate : [...toate, widget.dosar];
-        return _Parcurs(etape: ParcursDosar.ordoneaza(etape), curent: widget.dosar);
+        final etape = toate.any((d) => d.cheie == widget.dosar.cheie)
+            ? toate
+            : [...toate, widget.dosar];
+        return _Parcurs(
+          etape: ParcursDosar.ordoneaza(etape),
+          curent: widget.dosar,
+        );
       },
     );
   }
@@ -130,7 +139,12 @@ class _CardMic extends StatelessWidget {
   final String? actiune;
   final VoidCallback? onActiune;
 
-  const _CardMic({required this.icon, required this.text, this.actiune, this.onActiune});
+  const _CardMic({
+    required this.icon,
+    required this.text,
+    this.actiune,
+    this.onActiune,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -142,9 +156,16 @@ class _CardMic extends StatelessWidget {
             Icon(icon, size: 20, color: AppColors.onSurfaceVariant),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(text, style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ),
-            if (actiune != null) TextButton(onPressed: onActiune, child: Text(actiune!)),
+            if (actiune != null)
+              TextButton(onPressed: onActiune, child: Text(actiune!)),
           ],
         ),
       ),
@@ -184,11 +205,17 @@ class _Parcurs extends StatelessWidget {
                     children: [
                       const Text(
                         'Parcursul dosarului',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Text(
                         'La ${etape.length} instanțe · de jos în sus, de la fond la căile de atac',
-                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -215,7 +242,11 @@ class _Etapa extends StatefulWidget {
   final bool curent;
   final bool ultima;
 
-  const _Etapa({required this.dosar, required this.curent, required this.ultima});
+  const _Etapa({
+    required this.dosar,
+    required this.curent,
+    required this.ultima,
+  });
 
   @override
   State<_Etapa> createState() => _EtapaState();
@@ -252,7 +283,9 @@ class _EtapaState extends State<_Etapa> {
                   ),
                 ),
                 if (!widget.ultima)
-                  Expanded(child: Container(width: 2, color: AppColors.outline)),
+                  Expanded(
+                    child: Container(width: 2, color: AppColors.outline),
+                  ),
               ],
             ),
           ),
@@ -268,20 +301,34 @@ class _EtapaState extends State<_Etapa> {
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (d.stadiuProcesual.isNotEmpty) StadiuChip.stadiu(d.stadiuProcesual),
+                      if (d.stadiuProcesual.isNotEmpty)
+                        StadiuChip.stadiu(d.stadiuProcesual),
                       if (widget.curent)
                         const Text(
                           'dosarul deschis',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(d.instanta, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(
+                    d.instanta,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   if (d.data != null)
                     Text(
                       'Înregistrat ${formateazaData(d.data)}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   const SizedBox(height: 8),
                   _Solutie(solutie: solutie, termen: termen, dosar: d),
@@ -293,11 +340,17 @@ class _EtapaState extends State<_Etapa> {
                         if (sedinte.isNotEmpty)
                           TextButton.icon(
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
                               visualDensity: VisualDensity.compact,
                             ),
-                            onPressed: () => setState(() => _sedinte = !_sedinte),
-                            icon: Icon(_sedinte ? Icons.expand_less : Icons.expand_more, size: 18),
+                            onPressed: () =>
+                                setState(() => _sedinte = !_sedinte),
+                            icon: Icon(
+                              _sedinte ? Icons.expand_less : Icons.expand_more,
+                              size: 18,
+                            ),
                             label: Text('Ședințe (${sedinte.length})'),
                           ),
                         TextButton.icon(
@@ -306,7 +359,9 @@ class _EtapaState extends State<_Etapa> {
                             visualDensity: VisualDensity.compact,
                           ),
                           onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: d)),
+                            MaterialPageRoute(
+                              builder: (_) => DosarDetaliuScreen(dosar: d),
+                            ),
                           ),
                           icon: const Icon(Icons.open_in_new, size: 16),
                           label: const Text('Deschide'),
@@ -314,7 +369,8 @@ class _EtapaState extends State<_Etapa> {
                       ],
                     ),
                     if (_sedinte)
-                      for (final s in sedinte) SedintaRand(sedinta: s, dosar: d),
+                      for (final s in sedinte)
+                        SedintaRand(sedinta: s, dosar: d),
                   ],
                 ],
               ),
@@ -333,7 +389,11 @@ class _Solutie extends StatefulWidget {
   final Sedinta? termen;
   final Dosar dosar;
 
-  const _Solutie({required this.solutie, required this.termen, required this.dosar});
+  const _Solutie({
+    required this.solutie,
+    required this.termen,
+    required this.dosar,
+  });
 
   @override
   State<_Solutie> createState() => _SolutieState();
@@ -382,7 +442,10 @@ class _SolutieState extends State<_Solutie> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Soluție: $titlu', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            Text(
+              'Soluție: $titlu',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
             if (arataSumar) ...[
               const SizedBox(height: 4),
               // Fără AnimatedSize: etapa e într-un IntrinsicHeight, care nu
@@ -405,7 +468,13 @@ class _SolutieState extends State<_Solutie> {
             ],
             if (detalii.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(detalii, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+              Text(
+                detalii,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
             ],
           ],
         ),

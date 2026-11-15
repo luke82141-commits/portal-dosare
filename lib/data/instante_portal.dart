@@ -25,7 +25,13 @@ class InstantaPortal {
   /// Curtea de apel în a cărei rază se află.
   final String curte;
 
-  const InstantaPortal(this.id, this.numePortal, this.cod, this.judet, this.curte);
+  const InstantaPortal(
+    this.id,
+    this.numePortal,
+    this.cod,
+    this.judet,
+    this.curte,
+  );
 
   /// Aceeași denumire ca la dosare (cu diacritice), dacă o știm; altfel cea
   /// de pe portal.
@@ -37,15 +43,19 @@ class InstantaPortal {
   TipInstanta get tip => nume.startsWith('Curtea')
       ? TipInstanta.curteDeApel
       : nume.startsWith('Tribunalul')
-          ? TipInstanta.tribunal
-          : TipInstanta.judecatorie;
+      ? TipInstanta.tribunal
+      : TipInstanta.judecatorie;
 
-  Uri _pagina(String pagina) => Uri.https('portal.just.ro', '/$id/SitePages/$pagina');
+  Uri _pagina(String pagina) =>
+      Uri.https('portal.just.ro', '/$id/SitePages/$pagina');
 
   /// Adresa, telefoanele, emailul și programul serviciilor.
   Uri get paginaContact => _pagina('contact.aspx');
-  Uri get paginaAcasa =>
-      Uri.https('portal.just.ro', '/$id/SitePages/acasa_default.aspx', {'id_inst': '$id'});
+  Uri get paginaAcasa => Uri.https(
+    'portal.just.ro',
+    '/$id/SitePages/acasa_default.aspx',
+    {'id_inst': '$id'},
+  );
   Uri get listaSedinte => _pagina('Lista_Sedinte.aspx');
 }
 
@@ -56,4 +66,5 @@ final Map<String, InstantaPortal> _dupaCod = {
 };
 
 /// Instanța unui dosar, după identificatorul primit de la portal.
-InstantaPortal? instantaDupaCod(String cod) => _dupaCod[cod.trim().toLowerCase()];
+InstantaPortal? instantaDupaCod(String cod) =>
+    _dupaCod[cod.trim().toLowerCase()];

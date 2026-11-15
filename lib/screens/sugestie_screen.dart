@@ -76,7 +76,9 @@ class _SugestieScreenState extends State<SugestieScreen> {
   Future<void> _trimite() async {
     final messenger = ScaffoldMessenger.of(context);
     if (_text.text.trim().isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Scrie mai întâi sugestia.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Scrie mai întâi sugestia.')),
+      );
       return;
     }
     var reusit = false;
@@ -86,7 +88,9 @@ class _SugestieScreenState extends State<SugestieScreen> {
     if (reusit) return;
 
     // Fără aplicație de email: textul ajunge în clipboard, cu adresa.
-    await Clipboard.setData(ClipboardData(text: corpSugestie(_tip, _text.text)));
+    await Clipboard.setData(
+      ClipboardData(text: corpSugestie(_tip, _text.text)),
+    );
     messenger.showSnackBar(
       const SnackBar(
         duration: Duration(seconds: 8),
@@ -107,7 +111,11 @@ class _SugestieScreenState extends State<SugestieScreen> {
           const Text(
             'Ce ți-ar fi de folos în aplicație? Citim fiecare mesaj, iar ideile cerute '
             'de mai mulți utilizatori intră primele în lucru.',
-            style: TextStyle(fontSize: 14, height: 1.4, color: AppColors.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -115,7 +123,11 @@ class _SugestieScreenState extends State<SugestieScreen> {
             runSpacing: 8,
             children: [
               for (final t in TipSugestie.values)
-                Pastila(t.eticheta, activ: _tip == t, onTap: () => setState(() => _tip = t)),
+                Pastila(
+                  t.eticheta,
+                  activ: _tip == t,
+                  onTap: () => setState(() => _tip = t),
+                ),
             ],
           ),
           const SizedBox(height: 16),

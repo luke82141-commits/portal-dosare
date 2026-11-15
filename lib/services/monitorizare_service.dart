@@ -37,7 +37,8 @@ const plafonDosare = 200;
 /// (21:00–7:00) și în weekend grefele publică rar, așa că verificăm la 4 ore,
 /// nu deloc. Peste [plafonDosare] intervalele se dublează.
 Duration intervalVerificare(DateTime acum, {int dosare = 0}) {
-  final liber = acum.weekday >= DateTime.saturday || acum.hour < 7 || acum.hour >= 21;
+  final liber =
+      acum.weekday >= DateTime.saturday || acum.hour < 7 || acum.hour >= 21;
   final baza = Duration(hours: liber ? 4 : 1);
   return dosare > plafonDosare ? baza * 2 : baza;
 }
@@ -128,7 +129,9 @@ class MonitorizareService {
     if (!_suportat) return true;
     await _pornesteNotificari();
     final android = _notificari
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     return await android?.requestNotificationsPermission() ?? true;
   }
 
@@ -153,7 +156,12 @@ class MonitorizareService {
     final moment = acum ?? DateTime.now();
     await SetariNotificariService.instance.incarca();
     if (programata && !await _eDatorata(moment)) {
-      final rezultate = await _verificaDosare(serviciu, iccj, moment, doarIccj: true);
+      final rezultate = await _verificaDosare(
+        serviciu,
+        iccj,
+        moment,
+        doarIccj: true,
+      );
       await actualizeazaWidgeturi(acum: acum);
       if (programata) await trimiteRezumatulDacaEOra(moment);
       return rezultate;
@@ -161,7 +169,9 @@ class MonitorizareService {
     final rezultate = await _verificaDosare(serviciu, iccj, moment);
 
     try {
-      dosareNoiParti = await PartiUrmariteService.instance.verificaToate(soap: serviciu);
+      dosareNoiParti = await PartiUrmariteService.instance.verificaToate(
+        soap: serviciu,
+      );
       for (final r in dosareNoiParti) {
         await _notificaParte(r);
       }
@@ -170,7 +180,10 @@ class MonitorizareService {
       debugPrint('Verificarea părților urmărite a eșuat: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
+    await prefs.setString(
+      _cheieUltimaVerificare,
+      (acum ?? DateTime.now()).toIso8601String(),
+    );
     // Widgeturile de pe ecran se reîmprospătează odată cu verificarea orară.
     await actualizeazaWidgeturi(acum: acum);
     if (programata) await trimiteRezumatulDacaEOra(moment);
@@ -227,7 +240,10 @@ class MonitorizareService {
     final biblioteca = BibliotecaService.instance;
     await biblioteca.incarca();
     final interval = intervalVerificare(acum, dosare: biblioteca.dosare.length);
-    return eTimpulPentruVerificare(interval: interval - const Duration(minutes: 10), acum: acum);
+    return eTimpulPentruVerificare(
+      interval: interval - const Duration(minutes: 10),
+      acum: acum,
+    );
   }
 
   /// La deschiderea aplicației verificăm doar dacă ultima verificare
@@ -240,8 +256,11 @@ class MonitorizareService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
-    final ultima = DateTime.tryParse(prefs.getString(_cheieUltimaVerificare) ?? '');
-    return ultima == null || (acum ?? DateTime.now()).difference(ultima) >= interval;
+    final ultima = DateTime.tryParse(
+      prefs.getString(_cheieUltimaVerificare) ?? '',
+    );
+    return ultima == null ||
+        (acum ?? DateTime.now()).difference(ultima) >= interval;
   }
 
   /// Dosarele noi găsite pe numele părților urmărite la ultima verificare.
@@ -261,7 +280,9 @@ class MonitorizareService {
       for (final d in biblioteca.dosare)
         if (d.dosar.institutie == codIccj) d.dosar.numar,
     };
-    final numere = doarIccj ? <String>{} : biblioteca.numereUrmarite.difference(numereIccj);
+    final numere = doarIccj
+        ? <String>{}
+        : biblioteca.numereUrmarite.difference(numereIccj);
     if (numere.isEmpty && numereIccj.isEmpty) return [];
 
     final proaspete = <Dosar>[];
@@ -300,7 +321,10 @@ class MonitorizareService {
       throw ultimaEroare;
     }
 
-    final rezultate = await biblioteca.aplicaActualizari(proaspete, numereVerificate: verificate);
+    final rezultate = await biblioteca.aplicaActualizari(
+      proaspete,
+      numereVerificate: verificate,
+    );
     for (final r in rezultate) {
       await _notifica(r);
     }
@@ -318,7 +342,9 @@ class MonitorizareService {
         // aceluiași dosar, fără să le atingă pe ale celorlalte.
         id: r.dosar.cheie.hashCode & 0x7fffffff,
         title: 'Dosar ${r.dosar.numar} · ${r.dosar.instanta}',
-        body: linii.length == 1 ? linii.first : '${linii.length} modificări: ${linii.first}',
+        body: linii.length == 1
+            ? linii.first
+            : '${linii.length} modificări: ${linii.first}',
         notificationDetails: NotificationDetails(
           android: _detaliiAndroid(
             _canalId,
@@ -341,7 +367,11 @@ class MonitorizareService {
       await _pornesteNotificari();
       final linii = [
         for (final d in r.dosareNoi)
-          [d.numar, d.instanta, d.obiect].where((e) => e.isNotEmpty).join(' · '),
+          [
+            d.numar,
+            d.instanta,
+            d.obiect,
+          ].where((e) => e.isNotEmpty).join(' · '),
       ];
       await _notificari.show(
         // Un id per parte urmărită, separat de cele ale dosarelor.
@@ -376,11 +406,15 @@ class MonitorizareService {
     String? cheie,
   }) {
     final stil = BigTextStyleInformation(text);
-    if (SetariNotificariService.instance.silentioasa(DateTime.now(), cheie: cheie)) {
+    if (SetariNotificariService.instance.silentioasa(
+      DateTime.now(),
+      cheie: cheie,
+    )) {
       return AndroidNotificationDetails(
         _canalLinisteId,
         'Ore de liniște',
-        channelDescription: 'Modificările apărute noaptea, fără sunet și fără vibrație',
+        channelDescription:
+            'Modificările apărute noaptea, fără sunet și fără vibrație',
         importance: Importance.low,
         priority: Priority.low,
         playSound: false,

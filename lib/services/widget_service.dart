@@ -47,7 +47,11 @@ DateTime _moment(Sedinta s) {
 
 /// Datele pentru cele trei widgeturi, ca perechi cheie–text. Funcție pură,
 /// testată separat de partea nativă.
-Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, DateTime? acum}) {
+Map<String, String> dateWidgeturi(
+  List<DosarSalvat> dosare, {
+  required bool pro,
+  DateTime? acum,
+}) {
   final azi = acum ?? DateTime.now();
   final date = <String, String>{'pro': pro ? '1' : '0'};
 
@@ -65,7 +69,8 @@ Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, 
     date['${p}${i}_cheie'] = t?.$1.cheie ?? '';
   }
 
-  date['t_n'] = '${termene.length < randuriUrmatoare ? termene.length : randuriUrmatoare}';
+  date['t_n'] =
+      '${termene.length < randuriUrmatoare ? termene.length : randuriUrmatoare}';
   for (var i = 0; i < randuriUrmatoare; i++) {
     rand('t', i, i < termene.length ? termene[i] : null);
   }
@@ -95,7 +100,12 @@ Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, 
   final cuActualizari = [
     for (final s in dosare)
       if (s.necitite > 0 && s.modificari.isNotEmpty)
-        (s, s.modificari.reduce((a, b) => b.detectataLa.isAfter(a.detectataLa) ? b : a)),
+        (
+          s,
+          s.modificari.reduce(
+            (a, b) => b.detectataLa.isAfter(a.detectataLa) ? b : a,
+          ),
+        ),
   ]..sort((a, b) => b.$2.detectataLa.compareTo(a.$2.detectataLa));
   for (var i = 0; i < randuriActualizari; i++) {
     final a = i < cuActualizari.length ? cuActualizari[i] : null;
@@ -104,7 +114,8 @@ Map<String, String> dateWidgeturi(List<DosarSalvat> dosare, {required bool pro, 
     date['a${i}_cheie'] = a?.$1.dosar.cheie ?? '';
   }
 
-  final ora = '${azi.hour.toString().padLeft(2, '0')}:${azi.minute.toString().padLeft(2, '0')}';
+  final ora =
+      '${azi.hour.toString().padLeft(2, '0')}:${azi.minute.toString().padLeft(2, '0')}';
   date['actualizat'] = 'Actualizat $ora';
   return date;
 }

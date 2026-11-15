@@ -100,12 +100,18 @@ class _WidgeturiScreenState extends State<WidgeturiScreen> {
                   title: Text(titlu),
                   subtitle: Text(text),
                   trailing: _android
-                      ? TextButton(onPressed: () => _adauga(nume), child: const Text('Adaugă'))
+                      ? TextButton(
+                          onPressed: () => _adauga(nume),
+                          child: const Text('Adaugă'),
+                        )
                       : null,
                 ),
               const Divider(height: 32),
               ListTile(
-                leading: const Icon(Icons.workspace_premium_outlined, color: AppColors.accent),
+                leading: const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: AppColors.accent,
+                ),
                 title: const Text(ProService.etichetaLansare),
                 subtitle: Text(
                   pro

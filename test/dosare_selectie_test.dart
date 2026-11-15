@@ -18,14 +18,22 @@ Dosar _d(String numar, {DateTime? termen, String ora = '09:00'}) => Dosar(
   parti: const [],
   sedinte: [
     if (termen != null)
-      Sedinta(complet: 'C1', data: termen, ora: ora, solutie: '', solutieSumar: ''),
+      Sedinta(
+        complet: 'C1',
+        data: termen,
+        ora: ora,
+        solutie: '',
+        solutieSumar: '',
+      ),
   ],
 );
 
 DosarSalvat _s(Dosar d, {List<DateTime> modificari = const []}) => DosarSalvat(
   dosar: d,
   adaugatLa: DateTime(2026, 1, 1),
-  modificari: [for (final m in modificari) Modificare(detectataLa: m, text: 'x')],
+  modificari: [
+    for (final m in modificari) Modificare(detectataLa: m, text: 'x'),
+  ],
   necitite: modificari.length,
 );
 
@@ -40,19 +48,27 @@ void main() {
       _s(_d('4/1/2026', termen: DateTime(2026, 11, 21))),
       _s(_d('5/1/2026')),
     ], acum: acum);
-    expect([for (final s in l) s.dosar.numar], ['3/1/2026', '2/1/2026', '1/1/2026']);
+    expect(
+      [for (final s in l) s.dosar.numar],
+      ['3/1/2026', '2/1/2026', '1/1/2026'],
+    );
   });
 
   test('Actualizările noi, cea mai recentă întâi', () {
     final l = dosareCuActualizari([
       _s(_d('1/1/2026'), modificari: [DateTime(2026, 11, 10)]),
       _s(_d('2/1/2026')),
-      _s(_d('3/1/2026'), modificari: [DateTime(2026, 11, 1), DateTime(2026, 11, 14)]),
+      _s(
+        _d('3/1/2026'),
+        modificari: [DateTime(2026, 11, 1), DateTime(2026, 11, 14)],
+      ),
     ]);
     expect([for (final s in l) s.dosar.numar], ['3/1/2026', '1/1/2026']);
   });
 
-  testWidgets('Căsuța „actualizări noi” deschide dosarele cu actualizări', (tester) async {
+  testWidgets('Căsuța „actualizări noi” deschide dosarele cu actualizări', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final b = BibliotecaService.instance;
     await b.incarca();

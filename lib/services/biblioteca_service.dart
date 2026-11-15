@@ -60,7 +60,10 @@ class BibliotecaService extends ChangeNotifier {
 
   Future<void> _salveaza() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cheieDosare, jsonEncode([for (final d in _dosare) d.toJson()]));
+    await prefs.setString(
+      _cheieDosare,
+      jsonEncode([for (final d in _dosare) d.toJson()]),
+    );
     await prefs.setStringList(_cheieIgnorate, _ignorate.toList());
     notifyListeners();
   }
@@ -69,7 +72,10 @@ class BibliotecaService extends ChangeNotifier {
     await incarca();
     if (contine(dosar.cheie)) return;
     final acum = DateTime.now();
-    _dosare.insert(0, DosarSalvat(dosar: dosar, adaugatLa: acum, ultimaVerificare: acum));
+    _dosare.insert(
+      0,
+      DosarSalvat(dosar: dosar, adaugatLa: acum, ultimaVerificare: acum),
+    );
     _ignorate.remove(dosar.cheie);
     await _salveaza();
   }
@@ -83,7 +89,10 @@ class BibliotecaService extends ChangeNotifier {
     final noi = <String>[];
     for (final d in dosare.reversed) {
       if (contine(d.cheie)) continue;
-      _dosare.insert(0, DosarSalvat(dosar: d, adaugatLa: acum, ultimaVerificare: acum));
+      _dosare.insert(
+        0,
+        DosarSalvat(dosar: d, adaugatLa: acum, ultimaVerificare: acum),
+      );
       _ignorate.remove(d.cheie);
       noi.add(d.cheie);
     }
@@ -176,12 +185,15 @@ class BibliotecaService extends ChangeNotifier {
         ].take(_maxModificari).toList(),
         necitite: salvat.necitite + schimbari.length,
       );
-      if (schimbari.isNotEmpty) rezultate.add(RezultatVerificare(nou, schimbari));
+      if (schimbari.isNotEmpty)
+        rezultate.add(RezultatVerificare(nou, schimbari));
     }
 
     final urmarite = numereUrmarite;
     for (final d in proaspete) {
-      if (!urmarite.contains(d.numar) || contine(d.cheie) || _ignorate.contains(d.cheie)) {
+      if (!urmarite.contains(d.numar) ||
+          contine(d.cheie) ||
+          _ignorate.contains(d.cheie)) {
         continue;
       }
       final text =

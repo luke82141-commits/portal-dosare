@@ -14,8 +14,13 @@ import 'package:legal_management_app/services/statistici_service.dart';
 import 'package:legal_management_app/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Sedinta _t(DateTime zi, [String solutie = '']) =>
-    Sedinta(complet: 'C1', data: zi, ora: '09:00', solutie: solutie, solutieSumar: '');
+Sedinta _t(DateTime zi, [String solutie = '']) => Sedinta(
+  complet: 'C1',
+  data: zi,
+  ora: '09:00',
+  solutie: solutie,
+  solutieSumar: '',
+);
 
 Dosar _d(
   String numar,
@@ -112,7 +117,8 @@ void main() {
             ..addFont(
               Future.value(
                 ByteData.sublistView(
-                  File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf').readAsBytesSync(),
+                  File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf')
+                      .readAsBytesSync(),
                 ),
               ),
             );
@@ -147,7 +153,9 @@ void main() {
     expect(tester.takeException(), isNull);
 
     if (captura != null) {
-      final r = tester.renderObject<RenderRepaintBoundary>(find.byType(RepaintBoundary).first);
+      final r = tester.renderObject<RenderRepaintBoundary>(
+        find.byType(RepaintBoundary).first,
+      );
       await tester.runAsync(() async {
         final img = await r.toImage(pixelRatio: 1);
         final png = await img.toByteData(format: ui.ImageByteFormat.png);

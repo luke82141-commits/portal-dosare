@@ -35,7 +35,9 @@ Future<void> comutaMonitorizare(BuildContext context, Dosar dosar) async {
     if (confirmat != true) return;
     await biblioteca.sterge(dosar.cheie);
     messenger.showSnackBar(
-      SnackBar(content: Text('Dosarul ${dosar.numar} nu mai este monitorizat.')),
+      SnackBar(
+        content: Text('Dosarul ${dosar.numar} nu mai este monitorizat.'),
+      ),
     );
     return;
   }
@@ -48,7 +50,7 @@ Future<void> comutaMonitorizare(BuildContext context, Dosar dosar) async {
         permis
             ? 'Dosarul ${dosar.numar} este monitorizat. Vei primi notificări la modificări.'
             : 'Dosarul ${dosar.numar} este monitorizat, dar notificările sunt '
-                'dezactivate pentru aplicație. Activează-le din setările telefonului.',
+                  'dezactivate pentru aplicație. Activează-le din setările telefonului.',
       ),
     ),
   );

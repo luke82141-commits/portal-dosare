@@ -31,10 +31,12 @@ class SelecteazaMonitorizateScreen extends StatefulWidget {
   const SelecteazaMonitorizateScreen({super.key, this.cheieInitiala});
 
   @override
-  State<SelecteazaMonitorizateScreen> createState() => _SelecteazaMonitorizateScreenState();
+  State<SelecteazaMonitorizateScreen> createState() =>
+      _SelecteazaMonitorizateScreenState();
 }
 
-class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScreen> {
+class _SelecteazaMonitorizateScreenState
+    extends State<SelecteazaMonitorizateScreen> {
   late final Set<String> _alese = {if (widget.cheieInitiala case final c?) c};
   String? _institutie;
   bool _faraClient = false;
@@ -66,7 +68,9 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
       isScrollControlled: true,
       builder: (context) => SafeArea(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+          ),
           child: ListView(
             shrinkWrap: true,
             children: [
@@ -78,7 +82,9 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
               for (final c in coduri)
                 ListTile(
                   title: Text(nume[c]!),
-                  subtitle: Text(numar[c] == 1 ? '1 dosar' : numarCu(numar[c]!, 'dosare')),
+                  subtitle: Text(
+                    numar[c] == 1 ? '1 dosar' : numarCu(numar[c]!, 'dosare'),
+                  ),
                   trailing: _institutie == c ? const Icon(Icons.check) : null,
                   onTap: () => Navigator.pop(context, c),
                 ),
@@ -102,7 +108,10 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
           'Nu mai primești notificări pentru ele. Le poți pune la loc imediat din mesajul de jos.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Renunță')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Renunță'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Nu mai urmări'),
@@ -136,31 +145,45 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([BibliotecaService.instance, ClientService.instance]),
+      listenable: Listenable.merge([
+        BibliotecaService.instance,
+        ClientService.instance,
+      ]),
       builder: (context, _) {
         final toate = BibliotecaService.instance.dosare;
         // Un dosar dispărut între timp (șters din altă parte) nu rămâne bifat.
         _alese.removeWhere((c) => !toate.any((s) => s.dosar.cheie == c));
-        if (_institutie != null && !toate.any((s) => s.dosar.institutie == _institutie)) {
+        if (_institutie != null &&
+            !toate.any((s) => s.dosar.institutie == _institutie)) {
           _institutie = null;
         }
         final afisate = _afisate;
         final toateBifate =
-            afisate.isNotEmpty && afisate.every((s) => _alese.contains(s.dosar.cheie));
+            afisate.isNotEmpty &&
+            afisate.every((s) => _alese.contains(s.dosar.cheie));
         final numeInstanta = _institutie == null
             ? null
-            : toate.firstWhere((s) => s.dosar.institutie == _institutie).dosar.instanta;
+            : toate
+                  .firstWhere((s) => s.dosar.institutie == _institutie)
+                  .dosar
+                  .instanta;
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(_alese.isEmpty ? 'Selectează dosare' : '${_alese.length} selectate'),
+            title: Text(
+              _alese.isEmpty
+                  ? 'Selectează dosare'
+                  : '${_alese.length} selectate',
+            ),
             actions: [
               TextButton(
                 onPressed: afisate.isEmpty
                     ? null
                     : () => setState(() {
                         final chei = afisate.map((s) => s.dosar.cheie);
-                        toateBifate ? _alese.removeAll(chei) : _alese.addAll(chei);
+                        toateBifate
+                            ? _alese.removeAll(chei)
+                            : _alese.addAll(chei);
                       }),
                 child: Text(toateBifate ? 'Deselectează' : 'Selectează tot'),
               ),
@@ -175,7 +198,10 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
                   children: [
                     FilterChip(
                       label: Text(numeInstanta ?? 'Toate instanțele'),
-                      avatar: const Icon(Icons.account_balance_outlined, size: 18),
+                      avatar: const Icon(
+                        Icons.account_balance_outlined,
+                        size: 18,
+                      ),
                       selected: _institutie != null,
                       showCheckmark: false,
                       onSelected: (_) => _alegeInstanta(),
@@ -211,11 +237,15 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
                         itemBuilder: (context, i) {
                           final s = afisate[i];
                           final cheie = s.dosar.cheie;
-                          final client = ClientService.instance.client(s.dosar.numar);
+                          final client = ClientService.instance.client(
+                            s.dosar.numar,
+                          );
                           return CheckboxListTile(
                             value: _alese.contains(cheie),
                             onChanged: (v) => setState(
-                              () => v == true ? _alese.add(cheie) : _alese.remove(cheie),
+                              () => v == true
+                                  ? _alese.add(cheie)
+                                  : _alese.remove(cheie),
                             ),
                             controlAffinity: ListTileControlAffinity.leading,
                             title: Text(s.dosar.numar),
@@ -241,7 +271,11 @@ class _SelecteazaMonitorizateScreenState extends State<SelecteazaMonitorizateScr
                 style: FilledButton.styleFrom(backgroundColor: AppColors.error),
                 onPressed: _alese.isEmpty ? null : _sterge,
                 icon: const Icon(Icons.bookmark_remove_outlined),
-                label: Text(_alese.isEmpty ? 'Nu mai urmări' : 'Nu mai urmări (${_alese.length})'),
+                label: Text(
+                  _alese.isEmpty
+                      ? 'Nu mai urmări'
+                      : 'Nu mai urmări (${_alese.length})',
+                ),
               ),
             ),
           ),
@@ -260,7 +294,12 @@ class AvertizarePlafon extends StatelessWidget {
   /// X-ul din colț: ascunde avertizarea.
   final VoidCallback? onInchide;
 
-  const AvertizarePlafon({super.key, required this.dosare, this.onAlege, this.onInchide});
+  const AvertizarePlafon({
+    super.key,
+    required this.dosare,
+    this.onAlege,
+    this.onInchide,
+  });
 
   @override
   Widget build(BuildContext context) {

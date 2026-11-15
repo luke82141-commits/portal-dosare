@@ -3,7 +3,20 @@ import 'package:flutter/material.dart' show DateUtils;
 import '../models/dosar_model.dart';
 import 'formatare.dart';
 
-const _luni = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOI', 'DEC'];
+const _luni = [
+  'IAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAI',
+  'IUN',
+  'IUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOI',
+  'DEC',
+];
 
 /// „NOI 2026”, pentru caseta de dată a unei ședințe.
 String lunaScurta(DateTime d) => '${_luni[d.month - 1]} ${d.year}';
@@ -16,13 +29,15 @@ bool esteTermenViitor(Sedinta s, {DateTime? acum}) {
 
 /// Cel mai apropiat termen viitor al dosarului, dacă există.
 Sedinta? urmatorulTermen(Dosar d, {DateTime? acum}) {
-  final viitoare = d.sedinte.where((s) => esteTermenViitor(s, acum: acum)).toList()
-    ..sort((a, b) => a.data!.compareTo(b.data!));
+  final viitoare =
+      d.sedinte.where((s) => esteTermenViitor(s, acum: acum)).toList()
+        ..sort((a, b) => a.data!.compareTo(b.data!));
   return viitoare.firstOrNull;
 }
 
 /// Cea mai recentă ședință cu soluție publicată.
-Sedinta? ultimaPronuntare(Dosar d) => d.sedinteSortate.where((s) => s.arePronuntare).firstOrNull;
+Sedinta? ultimaPronuntare(Dosar d) =>
+    d.sedinteSortate.where((s) => s.arePronuntare).firstOrNull;
 
 /// Rândul de jos al cardului: următorul termen sau, dacă nu există, ultima
 /// soluție.
@@ -44,7 +59,9 @@ String rezumatTermen(Dosar d, {DateTime? acum}) {
 String initiale(String nume) {
   final cuvinte = nume
       .split(RegExp(r'[\s\-]+'))
-      .where((c) => c.isNotEmpty && RegExp(r'[A-Za-zĂÂÎȘȚăâîșț]').hasMatch(c[0]))
+      .where(
+        (c) => c.isNotEmpty && RegExp(r'[A-Za-zĂÂÎȘȚăâîșț]').hasMatch(c[0]),
+      )
       .toList();
   if (cuvinte.isEmpty) return '?';
   final litere = cuvinte.take(2).map((c) => c[0].toUpperCase()).join();

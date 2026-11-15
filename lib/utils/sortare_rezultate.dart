@@ -19,7 +19,11 @@ List<int> aniRezultate(List<Dosar> dosare) => {
 
 /// Filtrează după anul înregistrării ([an] null = toți) și ordonează. Dosarele
 /// fără dată ajung la sfârșit, oricare ar fi ordinea.
-List<Dosar> ordoneazaRezultate(List<Dosar> dosare, SortareRezultate sortare, {int? an}) {
+List<Dosar> ordoneazaRezultate(
+  List<Dosar> dosare,
+  SortareRezultate sortare, {
+  int? an,
+}) {
   final l = [
     for (final d in dosare)
       if (an == null || d.data?.year == an) d,
@@ -35,7 +39,10 @@ List<Dosar> ordoneazaRezultate(List<Dosar> dosare, SortareRezultate sortare, {in
     case SortareRezultate.portal:
       break;
     case SortareRezultate.modificateRecent:
-      _sorteazaStabil(l, (a, b) => dupa(a.dataModificare ?? a.data, b.dataModificare ?? b.data));
+      _sorteazaStabil(
+        l,
+        (a, b) => dupa(a.dataModificare ?? a.data, b.dataModificare ?? b.data),
+      );
     case SortareRezultate.celeMaiNoi:
       _sorteazaStabil(l, (a, b) => dupa(a.data, b.data));
     case SortareRezultate.celeMaiVechi:

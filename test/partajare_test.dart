@@ -11,7 +11,8 @@ final _sedinta = Sedinta(
   data: DateTime(2025, 11, 4),
   ora: '09:00',
   solutie: 'Admite în parte',
-  solutieSumar: 'Admite în parte cererea. Obligă pârâta la plata sumei de 12.400 lei.',
+  solutieSumar:
+      'Admite în parte cererea. Obligă pârâta la plata sumei de 12.400 lei.',
   document: 'SentintaCivila',
   numarDocument: '5123/2025',
   dataDocument: DateTime(2025, 11, 4),
@@ -49,16 +50,26 @@ void main() {
     );
   });
 
-  testWidgets('apăsare lungă pe soluție: Copiază pune textul în clipboard', (tester) async {
+  testWidgets('apăsare lungă pe soluție: Copiază pune textul în clipboard', (
+    tester,
+  ) async {
     String? copiat;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') copiat = (call.arguments as Map)['text'] as String;
-      return null;
-    });
-    await tester.pumpWidget(MaterialApp(
-      theme: construiesteTema(),
-      home: Scaffold(body: SedintaRand(sedinta: _sedinta, dosar: _dosar)),
-    ));
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData')
+          copiat = (call.arguments as Map)['text'] as String;
+        return null;
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construiesteTema(),
+        home: Scaffold(
+          body: SedintaRand(sedinta: _sedinta, dosar: _dosar),
+        ),
+      ),
+    );
     await tester.longPress(find.text('Admite în parte'));
     await tester.pumpAndSettle();
     expect(find.text('Distribuie'), findsOneWidget);

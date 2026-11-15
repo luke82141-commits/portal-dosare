@@ -231,7 +231,8 @@ const Map<String, String> _localitati = {
 String numeInstanta(String cod) {
   final c = cod.trim();
   if (c.isEmpty || c.contains(' ')) return c;
-  if (c == 'InaltaCurteDeCasatieSiJustitie') return 'Înalta Curte de Casație și Justiție';
+  if (c == 'InaltaCurteDeCasatieSiJustitie')
+    return 'Înalta Curte de Casație și Justiție';
 
   final lower = c.toLowerCase();
   for (final (prefix, tip) in _tipuri) {
@@ -252,11 +253,13 @@ const Map<String, String> _documente = {
   'incheierefinalacameraconsiliu': 'Încheiere finală (cameră de consiliu)',
   'incheierefinalacamerapreliminara': 'Încheiere finală (cameră preliminară)',
   'incheierecamerapreliminara': 'Încheiere (cameră preliminară)',
-  'incheiereindreptareeroaremateriala': 'Încheiere de îndreptare a erorii materiale',
+  'incheiereindreptareeroaremateriala':
+      'Încheiere de îndreptare a erorii materiale',
   'incheieresuspendare': 'Încheiere de suspendare',
   'incheiereamanareainitialaapronuntarii': 'Încheiere de amânare a pronunțării',
   'incheiereamanareinitialaapronuntarii': 'Încheiere de amânare a pronunțării',
-  'incheiereamanareulterioaraapronuntarii': 'Încheiere de amânare a pronunțării',
+  'incheiereamanareulterioaraapronuntarii':
+      'Încheiere de amânare a pronunțării',
   'hotarare': 'Hotărâre',
   'hotararecameraconsiliu': 'Hotărâre (cameră de consiliu)',
   'sentintapenala': 'Sentință penală',

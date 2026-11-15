@@ -41,22 +41,25 @@ void main() {
     expect(setari.esteLiniste(_la(15)), isFalse);
   });
 
-  test('Dosarele importante sună și noaptea, iar setările rămân salvate', () async {
-    await setari.seteazaLiniste(activ: true);
-    await setari.seteazaImportant('468/310/2026|X', true);
-    expect(setari.silentioasa(_la(23), cheie: '468/310/2026|X'), isFalse);
-    expect(setari.silentioasa(_la(23), cheie: 'altul'), isTrue);
-    expect(setari.silentioasa(_la(23)), isTrue);
-    expect(setari.silentioasa(_la(10), cheie: 'altul'), isFalse);
+  test(
+    'Dosarele importante sună și noaptea, iar setările rămân salvate',
+    () async {
+      await setari.seteazaLiniste(activ: true);
+      await setari.seteazaImportant('468/310/2026|X', true);
+      expect(setari.silentioasa(_la(23), cheie: '468/310/2026|X'), isFalse);
+      expect(setari.silentioasa(_la(23), cheie: 'altul'), isTrue);
+      expect(setari.silentioasa(_la(23)), isTrue);
+      expect(setari.silentioasa(_la(10), cheie: 'altul'), isFalse);
 
-    await setari.incarca();
-    expect(setari.linisteActiva, isTrue);
-    expect(setari.important('468/310/2026|X'), isTrue);
+      await setari.incarca();
+      expect(setari.linisteActiva, isTrue);
+      expect(setari.important('468/310/2026|X'), isTrue);
 
-    await setari.seteazaImportant('468/310/2026|X', false);
-    await setari.incarca();
-    expect(setari.important('468/310/2026|X'), isFalse);
-  });
+      await setari.seteazaImportant('468/310/2026|X', false);
+      await setari.incarca();
+      expect(setari.important('468/310/2026|X'), isFalse);
+    },
+  );
 
   testWidgets('Din Utilități se pornesc orele de liniște', (tester) async {
     await BibliotecaService.instance.incarca();

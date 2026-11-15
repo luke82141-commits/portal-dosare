@@ -26,7 +26,12 @@ String _cuDe(int n, String plural) {
 }
 
 /// Explicația calculului, pas cu pas, sub rezultat.
-List<String> explicatieCalcul(DateTime start, int durata, UnitateTermen unitate, CalculTermen c) {
+List<String> explicatieCalcul(
+  DateTime start,
+  int durata,
+  UnitateTermen unitate,
+  CalculTermen c,
+) {
   return [
     if (unitate == UnitateTermen.zile)
       'Termenul de ${_durataText(durata, unitate)} se calculează pe zile libere: nu se '
@@ -47,12 +52,15 @@ class CalculatorTermeneScreen extends StatefulWidget {
   const CalculatorTermeneScreen({super.key});
 
   @override
-  State<CalculatorTermeneScreen> createState() => _CalculatorTermeneScreenState();
+  State<CalculatorTermeneScreen> createState() =>
+      _CalculatorTermeneScreenState();
 }
 
 class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
   ActProcedural? _act = actePrecompletate.first;
-  late final _durata = TextEditingController(text: '${actePrecompletate.first.durata}');
+  late final _durata = TextEditingController(
+    text: '${actePrecompletate.first.durata}',
+  );
   UnitateTermen _unitate = actePrecompletate.first.unitate;
   DateTime? _start;
   String _dosar = '';
@@ -102,7 +110,9 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
       ),
     );
     messenger.showSnackBar(
-      const SnackBar(content: Text('Termen salvat. Îl vei vedea și în rezumatul zilnic.')),
+      const SnackBar(
+        content: Text('Termen salvat. Îl vei vedea și în rezumatul zilnic.'),
+      ),
     );
   }
 
@@ -114,12 +124,16 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
         SnackBar(
           persist: false,
           showCloseIcon: true,
-          content: const Text('Alege întâi calendarul în care trimitem termenele.'),
+          content: const Text(
+            'Alege întâi calendarul în care trimitem termenele.',
+          ),
           action: SnackBarAction(
             label: 'Alege',
-            onPressed: () =>
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const SincronizareCalendarScreen())),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SincronizareCalendarScreen(),
+              ),
+            ),
           ),
         ),
       );
@@ -129,7 +143,8 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
       final zi = c.ultimaZi;
       await sync.calendareTelefon.creeaza(
         calendarId: sync.calendarId!,
-        titlu: 'Ultima zi: $_numeAct${_dosar.isEmpty ? '' : ' · dosar $_dosar'}',
+        titlu:
+            'Ultima zi: $_numeAct${_dosar.isEmpty ? '' : ' · dosar $_dosar'}',
         start: zi,
         sfarsit: DateTime(zi.year, zi.month, zi.day + 1),
         totaZiua: true,
@@ -143,10 +158,14 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
         amintire: const Duration(hours: 15),
       );
       messenger.showSnackBar(
-        SnackBar(content: Text('Adăugat în calendarul „${sync.numeCalendar ?? ''}”.')),
+        SnackBar(
+          content: Text('Adăugat în calendarul „${sync.numeCalendar ?? ''}”.'),
+        ),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Nu am putut adăuga în calendar: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Nu am putut adăuga în calendar: $e')),
+      );
     }
   }
 
@@ -155,15 +174,19 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Calculator termene')),
       body: ListenableBuilder(
-        listenable: Listenable.merge([ProService.instance, TermeneProceduraleService.instance]),
+        listenable: Listenable.merge([
+          ProService.instance,
+          TermeneProceduraleService.instance,
+        ]),
         builder: (context, _) {
           if (!ProService.instance.activ) return const _Blocat();
           final n = _n;
           final calcul = n == null || _start == null
               ? null
               : calculeazaTermen(_start!, n, _unitate);
-          final numere = {for (final s in BibliotecaService.instance.dosare) s.dosar.numar}.toList()
-            ..sort();
+          final numere = {
+            for (final s in BibliotecaService.instance.dosare) s.dosar.numar,
+          }.toList()..sort();
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -175,7 +198,10 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
                 items: [
                   for (final a in actePrecompletate)
                     DropdownMenuItem(value: a, child: Text(a.nume)),
-                  const DropdownMenuItem(value: null, child: Text('Alt termen')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Alt termen'),
+                  ),
                 ],
                 onChanged: (a) => setState(() {
                   _act = a;
@@ -196,7 +222,9 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Durata',
-                        errorText: _durata.text.isNotEmpty && n == null ? 'Invalid' : null,
+                        errorText: _durata.text.isNotEmpty && n == null
+                            ? 'Invalid'
+                            : null,
                       ),
                       onChanged: (_) => setState(() {}),
                     ),
@@ -206,12 +234,22 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
                     child: SegmentedButton<UnitateTermen>(
                       showSelectedIcon: false,
                       segments: const [
-                        ButtonSegment(value: UnitateTermen.zile, label: Text('zile')),
-                        ButtonSegment(value: UnitateTermen.luni, label: Text('luni')),
-                        ButtonSegment(value: UnitateTermen.ani, label: Text('ani')),
+                        ButtonSegment(
+                          value: UnitateTermen.zile,
+                          label: Text('zile'),
+                        ),
+                        ButtonSegment(
+                          value: UnitateTermen.luni,
+                          label: Text('luni'),
+                        ),
+                        ButtonSegment(
+                          value: UnitateTermen.ani,
+                          label: Text('ani'),
+                        ),
                       ],
                       selected: {_unitate},
-                      onSelectionChanged: (s) => setState(() => _unitate = s.first),
+                      onSelectionChanged: (s) =>
+                          setState(() => _unitate = s.first),
                     ),
                   ),
                 ],
@@ -221,7 +259,10 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     'Curge de la ${_act!.deLa} · ${_act!.temei}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               const SizedBox(height: 14),
@@ -247,10 +288,16 @@ class _CalculatorTermeneScreenState extends State<CalculatorTermeneScreen> {
                 DropdownButtonFormField<String>(
                   initialValue: _dosar,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Dosarul (opțional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Dosarul (opțional)',
+                  ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('Fără dosar')),
-                    for (final nr in numere) DropdownMenuItem(value: nr, child: Text(nr)),
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Fără dosar'),
+                    ),
+                    for (final nr in numere)
+                      DropdownMenuItem(value: nr, child: Text(nr)),
                   ],
                   onChanged: (v) => setState(() => _dosar = v ?? ''),
                 ),
@@ -287,7 +334,9 @@ class _Rezultat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ramase = calcul.ultimaZi.difference(DateUtils.dateOnly(DateTime.now())).inDays;
+    final ramase = calcul.ultimaZi
+        .difference(DateUtils.dateOnly(DateTime.now()))
+        .inDays;
     return Card(
       margin: EdgeInsets.zero,
       color: AppColors.primaryContainer,
@@ -298,7 +347,11 @@ class _Rezultat extends StatelessWidget {
           children: [
             const Text(
               'Ultima zi',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.primary),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -314,14 +367,19 @@ class _Rezultat extends StatelessWidget {
               },
               style: TextStyle(
                 fontSize: 13,
-                color: ramase <= 1 ? AppColors.error : AppColors.onSurfaceVariant,
+                color: ramase <= 1
+                    ? AppColors.error
+                    : AppColors.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
             for (final e in explicatie)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
-                child: Text(e, style: const TextStyle(fontSize: 13, height: 1.35)),
+                child: Text(
+                  e,
+                  style: const TextStyle(fontSize: 13, height: 1.35),
+                ),
               ),
             const SizedBox(height: 6),
             Wrap(
@@ -369,7 +427,9 @@ class _TermeneSalvate extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Icon(
                 Icons.timer_outlined,
-                color: t.ultimaZi.isBefore(azi) ? AppColors.onSurfaceVariant : AppColors.primary,
+                color: t.ultimaZi.isBefore(azi)
+                    ? AppColors.onSurfaceVariant
+                    : AppColors.primary,
               ),
               title: Text(t.act),
               subtitle: Text(
@@ -381,7 +441,8 @@ class _TermeneSalvate extends StatelessWidget {
               trailing: IconButton(
                 tooltip: 'Șterge',
                 icon: const Icon(Icons.delete_outline),
-                onPressed: () => TermeneProceduraleService.instance.sterge(t.id),
+                onPressed: () =>
+                    TermeneProceduraleService.instance.sterge(t.id),
               ),
             ),
         ],
@@ -401,7 +462,11 @@ class _Blocat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.accent),
+            const Icon(
+              Icons.workspace_premium_outlined,
+              size: 48,
+              color: AppColors.accent,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Disponibil în Portal Dosare Pro',

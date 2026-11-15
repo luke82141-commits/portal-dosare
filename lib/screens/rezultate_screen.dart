@@ -57,7 +57,8 @@ class _RezultateScreenState extends State<RezultateScreen> {
   void initState() {
     super.initState();
     _cauta();
-    if (widget.criterii.parte.trim().isNotEmpty) PartiUrmariteService.instance.incarca();
+    if (widget.criterii.parte.trim().isNotEmpty)
+      PartiUrmariteService.instance.incarca();
   }
 
   Future<void> _cauta() async {
@@ -105,7 +106,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
       for (final i in institutii) {
         await parti.sterge(ParteUrmarita.cheiePentru(c.parte, i));
       }
-      messenger.showSnackBar(SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Nu mai urmărești „${c.parte.trim()}”.')),
+      );
       return;
     }
     setState(() => _seAdaugaParte = true);
@@ -113,7 +116,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
       var preaGeneral = false;
       for (final i in institutii) {
         if (parti.urmareste(c.parte, i)) continue;
-        preaGeneral = await parti.adauga(c.parte, institutie: i, soap: _soap) || preaGeneral;
+        preaGeneral =
+            await parti.adauga(c.parte, institutie: i, soap: _soap) ||
+            preaGeneral;
       }
       messenger.showSnackBar(
         SnackBar(
@@ -126,7 +131,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
         ),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Partea nu a putut fi urmărită: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Partea nu a putut fi urmărită: $e')),
+      );
     } finally {
       if (mounted) setState(() => _seAdaugaParte = false);
     }
@@ -157,7 +164,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
         final urmarita = _parteUrmarita(c);
         return IconButton(
           tooltip: urmarita ? 'Nu mai urmări partea' : 'Urmărește partea',
-          icon: Icon(urmarita ? Icons.notifications_active : Icons.notification_add_outlined),
+          icon: Icon(
+            urmarita
+                ? Icons.notifications_active
+                : Icons.notification_add_outlined,
+          ),
           color: AppColors.primary,
           onPressed: _urmaresteParte,
         );
@@ -183,7 +194,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
         if (d.stadiuProcesual.isNotEmpty) d.stadiuProcesual,
     }.toList();
     final afisate = ordoneazaRezultate(
-      _filtru == null ? _dosare : _dosare.where((d) => d.stadiuProcesual == _filtru).toList(),
+      _filtru == null
+          ? _dosare
+          : _dosare.where((d) => d.stadiuProcesual == _filtru).toList(),
       _sortare,
       an: _an,
     );
@@ -222,7 +235,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
                       ),
                       for (final s in stadii) ...[
                         const SizedBox(width: 8),
-                        Pastila(s, activ: _filtru == s, onTap: () => setState(() => _filtru = s)),
+                        Pastila(
+                          s,
+                          activ: _filtru == s,
+                          onTap: () => setState(() => _filtru = s),
+                        ),
                       ],
                     ],
                   ),
@@ -261,7 +278,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
             icon: Icons.cloud_off,
             fundal: AppColors.warningContainer,
             culoare: AppColors.warning,
-            titlu: _eroare is PortalOcupatException ? 'Portalul e ocupat' : 'Portalul nu răspunde',
+            titlu: _eroare is PortalOcupatException
+                ? 'Portalul e ocupat'
+                : 'Portalul nu răspunde',
             text: _eroare is PortalOcupatException
                 ? '$_eroare'
                 : 'Nu am putut obține datele de pe portal.just.ro. '
@@ -310,7 +329,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
           itemBuilder: (context, i) {
             if (i == 0) return _rezumat(afisate);
             final d = afisate[i - 1];
-            return DosarCardWidget(key: ValueKey(d.cheie), dosar: d, cuBiblioteca: true);
+            return DosarCardWidget(
+              key: ValueKey(d.cheie),
+              dosar: d,
+              cuBiblioteca: true,
+            );
           },
         ),
       ),
@@ -319,14 +342,18 @@ class _RezultateScreenState extends State<RezultateScreen> {
 
   /// „5 dosare”, „25 de dosare” (de la 20 în sus româna cere „de”).
   static String _dosareText(int n) =>
-      n % 100 >= 20 || (n >= 100 && n % 100 == 0) ? '$n de dosare' : '$n dosare';
+      n % 100 >= 20 || (n >= 100 && n % 100 == 0)
+      ? '$n de dosare'
+      : '$n dosare';
 
   /// Pune în bibliotecă toate dosarele afișate (cu filtrul de stadiu aplicat).
   /// Adăugarea se poate anula din mesajul de jos.
   Future<void> _monitorizeazaToate(List<Dosar> afisate) async {
     final messenger = ScaffoldMessenger.of(context);
     final biblioteca = BibliotecaService.instance;
-    final noiEstimat = afisate.where((d) => !biblioteca.contine(d.cheie)).length;
+    final noiEstimat = afisate
+        .where((d) => !biblioteca.contine(d.cheie))
+        .length;
     final total = biblioteca.dosare.length + noiEstimat;
     final pestePlafon = total > plafonDosare;
     if (afisate.length > 20 || pestePlafon) {
@@ -369,7 +396,10 @@ class _RezultateScreenState extends State<RezultateScreen> {
         ),
         action: noi.isEmpty
             ? null
-            : SnackBarAction(label: 'Anulează', onPressed: () => biblioteca.stergeToate(noi)),
+            : SnackBarAction(
+                label: 'Anulează',
+                onPressed: () => biblioteca.stergeToate(noi),
+              ),
       ),
     );
   }
@@ -378,10 +408,15 @@ class _RezultateScreenState extends State<RezultateScreen> {
     return ListenableBuilder(
       listenable: BibliotecaService.instance,
       builder: (context, _) {
-        final toate = afisate.every((d) => BibliotecaService.instance.contine(d.cheie));
+        final toate = afisate.every(
+          (d) => BibliotecaService.instance.contine(d.cheie),
+        );
         return TextButton.icon(
           onPressed: toate ? null : () => _monitorizeazaToate(afisate),
-          icon: Icon(toate ? Icons.library_add_check : Icons.library_add_outlined, size: 18),
+          icon: Icon(
+            toate ? Icons.library_add_check : Icons.library_add_outlined,
+            size: 18,
+          ),
           label: Text(toate ? 'Toate monitorizate' : 'Monitorizează toate'),
         );
       },
@@ -428,7 +463,9 @@ class _RezultateScreenState extends State<RezultateScreen> {
       children: [
         Expanded(
           child: Text(
-            afisate.length == 1 ? 'Un dosar găsit' : '${afisate.length} dosare găsite',
+            afisate.length == 1
+                ? 'Un dosar găsit'
+                : '${afisate.length} dosare găsite',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -462,7 +499,11 @@ class _RezultateScreenState extends State<RezultateScreen> {
                 child: Text(
                   'Afișate primele ${_dosare.length} dosare (limita portalului). '
                   'Restrânge căutarea pentru rezultate complete.',
-                  style: const TextStyle(fontSize: 13, height: 1.38, color: AppColors.warning),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.38,
+                    color: AppColors.warning,
+                  ),
                 ),
               ),
             ],
@@ -489,7 +530,9 @@ class _Meniu extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: activ ? AppColors.primary : AppColors.outline),
+        border: Border.all(
+          color: activ ? AppColors.primary : AppColors.outline,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -498,7 +541,11 @@ class _Meniu extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             text,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: culoare),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: culoare,
+            ),
           ),
           Icon(Icons.arrow_drop_down, size: 18, color: culoare),
         ],

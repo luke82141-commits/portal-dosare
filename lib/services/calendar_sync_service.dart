@@ -49,7 +49,11 @@ class EvenimentCalendar {
 /// Accesul la calendarele telefonului; înlocuibil în teste.
 abstract class CalendareTelefon {
   Future<List<CalendarTelefon>> calendare();
-  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana);
+  Future<List<EvenimentCalendar>> evenimente(
+    String calendarId,
+    DateTime de,
+    DateTime pana,
+  );
   Future<String> creeaza({
     required String calendarId,
     required String titlu,
@@ -75,12 +79,25 @@ class CalendareEventide implements CalendareTelefon {
   @override
   Future<List<CalendarTelefon>> calendare() async => [
     for (final c in await _e.retrieveCalendars(onlyWritableCalendars: true))
-      CalendarTelefon(id: c.id, nume: c.title, cont: c.account.name, culoare: c.color),
+      CalendarTelefon(
+        id: c.id,
+        nume: c.title,
+        cont: c.account.name,
+        culoare: c.color,
+      ),
   ];
 
   @override
-  Future<List<EvenimentCalendar>> evenimente(String calendarId, DateTime de, DateTime pana) async {
-    final ev = await _e.retrieveEvents(calendarId: calendarId, startDate: de, endDate: pana);
+  Future<List<EvenimentCalendar>> evenimente(
+    String calendarId,
+    DateTime de,
+    DateTime pana,
+  ) async {
+    final ev = await _e.retrieveEvents(
+      calendarId: calendarId,
+      startDate: de,
+      endDate: pana,
+    );
     for (final e in ev) {
       _citite[e.id] = e;
     }
@@ -97,10 +114,18 @@ class CalendareEventide implements CalendareTelefon {
   }
 
   @override
-  Future<void> actualizeaza(String eventId, {String? titlu, String? descriere}) async {
+  Future<void> actualizeaza(
+    String eventId, {
+    String? titlu,
+    String? descriere,
+  }) async {
     final e = _citite[eventId];
     if (e == null) return;
-    _citite[eventId] = await _e.updateEvent(e, title: titlu, description: descriere);
+    _citite[eventId] = await _e.updateEvent(
+      e,
+      title: titlu,
+      description: descriere,
+    );
   }
 
   @override
@@ -146,7 +171,9 @@ class RezultatTrimitere {
 
 /// Numerele de dosar dintr-un text: „14993/299/2025”, „123/3/2026*”,
 /// „55/1/2026/a1”.
-final _numarDosar = RegExp(r'(?<![\d/])(\d{1,6}/\d{1,4}/(?:19|20)\d{2}(?:/a\d+)?\**)(?![\d/])');
+final _numarDosar = RegExp(
+  r'(?<![\d/])(\d{1,6}/\d{1,4}/(?:19|20)\d{2}(?:/a\d+)?\**)(?![\d/])',
+);
 
 /// Simbolurile din care se alege semnul pus în fața termenelor, ca să fie
 /// găsite ușor prin căutarea din aplicația de calendar. '' = fără simbol.
@@ -245,12 +272,16 @@ class CalendarSyncService extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool esteAles(String cheie) => dosareAlese == null || dosareAlese!.contains(cheie);
+  bool esteAles(String cheie) =>
+      dosareAlese == null || dosareAlese!.contains(cheie);
 
   /// Trimite în calendarul ales termenele viitoare ale dosarelor alese.
   /// Termenele deja trimise (recunoscute după eticheta din descriere) nu se
   /// dublează.
-  Future<RezultatTrimitere> trimite(List<Dosar> dosare, {DateTime? acum}) async {
+  Future<RezultatTrimitere> trimite(
+    List<Dosar> dosare, {
+    DateTime? acum,
+  }) async {
     final id = calendarId;
     if (id == null) return const RezultatTrimitere(0, 0);
     final azi = DateUtils.dateOnly(acum ?? DateTime.now());
@@ -264,7 +295,9 @@ class CalendarSyncService extends ChangeNotifier {
     ];
     if (termene.isEmpty) return const RezultatTrimitere(0, 0);
 
-    final ultimul = termene.map((t) => t.$2.data!).reduce((a, b) => a.isAfter(b) ? a : b);
+    final ultimul = termene
+        .map((t) => t.$2.data!)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
     final existente = await calendareTelefon.evenimente(
       id,
       dela,
@@ -290,12 +323,21 @@ class CalendarSyncService extends ChangeNotifier {
       final i = e.descriere.indexOf(_marcaj);
       if (i < 0) continue;
       final titluNou = retitlu(e.titlu, simbol);
-      final termen = dupaCheie[e.descriere.substring(i + _marcaj.length).split('\n').first.trim()];
+      final termen =
+          dupaCheie[e.descriere
+              .substring(i + _marcaj.length)
+              .split('\n')
+              .first
+              .trim()];
       final descriereNoua = termen == null
           ? null
-          : pastreazaNotite(e.descriere, descriereEveniment(termen.$1, termen.$2));
+          : pastreazaNotite(
+              e.descriere,
+              descriereEveniment(termen.$1, termen.$2),
+            );
       final schimbaTitlu = titluNou != e.titlu;
-      final schimbaDescriere = descriereNoua != null && descriereNoua != e.descriere;
+      final schimbaDescriere =
+          descriereNoua != null && descriereNoua != e.descriere;
       if (!schimbaTitlu && !schimbaDescriere) continue;
       try {
         await calendareTelefon.actualizeaza(
@@ -309,7 +351,8 @@ class CalendarSyncService extends ChangeNotifier {
     var adaugate = 0, sarite = 0;
     for (final (d, s) in termene) {
       final cheie = cheieTermen(d, s);
-      if (marcate.contains(cheie) || deMana.contains('${d.numar}|${cheieZi(s.data!)}')) {
+      if (marcate.contains(cheie) ||
+          deMana.contains('${d.numar}|${cheieZi(s.data!)}')) {
         sarite++;
         continue;
       }
@@ -344,7 +387,9 @@ class CalendarSyncService extends ChangeNotifier {
     DateTime? acum,
   }) async {
     final azi = DateUtils.dateOnly(acum ?? DateTime.now());
-    final inBiblioteca = {for (final s in BibliotecaService.instance.dosare) s.dosar.numar};
+    final inBiblioteca = {
+      for (final s in BibliotecaService.instance.dosare) s.dosar.numar,
+    };
     final gasite = <String, DosarDinCalendar>{};
     for (final id in calendarIds) {
       final ev = await calendareTelefon.evenimente(
@@ -369,7 +414,9 @@ class CalendarSyncService extends ChangeNotifier {
   /// Dintre instanțele cu același număr o alege pe cea pomenită în eveniment
   /// sau pe cea cu termen în ziua evenimentului; altfel pe cea mai recentă.
   /// Întoarce câte dosare au fost adăugate și numerele negăsite pe portal.
-  Future<(int, List<String>)> adaugaInBiblioteca(List<DosarDinCalendar> alese) async {
+  Future<(int, List<String>)> adaugaInBiblioteca(
+    List<DosarDinCalendar> alese,
+  ) async {
     final client = soap();
     var adaugate = 0;
     final negasite = <String>[];
@@ -406,11 +453,13 @@ Dosar? alegeInstanta(List<Dosar> dosare, EvenimentCalendar e) {
   }
   final zi = DateUtils.dateOnly(e.start);
   for (final d in dosare) {
-    if (d.sedinte.any((s) => s.data != null && DateUtils.isSameDay(s.data, zi))) return d;
+    if (d.sedinte.any((s) => s.data != null && DateUtils.isSameDay(s.data, zi)))
+      return d;
   }
-  return ([
-    ...dosare,
-  ]..sort((a, b) => (b.data ?? DateTime(0)).compareTo(a.data ?? DateTime(0)))).first;
+  return ([...dosare]..sort(
+        (a, b) => (b.data ?? DateTime(0)).compareTo(a.data ?? DateTime(0)),
+      ))
+      .first;
 }
 
 String descriereEveniment(Dosar d, Sedinta s) => [
@@ -429,7 +478,9 @@ String descriereEveniment(Dosar d, Sedinta s) => [
 
 bool _eInsolventa(Dosar d) {
   final t = '${d.obiect} ${d.categorie} ${d.sectie}'.toLowerCase();
-  return t.contains('insolven') || t.contains('faliment') || t.contains('reorganizare judiciar');
+  return t.contains('insolven') ||
+      t.contains('faliment') ||
+      t.contains('reorganizare judiciar');
 }
 
 bool _eDebitor(Parte p) => p.calitate.toLowerCase().contains('debitor');
@@ -438,10 +489,16 @@ bool _eDebitor(Parte p) => p.calitate.toLowerCase().contains('debitor');
 /// umple evenimentul. La insolvență debitorul apare mereu, primul.
 List<String> rezumatParti(Dosar d, {int max = 4}) {
   if (d.parti.isEmpty) return const [];
-  final debitori = _eInsolventa(d) ? d.parti.where(_eDebitor).toList() : const <Parte>[];
+  final debitori = _eInsolventa(d)
+      ? d.parti.where(_eDebitor).toList()
+      : const <Parte>[];
   final restul = d.parti.where((p) => !debitori.contains(p)).toList();
-  final alese = [...debitori, ...restul.take((max - debitori.length).clamp(0, max))];
-  String rand(Parte p) => p.calitate.isEmpty ? p.nume : '${p.calitate}: ${p.nume}';
+  final alese = [
+    ...debitori,
+    ...restul.take((max - debitori.length).clamp(0, max)),
+  ];
+  String rand(Parte p) =>
+      p.calitate.isEmpty ? p.nume : '${p.calitate}: ${p.nume}';
   final ramase = d.parti.length - alese.length;
   return [
     'Părți:',

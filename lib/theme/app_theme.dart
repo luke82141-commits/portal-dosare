@@ -65,7 +65,11 @@ ThemeData construiesteTema({String? fontFamily}) {
   final formaButon = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(AppRadius.button),
   );
-  final textButon = TextStyle(fontFamily: fontFamily, fontSize: 15, fontWeight: FontWeight.w600);
+  final textButon = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+  );
 
   return ThemeData(
     useMaterial3: true,
@@ -98,7 +102,9 @@ ThemeData construiesteTema({String? fontFamily}) {
       filled: true,
       fillColor: AppColors.surfaceVariant,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.7)),
+      hintStyle: TextStyle(
+        color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+      ),
       prefixIconColor: AppColors.onSurfaceVariant,
       border: rotunjitInput,
       enabledBorder: rotunjitInput,
@@ -137,14 +143,20 @@ ThemeData construiesteTema({String? fontFamily}) {
       labelTextStyle: WidgetStateProperty.resolveWith(
         (s) => TextStyle(
           fontSize: 12,
-          fontWeight: s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: s.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w500,
           color: s.contains(WidgetState.selected)
               ? AppColors.onSurface
               : AppColors.onSurfaceVariant,
         ),
       ),
     ),
-    dividerTheme: const DividerThemeData(color: AppColors.outline, thickness: 1, space: 1),
+    dividerTheme: const DividerThemeData(
+      color: AppColors.outline,
+      thickness: 1,
+      space: 1,
+    ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
     switchTheme: SwitchThemeData(
       trackColor: WidgetStateProperty.resolveWith(

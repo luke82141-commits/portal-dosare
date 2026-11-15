@@ -29,11 +29,16 @@ class _BackupScreenState extends State<BackupScreen> {
     await SharePlus.instance.share(
       ShareParams(
         files: [
-          XFile.fromData(Uint8List.fromList(utf8.encode(json)), mimeType: 'application/json'),
+          XFile.fromData(
+            Uint8List.fromList(utf8.encode(json)),
+            mimeType: 'application/json',
+          ),
         ],
         fileNameOverrides: [nume],
         subject: 'Backup Portal Dosare',
-        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
       ),
     );
   }
@@ -48,9 +53,14 @@ class _BackupScreenState extends State<BackupScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final json = await BackupService.exporta();
-      await (widget.trimiteFisier ?? _trimite)(json, BackupService.numeFisier(DateTime.now()));
+      await (widget.trimiteFisier ?? _trimite)(
+        json,
+        BackupService.numeFisier(DateTime.now()),
+      );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Backup-ul nu a putut fi creat: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Backup-ul nu a putut fi creat: $e')),
+      );
     } finally {
       if (mounted) setState(() => _lucreaza = false);
     }
@@ -62,7 +72,9 @@ class _BackupScreenState extends State<BackupScreen> {
     try {
       text = await (widget.alegeFisier ?? _alege)();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Fișierul nu a putut fi citit: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Fișierul nu a putut fi citit: $e')),
+      );
       return;
     }
     if (text == null || !mounted) return;
@@ -75,7 +87,10 @@ class _BackupScreenState extends State<BackupScreen> {
           'Dosarele, părțile urmărite și setările de acum vor fi înlocuite cu cele din fișier.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Renunță')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Renunță'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Restaurează'),
@@ -113,14 +128,22 @@ class _BackupScreenState extends State<BackupScreen> {
           const Text(
             'Datele aplicației stau doar pe acest telefon. Fă un backup înainte să schimbi '
             'telefonul sau să reinstalezi aplicația și păstrează fișierul în Drive sau pe email.',
-            style: TextStyle(fontSize: 14, height: 1.4, color: AppColors.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Cuprinde dosarele monitorizate cu istoricul modificărilor, culorile, părțile '
             'urmărite, căutările recente și orele de liniște. Sincronizarea cu calendarul '
             'se alege din nou pe telefonul nou.',
-            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

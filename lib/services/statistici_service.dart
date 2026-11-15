@@ -41,7 +41,8 @@ class Statistici {
   });
 
   int get totalDosare => dosareInregistrate.fold(0, (a, b) => a + b);
-  int get totalDosareAnTrecut => dosareInregistrateAnTrecut.fold(0, (a, b) => a + b);
+  int get totalDosareAnTrecut =>
+      dosareInregistrateAnTrecut.fold(0, (a, b) => a + b);
   int get totalTermene => termene.fold(0, (a, b) => a + b);
   int get totalTermeneAnTrecut => termeneAnTrecut.fold(0, (a, b) => a + b);
   int get totalHotarari => solutii.values.fold(0, (a, b) => a + b);
@@ -104,15 +105,21 @@ Statistici calculeazaStatistici(List<DosarSalvat> salvate, int an) {
       if (esteHotarare(s) && (s.dataPronuntare ?? zi).year == an) {
         final tip = tipSolutie(s);
         solutii[tip] = (solutii[tip] ?? 0) + 1;
-        final faza = d.stadiuProcesual.isEmpty ? 'Nespecificat' : d.stadiuProcesual;
-        final f = peFaze.putIfAbsent(faza, () => {for (final t in ordineSolutii) t: 0});
+        final faza = d.stadiuProcesual.isEmpty
+            ? 'Nespecificat'
+            : d.stadiuProcesual;
+        final f = peFaze.putIfAbsent(
+          faza,
+          () => {for (final t in ordineSolutii) t: 0},
+        );
         f[tip] = (f[tip] ?? 0) + 1;
       }
     }
   }
 
-  final instante = [for (final e in peInstante.entries) (e.key, e.value)]
-    ..sort((a, b) => b.$2 != a.$2 ? b.$2.compareTo(a.$2) : a.$1.compareTo(b.$1));
+  final instante = [
+    for (final e in peInstante.entries) (e.key, e.value),
+  ]..sort((a, b) => b.$2 != a.$2 ? b.$2.compareTo(a.$2) : a.$1.compareTo(b.$1));
 
   return Statistici(
     an: an,

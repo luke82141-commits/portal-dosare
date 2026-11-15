@@ -41,7 +41,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((p) {
-      if (mounted) setState(() => _plafonAscunsLa = p.getInt(_cheiePlafonAscuns));
+      if (mounted)
+        setState(() => _plafonAscunsLa = p.getInt(_cheiePlafonAscuns));
     });
   }
 
@@ -52,7 +53,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
   }
 
   bool _aratPlafon(int dosare) =>
-      dosare > plafonDosare && (_plafonAscunsLa == null || dosare > _plafonAscunsLa!);
+      dosare > plafonDosare &&
+      (_plafonAscunsLa == null || dosare > _plafonAscunsLa!);
 
   Future<void> _verificaAcum() async {
     if (_verifica) return;
@@ -61,7 +63,10 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
     try {
       final monitorizare = MonitorizareService.instance;
       final rezultate = await monitorizare.verificaToate();
-      final noi = monitorizare.dosareNoiParti.fold(0, (s, r) => s + r.dosareNoi.length);
+      final noi = monitorizare.dosareNoiParti.fold(
+        0,
+        (s, r) => s + r.dosareNoi.length,
+      );
       final mesaje = [
         if (rezultate.length == 1) 'Un dosar are modificări.',
         if (rezultate.length > 1) '${rezultate.length} dosare au modificări.',
@@ -69,10 +74,16 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
         if (noi > 1) '$noi dosare noi pe numele părților urmărite.',
       ];
       messenger.showSnackBar(
-        SnackBar(content: Text(mesaje.isEmpty ? 'Nicio modificare pe portal.' : mesaje.join(' '))),
+        SnackBar(
+          content: Text(
+            mesaje.isEmpty ? 'Nicio modificare pe portal.' : mesaje.join(' '),
+          ),
+        ),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Verificarea a eșuat: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Verificarea a eșuat: $e')),
+      );
     } finally {
       if (mounted) setState(() => _verifica = false);
     }
@@ -111,7 +122,10 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                             child: Text(
                               'Monitorizate',
                               maxLines: 1,
-                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -120,16 +134,21 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                             tooltip: 'Sincronizare Google / iCloud Calendar',
                             icon: Icons.event_repeat,
                             onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const SincronizareCalendarScreen()),
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const SincronizareCalendarScreen(),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           _butonRotund(
                             tooltip: 'Filtrează dosarele',
                             icon: Icons.tune,
-                            onPressed: () => Navigator.of(
-                              context,
-                            ).push(MaterialPageRoute(builder: (_) => const DosareFiltrateScreen())),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const DosareFiltrateScreen(),
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -171,7 +190,9 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                             children: [
                               _Sumar(
                                 '${dosare.length}',
-                                dosare.length == 1 ? 'dosar urmărit' : 'dosare urmărite',
+                                dosare.length == 1
+                                    ? 'dosar urmărit'
+                                    : 'dosare urmărite',
                               ),
                               const SizedBox(width: 10),
                               _Sumar(
@@ -181,7 +202,8 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                                     : 'actualizări noi',
                                 fundal: AppColors.successContainer,
                                 culoare: AppColors.success,
-                                onTap: () => _deschide(SelectieDosare.actualizari),
+                                onTap: () =>
+                                    _deschide(SelectieDosare.actualizari),
                               ),
                               const SizedBox(width: 10),
                               _Sumar(
@@ -236,7 +258,12 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
                   if (i < sus.length) return sus[i];
                   final s = dosare[i - sus.length];
                   return Padding(
-                    padding: EdgeInsets.fromLTRB(16, i == sus.length ? 0 : 12, 16, 0),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      i == sus.length ? 0 : 12,
+                      16,
+                      0,
+                    ),
                     child: DosarCardWidget(
                       key: ValueKey(s.dosar.cheie),
                       dosar: s.dosar,
@@ -253,12 +280,15 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
     );
   }
 
-  void _selecteaza([String? cheie]) => Navigator.of(context)
-      .push(MaterialPageRoute(builder: (_) => SelecteazaMonitorizateScreen(cheieInitiala: cheie)));
+  void _selecteaza([String? cheie]) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => SelecteazaMonitorizateScreen(cheieInitiala: cheie),
+    ),
+  );
 
-  void _deschide(SelectieDosare selectie) =>
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => DosareSelectieScreen(selectie: selectie)));
+  void _deschide(SelectieDosare selectie) => Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => DosareSelectieScreen(selectie: selectie)),
+  );
 
   Widget _butonRotund({
     required String tooltip,
@@ -296,9 +326,9 @@ class _MonitorizateScreenState extends State<MonitorizateScreen> {
           child: _butonRotund(
             tooltip: 'Părți urmărite',
             icon: Icons.person_search,
-            onPressed: () =>
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const PartiUrmariteScreen())),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PartiUrmariteScreen()),
+            ),
           ),
         );
       },
@@ -358,14 +388,20 @@ class _Sumar extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: fundal == null ? Border.all(color: AppColors.outline) : null,
+              border: fundal == null
+                  ? Border.all(color: AppColors.outline)
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   valoare,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: culoare),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: culoare,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -373,7 +409,9 @@ class _Sumar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.25,
-                    color: fundal == null ? AppColors.onSurfaceVariant : culoare,
+                    color: fundal == null
+                        ? AppColors.onSurfaceVariant
+                        : culoare,
                   ),
                 ),
               ],

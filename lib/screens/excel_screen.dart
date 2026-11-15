@@ -39,7 +39,8 @@ class _ExcelScreenState extends State<ExcelScreen> {
       ]);
       final azi = DateTime.now();
       String d(int n) => n.toString().padLeft(2, '0');
-      final nume = 'Situatia dosarelor ${azi.year}-${d(azi.month)}-${d(azi.day)}.xlsx';
+      final nume =
+          'Situatia dosarelor ${azi.year}-${d(azi.month)}-${d(azi.day)}.xlsx';
       await SharePlus.instance.share(
         ShareParams(
           files: [
@@ -54,7 +55,9 @@ class _ExcelScreenState extends State<ExcelScreen> {
         ),
       );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Fișierul nu a putut fi creat: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Fișierul nu a putut fi creat: $e')),
+      );
     } finally {
       if (mounted) setState(() => _lucreaza = false);
     }
@@ -74,13 +77,16 @@ class _ExcelScreenState extends State<ExcelScreen> {
           if (!ProService.instance.activ) return const _Blocat();
           final dosare = BibliotecaService.instance.dosare;
           final numere = {for (final s in dosare) s.dosar.numar};
-          final cuClient = numere.where((n) => ClientService.instance.client(n) != null).length;
+          final cuClient = numere
+              .where((n) => ClientService.instance.client(n) != null)
+              .length;
           final aniTermene = {
             for (final s in dosare)
               for (final t in s.dosar.sedinte)
                 if (t.data != null) t.data!.year,
           }.toList()..sort((a, b) => b - a);
-          final ani = {DateTime.now().year, ...aniTermene}.toList()..sort((a, b) => b - a);
+          final ani = {DateTime.now().year, ...aniTermene}.toList()
+            ..sort((a, b) => b - a);
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -103,7 +109,10 @@ class _ExcelScreenState extends State<ExcelScreen> {
               const SizedBox(height: 12),
               const Text(
                 'Termenele incluse',
-                style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
               Wrap(
@@ -201,7 +210,11 @@ class _Blocat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.accent),
+            const Icon(
+              Icons.workspace_premium_outlined,
+              size: 48,
+              color: AppColors.accent,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Disponibil în Portal Dosare Pro',

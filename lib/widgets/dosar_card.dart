@@ -40,14 +40,17 @@ class DosarCardWidget extends StatelessWidget {
     final ultimaModificare = necitite > 0 && salvat!.modificari.isNotEmpty
         ? salvat!.modificari.first
         : null;
-    final instanta = [dosar.instanta, dosar.sectie].where((e) => e.isNotEmpty).join(' · ');
+    final instanta = [
+      dosar.instanta,
+      dosar.sectie,
+    ].where((e) => e.isNotEmpty).join(' · ');
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () =>
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: dosar))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: dosar)),
+        ),
         onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -57,7 +60,10 @@ class DosarCardWidget extends StatelessWidget {
               Row(
                 children: [
                   if (salvat != null)
-                    Transform.translate(offset: const Offset(-8, 0), child: BulinaCuloare(dosar)),
+                    Transform.translate(
+                      offset: const Offset(-8, 0),
+                      child: BulinaCuloare(dosar),
+                    ),
                   Expanded(
                     child: Text(
                       dosar.numar,
@@ -80,13 +86,20 @@ class DosarCardWidget extends StatelessWidget {
                 children: [
                   const Padding(
                     padding: EdgeInsets.only(top: 1),
-                    child: Icon(Icons.account_balance, size: 16, color: AppColors.onSurfaceVariant),
+                    child: Icon(
+                      Icons.account_balance,
+                      size: 16,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       instanta,
-                      style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -96,12 +109,19 @@ class DosarCardWidget extends StatelessWidget {
                 dosar.obiect.isEmpty ? '—' : dosar.obiect,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15, height: 1.33, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.33,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               if (ultimaModificare != null) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.successContainer,
                     borderRadius: BorderRadius.circular(10),
@@ -109,12 +129,19 @@ class DosarCardWidget extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.notifications_active, size: 16, color: AppColors.success),
+                      const Icon(
+                        Icons.notifications_active,
+                        size: 16,
+                        color: AppColors.success,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           scurteaza(ultimaModificare.text, 140),
-                          style: const TextStyle(fontSize: 13, color: AppColors.success),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.success,
+                          ),
                         ),
                       ),
                     ],
@@ -133,13 +160,20 @@ class DosarCardWidget extends StatelessWidget {
                       rezumatTermen(dosar),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                   if (cuBiblioteca)
                     _ButonBiblioteca(dosar)
                   else
-                    const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                 ],
               ),
             ],
@@ -168,7 +202,9 @@ class _ButonBiblioteca extends StatelessWidget {
           child: Material(
             color: salvat ? AppColors.successContainer : AppColors.card,
             shape: StadiumBorder(
-              side: salvat ? BorderSide.none : const BorderSide(color: AppColors.outline),
+              side: salvat
+                  ? BorderSide.none
+                  : const BorderSide(color: AppColors.outline),
             ),
             child: InkWell(
               customBorder: const StadiumBorder(),
@@ -179,14 +215,20 @@ class _ButonBiblioteca extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      salvat ? Icons.bookmark_added : Icons.bookmark_add_outlined,
+                      salvat
+                          ? Icons.bookmark_added
+                          : Icons.bookmark_add_outlined,
                       size: 16,
                       color: culoare,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       salvat ? 'În bibliotecă' : 'Adaugă',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: culoare),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: culoare,
+                      ),
                     ),
                   ],
                 ),

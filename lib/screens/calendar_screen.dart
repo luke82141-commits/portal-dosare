@@ -33,19 +33,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime get _azi => DateUtils.dateOnly(widget.azi ?? DateTime.now());
 
   void _muta(int pas) => setState(() {
-        final f = _focus;
-        _focus = switch (_vedere) {
-          VedereCalendar.zi => DateTime(f.year, f.month, f.day + pas),
-          VedereCalendar.saptamana => DateTime(f.year, f.month, f.day + 7 * pas),
-          VedereCalendar.luna => DateTime(f.year, f.month + pas),
-          VedereCalendar.an => DateTime(f.year + pas, f.month),
-        };
-      });
+    final f = _focus;
+    _focus = switch (_vedere) {
+      VedereCalendar.zi => DateTime(f.year, f.month, f.day + pas),
+      VedereCalendar.saptamana => DateTime(f.year, f.month, f.day + 7 * pas),
+      VedereCalendar.luna => DateTime(f.year, f.month + pas),
+      VedereCalendar.an => DateTime(f.year + pas, f.month),
+    };
+  });
 
   void _deschide(VedereCalendar vedere, DateTime zi) => setState(() {
-        _vedere = vedere;
-        _focus = zi;
-      });
+    _vedere = vedere;
+    _focus = zi;
+  });
 
   String get _titlu {
     final f = _focus;
@@ -56,7 +56,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       case VedereCalendar.saptamana:
         final s = inceputSaptamana(f);
         final d = DateTime(s.year, s.month, s.day + 6);
-        if (s.month == d.month) return '${s.day} – ${d.day} ${_scurt(s.month)} ${d.year}';
+        if (s.month == d.month)
+          return '${s.day} – ${d.day} ${_scurt(s.month)} ${d.year}';
         return '${s.day} ${_scurt(s.month)} – ${d.day} ${_scurt(d.month)} ${d.year}';
       case VedereCalendar.luna:
         return '${lunileAnului[f.month - 1]} ${f.year}';
@@ -65,18 +66,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  static String _scurt(int luna) => '${lunileAnului[luna - 1].substring(0, 3).toLowerCase()}.';
+  static String _scurt(int luna) =>
+      '${lunileAnului[luna - 1].substring(0, 3).toLowerCase()}.';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListenableBuilder(
-        listenable: Listenable.merge([BibliotecaService.instance, CuloriDosareService.instance]),
+        listenable: Listenable.merge([
+          BibliotecaService.instance,
+          CuloriDosareService.instance,
+        ]),
         builder: (context, _) {
-          final termene = termenePeZile(
-            [for (final s in BibliotecaService.instance.dosare) s.dosar],
-            culoare: CuloriDosareService.instance.culoare,
-          );
+          final termene = termenePeZile([
+            for (final s in BibliotecaService.instance.dosare) s.dosar,
+          ], culoare: CuloriDosareService.instance.culoare);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -91,34 +95,38 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   },
                   child: switch (_vedere) {
                     VedereCalendar.zi => _GrilaOre(
-                        key: ValueKey('zi$_focus'),
-                        zile: [_focus],
-                        termene: termene,
-                        azi: _azi,
-                        detaliat: true,
-                      ),
+                      key: ValueKey('zi$_focus'),
+                      zile: [_focus],
+                      termene: termene,
+                      azi: _azi,
+                      detaliat: true,
+                    ),
                     VedereCalendar.saptamana => _GrilaOre(
-                        key: ValueKey('sapt${inceputSaptamana(_focus)}'),
-                        zile: [
-                          for (var i = 0; i < 7; i++)
-                            DateTime(_focus.year, _focus.month, _focus.day - (_focus.weekday - 1) + i),
-                        ],
-                        termene: termene,
-                        azi: _azi,
-                        onZi: (z) => _deschide(VedereCalendar.zi, z),
-                      ),
+                      key: ValueKey('sapt${inceputSaptamana(_focus)}'),
+                      zile: [
+                        for (var i = 0; i < 7; i++)
+                          DateTime(
+                            _focus.year,
+                            _focus.month,
+                            _focus.day - (_focus.weekday - 1) + i,
+                          ),
+                      ],
+                      termene: termene,
+                      azi: _azi,
+                      onZi: (z) => _deschide(VedereCalendar.zi, z),
+                    ),
                     VedereCalendar.luna => _Luna(
-                        luna: _focus,
-                        termene: termene,
-                        azi: _azi,
-                        onZi: (z) => _deschide(VedereCalendar.zi, z),
-                      ),
+                      luna: _focus,
+                      termene: termene,
+                      azi: _azi,
+                      onZi: (z) => _deschide(VedereCalendar.zi, z),
+                    ),
                     VedereCalendar.an => _An(
-                        an: _focus.year,
-                        termene: termene,
-                        azi: _azi,
-                        onLuna: (l) => _deschide(VedereCalendar.luna, l),
-                      ),
+                      an: _focus.year,
+                      termene: termene,
+                      azi: _azi,
+                      onLuna: (l) => _deschide(VedereCalendar.luna, l),
+                    ),
                   },
                 ),
               ),
@@ -146,7 +154,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   _titlu,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               IconButton(
@@ -180,7 +191,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
             segments: const [
               ButtonSegment(value: VedereCalendar.zi, label: Text('Zi')),
-              ButtonSegment(value: VedereCalendar.saptamana, label: Text('Săpt.')),
+              ButtonSegment(
+                value: VedereCalendar.saptamana,
+                label: Text('Săpt.'),
+              ),
               ButtonSegment(value: VedereCalendar.luna, label: Text('Lună')),
               ButtonSegment(value: VedereCalendar.an, label: Text('An')),
             ],
@@ -193,9 +207,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 }
 
-void _deschideDosar(BuildContext context, Termen t) => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: t.dosar)),
-    );
+void _deschideDosar(BuildContext context, Termen t) => Navigator.of(
+  context,
+).push(MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: t.dosar)));
 
 /// Numărul zilei, încercuit dacă e azi.
 class _NumarZi extends StatelessWidget {
@@ -204,7 +218,12 @@ class _NumarZi extends StatelessWidget {
   final bool estompat;
   final double marime;
 
-  const _NumarZi(this.zi, {this.azi = false, this.estompat = false, this.marime = 24});
+  const _NumarZi(
+    this.zi, {
+    this.azi = false,
+    this.estompat = false,
+    this.marime = 24,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +231,12 @@ class _NumarZi extends StatelessWidget {
       width: marime,
       height: marime,
       alignment: Alignment.center,
-      decoration: azi ? const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle) : null,
+      decoration: azi
+          ? const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            )
+          : null,
       child: Text(
         '${zi.day}',
         style: TextStyle(
@@ -221,8 +245,8 @@ class _NumarZi extends StatelessWidget {
           color: azi
               ? AppColors.onPrimary
               : estompat
-                  ? AppColors.onSurfaceVariant.withValues(alpha: 0.5)
-                  : AppColors.onSurface,
+              ? AppColors.onSurfaceVariant.withValues(alpha: 0.5)
+              : AppColors.onSurface,
         ),
       ),
     );
@@ -259,7 +283,12 @@ class _Banda extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.clip,
               softWrap: false,
-              style: const TextStyle(fontSize: 10, height: 1.2, color: Colors.white, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 10,
+                height: 1.2,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),
@@ -276,7 +305,12 @@ class _Luna extends StatelessWidget {
   final DateTime azi;
   final ValueChanged<DateTime> onZi;
 
-  const _Luna({required this.luna, required this.termene, required this.azi, required this.onZi});
+  const _Luna({
+    required this.luna,
+    required this.termene,
+    required this.azi,
+    required this.onZi,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +344,8 @@ class _Luna extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (var c = 0; c < 7; c++) Expanded(child: _celula(context, zile[r * 7 + c])),
+                      for (var c = 0; c < 7; c++)
+                        Expanded(child: _celula(context, zile[r * 7 + c])),
                     ],
                   ),
                 ),
@@ -327,7 +362,9 @@ class _Luna extends StatelessWidget {
       onTap: () => onZi(zi),
       child: Container(
         decoration: BoxDecoration(
-          color: zi.weekday >= 6 ? AppColors.surfaceVariant.withValues(alpha: 0.5) : null,
+          color: zi.weekday >= 6
+              ? AppColors.surfaceVariant.withValues(alpha: 0.5)
+              : null,
           border: const Border(
             top: BorderSide(color: AppColors.outline, width: 0.5),
             left: BorderSide(color: AppColors.outline, width: 0.5),
@@ -343,7 +380,10 @@ class _Luna extends StatelessWidget {
             final toate = ale.length <= _maxPeZi && ale.length * 14 <= spatiu;
             final vizibile = toate
                 ? ale.length
-                : ((spatiu - 12) / 14).floor().clamp(0, _maxPeZi).clamp(0, ale.length);
+                : ((spatiu - 12) / 14)
+                      .floor()
+                      .clamp(0, _maxPeZi)
+                      .clamp(0, ale.length);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -356,7 +396,8 @@ class _Luna extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                for (final t in ale.take(vizibile)) _Banda(t, scurt: true, onTap: () => onZi(zi)),
+                for (final t in ale.take(vizibile))
+                  _Banda(t, scurt: true, onTap: () => onZi(zi)),
                 if (ale.length > vizibile)
                   Text(
                     '… +${ale.length - vizibile}',
@@ -415,8 +456,12 @@ class _GrilaOreState extends State<_GrilaOre> {
         for (final t in widget.termene[z] ?? const <Termen>[])
           if (t.minut != null) t.minut!,
     ];
-    final start = minute.isEmpty ? 8 * 60 : (minute.reduce((a, b) => a < b ? a : b) - 30);
-    _scroll = ScrollController(initialScrollOffset: (start.clamp(0, 24 * 60) / 60) * _ora);
+    final start = minute.isEmpty
+        ? 8 * 60
+        : (minute.reduce((a, b) => a < b ? a : b) - 30);
+    _scroll = ScrollController(
+      initialScrollOffset: (start.clamp(0, 24 * 60) / 60) * _ora,
+    );
   }
 
   @override
@@ -429,7 +474,10 @@ class _GrilaOreState extends State<_GrilaOre> {
   Widget build(BuildContext context) {
     final faraOra = [
       for (final z in widget.zile)
-        [for (final t in widget.termene[z] ?? const <Termen>[]) if (t.minut == null) t],
+        [
+          for (final t in widget.termene[z] ?? const <Termen>[])
+            if (t.minut == null) t,
+        ],
     ];
     final areFaraOra = faraOra.any((l) => l.isNotEmpty);
 
@@ -459,7 +507,11 @@ class _GrilaOreState extends State<_GrilaOre> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          _NumarZi(z, azi: DateUtils.isSameDay(z, widget.azi), marime: 28),
+                          _NumarZi(
+                            z,
+                            azi: DateUtils.isSameDay(z, widget.azi),
+                            marime: 28,
+                          ),
                         ],
                       ),
                     ),
@@ -480,7 +532,11 @@ class _GrilaOreState extends State<_GrilaOre> {
                     child: Text(
                       'fără\noră',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 10, height: 1.1, color: AppColors.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 10,
+                        height: 1.1,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -527,7 +583,10 @@ class _GrilaOreState extends State<_GrilaOre> {
             right: 8,
             child: Text(
               '${h.toString().padLeft(2, '0')}:00',
-              style: const TextStyle(fontSize: 10, color: AppColors.onSurfaceVariant),
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
           ),
       ],
@@ -535,7 +594,10 @@ class _GrilaOreState extends State<_GrilaOre> {
   }
 
   Widget _coloana(DateTime zi) {
-    final cuOra = [for (final t in widget.termene[zi] ?? const <Termen>[]) if (t.minut != null) t];
+    final cuOra = [
+      for (final t in widget.termene[zi] ?? const <Termen>[])
+        if (t.minut != null) t,
+    ];
     final coloane = coloaneSuprapuse(cuOra);
     final acum = DateTime.now();
     final eAzi = DateUtils.isSameDay(zi, acum);
@@ -545,7 +607,9 @@ class _GrilaOreState extends State<_GrilaOre> {
         final w = c.maxWidth;
         return Container(
           decoration: const BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.outline, width: 0.5)),
+            border: Border(
+              left: BorderSide(color: AppColors.outline, width: 0.5),
+            ),
           ),
           child: Stack(
             children: [
@@ -574,9 +638,14 @@ class _GrilaOreState extends State<_GrilaOre> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                      Expanded(child: Container(height: 2, color: AppColors.error)),
+                      Expanded(
+                        child: Container(height: 2, color: AppColors.error),
+                      ),
                     ],
                   ),
                 ),
@@ -614,12 +683,19 @@ class _Bloc extends StatelessWidget {
                 t.dosar.numar,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: alb.copyWith(fontWeight: FontWeight.w600, fontSize: detaliat ? 13 : 11),
+                style: alb.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: detaliat ? 13 : 11,
+                ),
               ),
               Text(
                 detaliat
-                    ? [t.ora, t.dosar.instanta, if (t.sedinta.complet.isNotEmpty) 'Complet ${t.sedinta.complet}']
-                        .join(' · ')
+                    ? [
+                        t.ora,
+                        t.dosar.instanta,
+                        if (t.sedinta.complet.isNotEmpty)
+                          'Complet ${t.sedinta.complet}',
+                      ].join(' · ')
                     : t.ora,
                 maxLines: detaliat ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
@@ -630,7 +706,9 @@ class _Bloc extends StatelessWidget {
                   t.dosar.obiect,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: alb.copyWith(color: Colors.white.withValues(alpha: 0.85)),
+                  style: alb.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
                 ),
             ],
           ),
@@ -648,7 +726,12 @@ class _An extends StatelessWidget {
   final DateTime azi;
   final ValueChanged<DateTime> onLuna;
 
-  const _An({required this.an, required this.termene, required this.azi, required this.onLuna});
+  const _An({
+    required this.an,
+    required this.termene,
+    required this.azi,
+    required this.onLuna,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -680,7 +763,9 @@ class _An extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 7, 6, 4),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: lunaCurenta ? AppColors.primary : AppColors.outline),
+            border: Border.all(
+              color: lunaCurenta ? AppColors.primary : AppColors.outline,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -693,14 +778,20 @@ class _An extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: lunaCurenta ? AppColors.primary : AppColors.onSurface,
+                        color: lunaCurenta
+                            ? AppColors.primary
+                            : AppColors.onSurface,
                       ),
                     ),
                   ),
                   if (numar > 0)
                     Text(
                       '$numar',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accent),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accent,
+                      ),
                     ),
                 ],
               ),
@@ -712,7 +803,10 @@ class _An extends StatelessWidget {
                       child: Text(
                         z[0],
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 8, color: AppColors.onSurfaceVariant),
+                        style: const TextStyle(
+                          fontSize: 8,
+                          color: AppColors.onSurfaceVariant,
+                        ),
                       ),
                     ),
                 ],
@@ -724,7 +818,8 @@ class _An extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            for (var c = 0; c < 7; c++) Expanded(child: _ziMica(zile[r * 7 + c], luna)),
+                            for (var c = 0; c < 7; c++)
+                              Expanded(child: _ziMica(zile[r * 7 + c], luna)),
                           ],
                         ),
                       ),
@@ -751,7 +846,9 @@ class _An extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: areTermene ? ale.first.culoare : null,
-          border: eAzi ? Border.all(color: AppColors.primary, width: 1.5) : null,
+          border: eAzi
+              ? Border.all(color: AppColors.primary, width: 1.5)
+              : null,
         ),
         child: Text(
           '${zi.day}',

@@ -197,6 +197,26 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     );
   }
 
+  /// Actul care a aprobat regulamentul / norma: din nota de sub antet.
+  AprobareAct? get _aprobare =>
+      _actAfisat.aprobatPrin ??
+      _act.aprobatPrin ??
+      (_forma == null ? null : aprobareDinText(_forma!.textSimplu));
+
+  /// Linkul notei „Aprobat prin …” din forma consolidată, dacă există.
+  String? get _idAprobare {
+    final f = _forma;
+    if (f == null) return null;
+    for (final b in f.blocuri.take(5)) {
+      if (b.tip == TipBloc.nota &&
+          b.text.toLowerCase().contains('aprobat') &&
+          b.legaturi.isNotEmpty) {
+        return b.legaturi.first.idAct;
+      }
+    }
+    return null;
+  }
+
   void _deschideActDupaId(String id, [String titlu = '']) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -640,6 +660,13 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
                           _forma == null &&
                           !_seIncarcaLaZi,
                       onPortal: _deschidePortal,
+                      aprobatPrin: _aprobare?.denumire,
+                      onAprobare: _idAprobare == null
+                          ? null
+                          : () => _deschideActDupaId(
+                              _idAprobare!,
+                              _aprobare?.denumire ?? '',
+                            ),
                       stare: _CardStare(
                         stare: _stare,
                         forma: _forma,
@@ -858,12 +885,18 @@ class _AntetAct extends StatelessWidget {
   final Widget? cod;
   final Widget? stare;
 
+  /// „Ordinul nr. 600 din 8 februarie 2023”, la regulamente și norme.
+  final String? aprobatPrin;
+  final VoidCallback? onAprobare;
+
   const _AntetAct({
     required this.act,
     required this.goala,
     required this.onPortal,
     this.cod,
     this.stare,
+    this.aprobatPrin,
+    this.onAprobare,
   });
 
   @override
@@ -903,6 +936,51 @@ class _AntetAct extends StatelessWidget {
               color: AppColors.primary,
             ),
           ),
+          if (aprobatPrin != null) ...[
+            const SizedBox(height: 12),
+            Material(
+              color: AppColors.accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onAprobare,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.verified_outlined,
+                        size: 16,
+                        color: AppColors.accent,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Aprobat prin $aprobatPrin',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                            decoration: onAprobare == null
+                                ? null
+                                : TextDecoration.underline,
+                            decorationColor: AppColors.primary.withValues(
+                              alpha: 0.4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           for (final (icon, text) in date)
             Padding(

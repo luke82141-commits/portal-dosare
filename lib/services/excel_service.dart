@@ -55,16 +55,25 @@ String descriereHotarare(Sedinta h) {
   final text = h.solutieSumar.isNotEmpty ? h.solutieSumar : h.solutie;
   final doc = documentSedinta(h);
   final data = formateazaData(h.dataPronuntare ?? h.data);
-  final detalii = [if (doc.isNotEmpty) doc, if (data.isNotEmpty) 'din $data'].join(' ');
+  final detalii = [
+    if (doc.isNotEmpty) doc,
+    if (data.isNotEmpty) 'din $data',
+  ].join(' ');
   return [scurteaza(text, 300), if (detalii.isNotEmpty) '($detalii)'].join(' ');
 }
 
-String _parti(Dosar d) =>
-    [for (final p in d.parti) p.calitate.isEmpty ? p.nume : '${p.calitate}: ${p.nume}'].join('\n');
+String _parti(Dosar d) => [
+  for (final p in d.parti)
+    p.calitate.isEmpty ? p.nume : '${p.calitate}: ${p.nume}',
+].join('\n');
 
 /// Foaia „Situația dosarelor”: un rând pentru fiecare dosar (după număr),
 /// cu soluțiile din fiecare fază urmărită.
-Foaie situatiaDosarelor(List<DosarSalvat> salvate, ClientService clienti, {DateTime? acum}) {
+Foaie situatiaDosarelor(
+  List<DosarSalvat> salvate,
+  ClientService clienti, {
+  DateTime? acum,
+}) {
   final grupuri = <String, List<Dosar>>{};
   for (final s in salvate) {
     grupuri.putIfAbsent(s.dosar.numar, () => []).add(s.dosar);
@@ -82,7 +91,8 @@ Foaie situatiaDosarelor(List<DosarSalvat> salvate, ClientService clienti, {DateT
         g.last;
     String solutie(Faza f) {
       for (final d in g.reversed) {
-        if (fazaDosar(d) == f || (f == Faza.fond && fazaDosar(d) == Faza.alta)) {
+        if (fazaDosar(d) == f ||
+            (f == Faza.fond && fazaDosar(d) == Faza.alta)) {
           final h = ultimaHotarare(d);
           if (h != null) return descriereHotarare(h);
         }
@@ -172,7 +182,10 @@ Foaie situatiaTermenelor(List<DosarSalvat> salvate, {int? an}) {
       termene.add((s.dosar, t));
     }
   }
-  termene.sort((a, b) => RandTermen(a.$1, a.$2).moment.compareTo(RandTermen(b.$1, b.$2).moment));
+  termene.sort(
+    (a, b) =>
+        RandTermen(a.$1, a.$2).moment.compareTo(RandTermen(b.$1, b.$2).moment),
+  );
 
   DateTime? termenUlterior(Dosar d, Sedinta t) {
     final dupa = [
@@ -207,7 +220,10 @@ Foaie situatiaTermenelor(List<DosarSalvat> salvate, {int? an}) {
           _parti(d),
           t.complet,
           t.arePronuntare ? numeSolutie(tipSolutie(t)) : '',
-          scurteaza(t.solutieSumar.isNotEmpty ? t.solutieSumar : t.solutie, 300),
+          scurteaza(
+            t.solutieSumar.isNotEmpty ? t.solutieSumar : t.solutie,
+            300,
+          ),
           tipSolutie(t) == TipSolutie.amanare ? termenUlterior(d, t) : null,
         ],
     ],
@@ -233,8 +249,11 @@ String _coloana(int i) {
 }
 
 /// Zilele de la 30.12.1899, cum ține Excel datele.
-int _serialData(DateTime d) =>
-    DateTime.utc(d.year, d.month, d.day).difference(DateTime.utc(1899, 12, 30)).inDays;
+int _serialData(DateTime d) => DateTime.utc(
+  d.year,
+  d.month,
+  d.day,
+).difference(DateTime.utc(1899, 12, 30)).inDays;
 
 // Stiluri (cellXfs): 0 implicit, 1 antet, 2 text, 3 dată, 4 număr.
 const _stiluri =
@@ -271,10 +290,14 @@ const _stiluri =
 String _foaieXml(Foaie f) {
   final b = StringBuffer()
     ..write('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
-    ..write('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">')
+    ..write(
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+    )
     ..write('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>')
     ..write('<sheetViews><sheetView workbookViewId="0">')
-    ..write('<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>')
+    ..write(
+      '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>',
+    )
     ..write('</sheetView></sheetViews><cols>');
   for (final (i, w) in f.latimi.indexed) {
     b.write('<col min="${i + 1}" max="${i + 1}" width="$w" customWidth="1"/>');
@@ -286,7 +309,9 @@ String _foaieXml(Foaie f) {
     for (final (i, v) in valori.indexed) {
       final ref = '${_coloana(i)}$r';
       if (antet) {
-        b.write('<c r="$ref" s="1" t="inlineStr"><is><t>${_x('$v')}</t></is></c>');
+        b.write(
+          '<c r="$ref" s="1" t="inlineStr"><is><t>${_x('$v')}</t></is></c>',
+        );
       } else if (v is int) {
         b.write('<c r="$ref" s="4"><v>$v</v></c>');
       } else if (v is DateTime) {
@@ -313,7 +338,9 @@ String _foaieXml(Foaie f) {
     ..write(
       '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>',
     )
-    ..write('<pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/>')
+    ..write(
+      '<pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/>',
+    )
     ..write('</worksheet>');
   return b.toString();
 }

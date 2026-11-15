@@ -14,16 +14,16 @@ Sedinta _s(DateTime d, String ora) =>
     Sedinta(complet: 'C3', data: d, ora: ora, solutie: '', solutieSumar: '');
 
 Dosar _d(String numar, List<Sedinta> sedinte) => Dosar(
-      numar: numar,
-      data: DateTime(2026, 3, 3),
-      institutie: 'JudecatoriaSECTORUL1BUCURESTI',
-      obiect: 'pretenții',
-      stadiuProcesual: 'Fond',
-      sectie: '',
-      categorie: 'Civil',
-      parti: const [],
-      sedinte: sedinte,
-    );
+  numar: numar,
+  data: DateTime(2026, 3, 3),
+  institutie: 'JudecatoriaSECTORUL1BUCURESTI',
+  obiect: 'pretenții',
+  stadiuProcesual: 'Fond',
+  sectie: '',
+  categorie: 'Civil',
+  parti: const [],
+  sedinte: sedinte,
+);
 
 class _SoapGol extends SoapService {
   @override
@@ -34,8 +34,7 @@ class _SoapGol extends SoapService {
     String institutie = '',
     DateTime? dataStart,
     DateTime? dataStop,
-  }) async =>
-      const RezultatCautare([], false);
+  }) async => const RezultatCautare([], false);
 }
 
 void main() {
@@ -80,14 +79,20 @@ void main() {
       ParcursDosar.soap = _SoapGol.new;
     });
 
-    testWidgets('trece prin vederile lună, zi, săptămână și an', (tester) async {
-      await tester.runAsync(() => BibliotecaService.instance.adauga(
-            _d('468/310/2026', [_s(DateTime(2026, 11, 13), '09:00')]),
-          ));
-      await tester.pumpWidget(MaterialApp(
-        theme: construiesteTema(),
-        home: CalendarScreen(azi: DateTime(2026, 11, 11)),
-      ));
+    testWidgets('trece prin vederile lună, zi, săptămână și an', (
+      tester,
+    ) async {
+      await tester.runAsync(
+        () => BibliotecaService.instance.adauga(
+          _d('468/310/2026', [_s(DateTime(2026, 11, 13), '09:00')]),
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construiesteTema(),
+          home: CalendarScreen(azi: DateTime(2026, 11, 11)),
+        ),
+      );
       expect(find.text('Noiembrie 2026'), findsOneWidget);
       expect(find.text('468/310'), findsOneWidget);
 
@@ -112,26 +117,34 @@ void main() {
       expect(find.text('2026'), findsOneWidget);
     });
 
-    testWidgets('luna arată cel mult 4 termene pe zi, apoi „…”', (tester) async {
+    testWidgets('luna arată cel mult 4 termene pe zi, apoi „…”', (
+      tester,
+    ) async {
       final zi = DateTime(2026, 11, 13);
       await tester.runAsync(() async {
         for (var i = 1; i <= 6; i++) {
-          await BibliotecaService.instance.adauga(_d('$i/1/2026', [_s(zi, '0$i:00')]));
+          await BibliotecaService.instance.adauga(
+            _d('$i/1/2026', [_s(zi, '0$i:00')]),
+          );
         }
       });
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
-        theme: construiesteTema(),
-        home: Scaffold(
-          body: CalendarScreen(azi: DateTime(2026, 11, 11)),
-          bottomNavigationBar: NavigationBar(destinations: const [
-            NavigationDestination(icon: Icon(Icons.search), label: 'a'),
-            NavigationDestination(icon: Icon(Icons.search), label: 'b'),
-          ]),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construiesteTema(),
+          home: Scaffold(
+            body: CalendarScreen(azi: DateTime(2026, 11, 11)),
+            bottomNavigationBar: NavigationBar(
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.search), label: 'a'),
+                NavigationDestination(icon: Icon(Icons.search), label: 'b'),
+              ],
+            ),
+          ),
         ),
-      ));
+      );
       for (var i = 1; i <= 4; i++) {
         expect(find.text('$i/1'), findsOneWidget);
       }
@@ -152,9 +165,15 @@ void main() {
   test('rutele către instanță pornesc din locația curentă', () {
     final g = rutaGoogleMaps('Judecătoria Sectorul 1 București');
     expect(g.host, 'www.google.com');
-    expect(g.queryParameters['destination'], 'Judecătoria Sectorul 1 București, România');
+    expect(
+      g.queryParameters['destination'],
+      'Judecătoria Sectorul 1 București, România',
+    );
     expect(g.queryParameters.containsKey('origin'), isFalse);
     final w = rutaWaze('Tribunalul București');
-    expect(w.queryParameters, {'q': 'Tribunalul București, România', 'navigate': 'yes'});
+    expect(w.queryParameters, {
+      'q': 'Tribunalul București, România',
+      'navigate': 'yes',
+    });
   });
 }

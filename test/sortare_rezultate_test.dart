@@ -51,32 +51,33 @@ void main() {
       '3/105/2025',
       '4/105/2024',
     ]);
-    expect(_numere(ordoneazaRezultate(_dosare, SortareRezultate.modificateRecent)), [
-      '3/105/2025',
-      '2/105/2026',
-      '1/105/2024',
-      '4/105/2024',
-    ]);
+    expect(
+      _numere(ordoneazaRezultate(_dosare, SortareRezultate.modificateRecent)),
+      ['3/105/2025', '2/105/2026', '1/105/2024', '4/105/2024'],
+    );
     expect(_numere(ordoneazaRezultate(_dosare, SortareRezultate.celeMaiNoi)), [
       '2/105/2026',
       '3/105/2025',
       '1/105/2024',
       '4/105/2024',
     ]);
-    expect(_numere(ordoneazaRezultate(_dosare, SortareRezultate.celeMaiVechi)), [
-      '1/105/2024',
-      '3/105/2025',
-      '2/105/2026',
-      '4/105/2024',
-    ]);
+    expect(
+      _numere(ordoneazaRezultate(_dosare, SortareRezultate.celeMaiVechi)),
+      ['1/105/2024', '3/105/2025', '2/105/2026', '4/105/2024'],
+    );
   });
 
   test('Filtrul pe an', () {
     expect(aniRezultate(_dosare), [2026, 2025, 2024]);
-    expect(_numere(ordoneazaRezultate(_dosare, SortareRezultate.portal, an: 2024)), ['1/105/2024']);
+    expect(
+      _numere(ordoneazaRezultate(_dosare, SortareRezultate.portal, an: 2024)),
+      ['1/105/2024'],
+    );
   });
 
-  testWidgets('Rezultatele au bară de scroll, ordonare și filtru pe an', (tester) async {
+  testWidgets('Rezultatele au bară de scroll, ordonare și filtru pe an', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     await BibliotecaService.instance.incarca();
     await tester.pumpWidget(

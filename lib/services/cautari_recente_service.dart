@@ -39,7 +39,8 @@ class CautareRecenta {
   String get numeInstante => descrieInstante(institutii);
 
   /// True dacă are cel puțin un criteriu pe care portalul îl acceptă singur.
-  bool get areCriteriuPrincipal => numar.isNotEmpty || obiect.isNotEmpty || parte.isNotEmpty;
+  bool get areCriteriuPrincipal =>
+      numar.isNotEmpty || obiect.isNotEmpty || parte.isNotEmpty;
 
   String get interval => switch ((dataStart, dataStop)) {
     (null, null) => '',
@@ -58,8 +59,14 @@ class CautareRecenta {
 
   static String _data(DateTime? d) => d?.toIso8601String() ?? '';
 
-  String _codifica() =>
-      [numar, obiect, parte, institutie, _data(dataStart), _data(dataStop)].join('\u0001');
+  String _codifica() => [
+    numar,
+    obiect,
+    parte,
+    institutie,
+    _data(dataStart),
+    _data(dataStop),
+  ].join('\u0001');
 
   static CautareRecenta _decodifica(String s) {
     final p = s.split('\u0001');
@@ -75,7 +82,8 @@ class CautareRecenta {
   }
 
   @override
-  bool operator ==(Object other) => other is CautareRecenta && other._codifica() == _codifica();
+  bool operator ==(Object other) =>
+      other is CautareRecenta && other._codifica() == _codifica();
 
   @override
   int get hashCode => _codifica().hashCode;

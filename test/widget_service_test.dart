@@ -17,12 +17,16 @@ Dosar _d(String numar, {List<(DateTime, String)> termene = const []}) => Dosar(
   ],
 );
 
-DosarSalvat _s(Dosar d, {List<(DateTime, String)> modificari = const []}) => DosarSalvat(
-  dosar: d,
-  adaugatLa: DateTime(2026, 1, 1),
-  modificari: [for (final (la, text) in modificari) Modificare(detectataLa: la, text: text)],
-  necitite: modificari.length,
-);
+DosarSalvat _s(Dosar d, {List<(DateTime, String)> modificari = const []}) =>
+    DosarSalvat(
+      dosar: d,
+      adaugatLa: DateTime(2026, 1, 1),
+      modificari: [
+        for (final (la, text) in modificari)
+          Modificare(detectataLa: la, text: text),
+      ],
+      necitite: modificari.length,
+    );
 
 void main() {
   // Sâmbătă, 14.11.2026, ora 15.
@@ -58,30 +62,39 @@ void main() {
     expect(date['s2_dosar'], '');
   });
 
-  test('Lista săptămânii are toate termenele; widgetul mic spune câte mai sunt', () {
-    final date = dateWidgeturi(
-      [
-        for (var i = 0; i < 8; i++)
-          _s(_d('$i/1/2026', termene: [(DateTime(2026, 11, 16), '09:0$i')])),
-      ],
-      pro: true,
-      acum: acum,
-    );
-    expect(date['s_n'], '8');
-    expect(date['s7_dosar'], isNotEmpty);
-    expect(date['s8_dosar'], isEmpty);
-    expect(date['t_n'], '8');
-    expect(date['mic_mai'], '+ încă 7 termene în 7 zile');
-  });
+  test(
+    'Lista săptămânii are toate termenele; widgetul mic spune câte mai sunt',
+    () {
+      final date = dateWidgeturi(
+        [
+          for (var i = 0; i < 8; i++)
+            _s(_d('$i/1/2026', termene: [(DateTime(2026, 11, 16), '09:0$i')])),
+        ],
+        pro: true,
+        acum: acum,
+      );
+      expect(date['s_n'], '8');
+      expect(date['s7_dosar'], isNotEmpty);
+      expect(date['s8_dosar'], isEmpty);
+      expect(date['t_n'], '8');
+      expect(date['mic_mai'], '+ încă 7 termene în 7 zile');
+    },
+  );
 
   test('Actualizările: total și cea mai recentă modificare întâi', () {
     final date = dateWidgeturi(
       [
-        _s(_d('1/1/2026'), modificari: [(DateTime(2026, 11, 10), 'Termen nou')]),
+        _s(
+          _d('1/1/2026'),
+          modificari: [(DateTime(2026, 11, 10), 'Termen nou')],
+        ),
         _s(_d('2/1/2026')),
         _s(
           _d('3/1/2026'),
-          modificari: [(DateTime(2026, 11, 1), 'Vechi'), (DateTime(2026, 11, 14), 'Soluție')],
+          modificari: [
+            (DateTime(2026, 11, 1), 'Vechi'),
+            (DateTime(2026, 11, 14), 'Soluție'),
+          ],
         ),
       ],
       pro: false,

@@ -33,7 +33,8 @@ String textSolutie(Sedinta s, {Dosar? dosar}) {
     if (sumar.isNotEmpty && sumar != s.solutie) sumar,
     '',
     if (pronuntata != null) 'Data pronunțării: ${formateazaData(pronuntata)}',
-    if (sedinta.isNotEmpty && formateazaData(pronuntata) != formateazaData(s.data))
+    if (sedinta.isNotEmpty &&
+        formateazaData(pronuntata) != formateazaData(s.data))
       'Ședința: $sedinta'
     else if (s.ora.isNotEmpty)
       'Ora ședinței: ${s.ora}',
@@ -58,10 +59,15 @@ Future<void> optiuniSolutie(BuildContext context, Sedinta s, {Dosar? dosar}) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Soluția', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const Text(
+              'Soluția',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 12),
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.45),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(ctx).height * 0.45,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -69,7 +75,10 @@ Future<void> optiuniSolutie(BuildContext context, Sedinta s, {Dosar? dosar}) {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: SingleChildScrollView(
-                  child: SelectableText(text, style: const TextStyle(fontSize: 14, height: 1.4)),
+                  child: SelectableText(
+                    text,
+                    style: const TextStyle(fontSize: 14, height: 1.4),
+                  ),
                 ),
               ),
             ),
@@ -82,7 +91,11 @@ Future<void> optiuniSolutie(BuildContext context, Sedinta s, {Dosar? dosar}) {
                       final messenger = ScaffoldMessenger.of(context);
                       await Clipboard.setData(ClipboardData(text: text));
                       if (ctx.mounted) Navigator.pop(ctx);
-                      messenger.showSnackBar(const SnackBar(content: Text('Soluția a fost copiată.')));
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Soluția a fost copiată.'),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.copy, size: 18),
                     label: const Text('Copiază'),
@@ -94,12 +107,17 @@ Future<void> optiuniSolutie(BuildContext context, Sedinta s, {Dosar? dosar}) {
                     onPressed: () async {
                       final box = ctx.findRenderObject() as RenderBox?;
                       Navigator.pop(ctx);
-                      await SharePlus.instance.share(ShareParams(
-                        text: text,
-                        subject: dosar == null ? 'Soluție' : 'Soluție dosar ${dosar.numar}',
-                        sharePositionOrigin:
-                            box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-                      ));
+                      await SharePlus.instance.share(
+                        ShareParams(
+                          text: text,
+                          subject: dosar == null
+                              ? 'Soluție'
+                              : 'Soluție dosar ${dosar.numar}',
+                          sharePositionOrigin: box == null
+                              ? null
+                              : box.localToGlobal(Offset.zero) & box.size,
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.share, size: 18),
                     label: const Text('Distribuie'),

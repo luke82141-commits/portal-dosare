@@ -137,7 +137,8 @@ DateTime pasteOrtodox(int an) {
 /// Sărbătorile legale din România (art. 139 Codul muncii), într-un an.
 Map<DateTime, String> sarbatoriLegale(int an) {
   final paste = pasteOrtodox(an);
-  DateTime fata(int zile) => DateTime(paste.year, paste.month, paste.day + zile);
+  DateTime fata(int zile) =>
+      DateTime(paste.year, paste.month, paste.day + zile);
   return {
     DateTime(an, 1, 1): 'Anul Nou',
     DateTime(an, 1, 2): 'Anul Nou',
@@ -191,12 +192,20 @@ class CalculTermen {
 ///   are o asemenea zi, în ultima zi a lunii;
 /// - dacă ultima zi e nelucrătoare, termenul se prelungește până la sfârșitul
 ///   primei zile lucrătoare următoare.
-CalculTermen calculeazaTermen(DateTime start, int durata, UnitateTermen unitate) {
+CalculTermen calculeazaTermen(
+  DateTime start,
+  int durata,
+  UnitateTermen unitate,
+) {
   final s = DateTime(start.year, start.month, start.day);
   DateTime peLuni(int luni) {
     final tinta = DateTime(s.year, s.month + luni, 1);
     final ultimaZiLuna = DateTime(tinta.year, tinta.month + 1, 0).day;
-    return DateTime(tinta.year, tinta.month, s.day > ultimaZiLuna ? ultimaZiLuna : s.day);
+    return DateTime(
+      tinta.year,
+      tinta.month,
+      s.day > ultimaZiLuna ? ultimaZiLuna : s.day,
+    );
   }
 
   final implinire = switch (unitate) {
@@ -206,7 +215,11 @@ CalculTermen calculeazaTermen(DateTime start, int durata, UnitateTermen unitate)
   };
   var zi = implinire;
   final prelungiri = <(DateTime, String)>[];
-  for (var motiv = motivZiNelucratoare(zi); motiv != null; motiv = motivZiNelucratoare(zi)) {
+  for (
+    var motiv = motivZiNelucratoare(zi);
+    motiv != null;
+    motiv = motivZiNelucratoare(zi)
+  ) {
     prelungiri.add((zi, motiv));
     zi = DateTime(zi.year, zi.month, zi.day + 1);
   }
@@ -249,7 +262,8 @@ class TermenSalvat {
 /// Termenele procedurale păstrate de utilizator.
 class TermeneProceduraleService extends ChangeNotifier {
   TermeneProceduraleService._();
-  static final TermeneProceduraleService instance = TermeneProceduraleService._();
+  static final TermeneProceduraleService instance =
+      TermeneProceduraleService._();
 
   static const _cheie = 'termene_procedurale_v1';
 
@@ -265,7 +279,10 @@ class TermeneProceduraleService extends ChangeNotifier {
       final brut = prefs.getString(_cheie);
       _termene = brut == null
           ? []
-          : [for (final j in jsonDecode(brut) as List) TermenSalvat.fromJson(j)];
+          : [
+              for (final j in jsonDecode(brut) as List)
+                TermenSalvat.fromJson(j),
+            ];
     } catch (e) {
       debugPrint('Termenele procedurale nu au putut fi citite: $e');
       _termene = [];
@@ -278,7 +295,10 @@ class TermeneProceduraleService extends ChangeNotifier {
 
   Future<void> _salveaza() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cheie, jsonEncode([for (final t in _termene) t.toJson()]));
+    await prefs.setString(
+      _cheie,
+      jsonEncode([for (final t in _termene) t.toJson()]),
+    );
     notifyListeners();
   }
 
@@ -300,7 +320,9 @@ class TermeneProceduraleService extends ChangeNotifier {
     final azi = DateTime(acum.year, acum.month, acum.day);
     return [
       for (final t in _termene)
-        if (!t.ultimaZi.isBefore(azi) && t.ultimaZi.difference(azi).inDays <= zile) t,
+        if (!t.ultimaZi.isBefore(azi) &&
+            t.ultimaZi.difference(azi).inDays <= zile)
+          t,
     ];
   }
 }

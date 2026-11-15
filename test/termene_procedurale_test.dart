@@ -89,7 +89,10 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await ProService.instance.incarca();
     await tester.pumpWidget(
-      MaterialApp(theme: construiesteTema(), home: const CalculatorTermeneScreen()),
+      MaterialApp(
+        theme: construiesteTema(),
+        home: const CalculatorTermeneScreen(),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('art. 468'), findsOneWidget);
@@ -105,6 +108,9 @@ void main() {
 
     expect(find.text('Ultima zi'), findsOneWidget);
     expect(find.text('luni, 02.11.2026'), findsOneWidget);
-    expect(find.textContaining('nu e zi lucrătoare (duminică)'), findsOneWidget);
+    expect(
+      find.textContaining('nu e zi lucrătoare (duminică)'),
+      findsOneWidget,
+    );
   });
 }

@@ -54,36 +54,36 @@ class FiltreDosare {
     this.parte = '',
     this.inregistrare,
     this.modificare,
-  })  : institutii = institutii ?? {},
-        stadii = stadii ?? {},
-        categorii = categorii ?? {},
-        sectii = sectii ?? {};
+  }) : institutii = institutii ?? {},
+       stadii = stadii ?? {},
+       categorii = categorii ?? {},
+       sectii = sectii ?? {};
 
   /// Filtrul pornit dintr-un element apăsat în detaliul [d].
   factory FiltreDosare.din(TipFiltru tip, Dosar d) => switch (tip) {
-        TipFiltru.instanta => FiltreDosare(institutii: {d.institutie}),
-        TipFiltru.stadiu => FiltreDosare(stadii: {d.stadiuProcesual}),
-        TipFiltru.categorie => FiltreDosare(categorii: {d.categorie}),
-        TipFiltru.an => FiltreDosare(
-            inregistrare: d.data == null
-                ? null
-                : DateTimeRange(
-                    start: DateTime(d.data!.year),
-                    end: DateTime(d.data!.year, 12, 31),
-                  ),
-          ),
-      };
+    TipFiltru.instanta => FiltreDosare(institutii: {d.institutie}),
+    TipFiltru.stadiu => FiltreDosare(stadii: {d.stadiuProcesual}),
+    TipFiltru.categorie => FiltreDosare(categorii: {d.categorie}),
+    TipFiltru.an => FiltreDosare(
+      inregistrare: d.data == null
+          ? null
+          : DateTimeRange(
+              start: DateTime(d.data!.year),
+              end: DateTime(d.data!.year, 12, 31),
+            ),
+    ),
+  };
 
   FiltreDosare copie() => FiltreDosare(
-        institutii: {...institutii},
-        stadii: {...stadii},
-        categorii: {...categorii},
-        sectii: {...sectii},
-        obiect: obiect,
-        parte: parte,
-        inregistrare: inregistrare,
-        modificare: modificare,
-      );
+    institutii: {...institutii},
+    stadii: {...stadii},
+    categorii: {...categorii},
+    sectii: {...sectii},
+    obiect: obiect,
+    parte: parte,
+    inregistrare: inregistrare,
+    modificare: modificare,
+  );
 
   bool potriveste(Dosar d) =>
       (institutii.isEmpty || institutii.contains(d.institutie)) &&
@@ -97,17 +97,21 @@ class FiltreDosare {
 
   /// Filtrele active, ca etichete care se pot scoate pe rând.
   List<(String, VoidCallback)> etichete() => [
-        for (final i in institutii) (numeInstanta(i), () => institutii.remove(i)),
-        for (final s in stadii) (s, () => stadii.remove(s)),
-        for (final c in categorii) (c, () => categorii.remove(c)),
-        for (final s in sectii) (s, () => sectii.remove(s)),
-        if (obiect.trim().isNotEmpty) ('Obiect: „${obiect.trim()}”', () => obiect = ''),
-        if (parte.trim().isNotEmpty) ('Parte: „${parte.trim()}”', () => parte = ''),
-        if (inregistrare != null)
-          ('Data dosarului: ${_perioada(inregistrare!)}', () => inregistrare = null),
-        if (modificare != null)
-          ('Modificat: ${_perioada(modificare!)}', () => modificare = null),
-      ];
+    for (final i in institutii) (numeInstanta(i), () => institutii.remove(i)),
+    for (final s in stadii) (s, () => stadii.remove(s)),
+    for (final c in categorii) (c, () => categorii.remove(c)),
+    for (final s in sectii) (s, () => sectii.remove(s)),
+    if (obiect.trim().isNotEmpty)
+      ('Obiect: „${obiect.trim()}”', () => obiect = ''),
+    if (parte.trim().isNotEmpty) ('Parte: „${parte.trim()}”', () => parte = ''),
+    if (inregistrare != null)
+      (
+        'Data dosarului: ${_perioada(inregistrare!)}',
+        () => inregistrare = null,
+      ),
+    if (modificare != null)
+      ('Modificat: ${_perioada(modificare!)}', () => modificare = null),
+  ];
 
   bool get gol => etichete().isEmpty;
 }
@@ -202,7 +206,8 @@ class _DosareFiltrateScreenState extends State<DosareFiltrateScreen> {
                 StareMesaj(
                   icon: Icons.filter_alt_off_outlined,
                   titlu: 'Niciun dosar găsit',
-                  text: 'Niciun dosar din biblioteca ta nu îndeplinește toate filtrele. '
+                  text:
+                      'Niciun dosar din biblioteca ta nu îndeplinește toate filtrele. '
                       'Scoate unul dintre ele sau schimbă-le.',
                   buton: 'Schimbă filtrele',
                   onButon: _deschideFiltre,
@@ -227,7 +232,11 @@ class _DosareFiltrateScreenState extends State<DosareFiltrateScreen> {
                 );
               }
               final s = dosare[i - 1];
-              return DosarCardWidget(key: ValueKey(s.dosar.cheie), dosar: s.dosar, salvat: s);
+              return DosarCardWidget(
+                key: ValueKey(s.dosar.cheie),
+                dosar: s.dosar,
+                salvat: s,
+              );
             },
           );
         },
@@ -278,46 +287,53 @@ class _FoaieFiltreState extends State<_FoaieFiltre> {
   Widget build(BuildContext context) {
     final dosare = [for (final s in BibliotecaService.instance.dosare) s.dosar];
     List<String> valori(String Function(Dosar) f) =>
-        {for (final d in dosare) f(d)}.where((e) => e.isNotEmpty).toList()..sort();
+        {for (final d in dosare) f(d)}.where((e) => e.isNotEmpty).toList()
+          ..sort();
     final potrivite = dosare.where(_f.potriveste).length;
 
     Widget sectiune(String titlu, Widget continut) => Padding(
-          padding: const EdgeInsets.only(bottom: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                titlu,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              continut,
-            ],
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            titlu,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
-        );
+          const SizedBox(height: 8),
+          continut,
+        ],
+      ),
+    );
 
-    Widget alegeri(List<String> toate, Set<String> alese, [String Function(String)? nume]) =>
-        toate.isEmpty
-            ? const Text('—', style: TextStyle(color: AppColors.onSurfaceVariant))
-            : Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final v in toate)
-                    Pastila(
-                      nume?.call(v) ?? v,
-                      activ: alese.contains(v),
-                      icon: alese.contains(v) ? Icons.check : null,
-                      onTap: () => setState(() => alese.contains(v) ? alese.remove(v) : alese.add(v)),
-                    ),
-                ],
-              );
+    Widget alegeri(
+      List<String> toate,
+      Set<String> alese, [
+      String Function(String)? nume,
+    ]) => toate.isEmpty
+        ? const Text('—', style: TextStyle(color: AppColors.onSurfaceVariant))
+        : Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final v in toate)
+                Pastila(
+                  nume?.call(v) ?? v,
+                  activ: alese.contains(v),
+                  icon: alese.contains(v) ? Icons.check : null,
+                  onTap: () => setState(
+                    () => alese.contains(v) ? alese.remove(v) : alese.add(v),
+                  ),
+                ),
+            ],
+          );
 
-    Widget perioada(DateTimeRange? p, void Function(DateTimeRange?) seteaza) => Row(
+    Widget perioada(DateTimeRange? p, void Function(DateTimeRange?) seteaza) =>
+        Row(
           children: [
             Expanded(
               child: OutlinedButton.icon(
@@ -340,16 +356,23 @@ class _FoaieFiltreState extends State<_FoaieFiltre> {
         );
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.88),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text('Filtre', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Filtre',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              ),
             ),
             Flexible(
               child: ListView(
@@ -378,12 +401,34 @@ class _FoaieFiltreState extends State<_FoaieFiltre> {
                       ),
                     ),
                   ),
-                  sectiune('Instanță', alegeri(valori((d) => d.institutie), _f.institutii, numeInstanta)),
-                  sectiune('Stadiu / cale de atac', alegeri(valori((d) => d.stadiuProcesual), _f.stadii)),
-                  sectiune('Materie', alegeri(valori((d) => d.categorie), _f.categorii)),
-                  sectiune('Secție', alegeri(valori((d) => d.sectie), _f.sectii)),
-                  sectiune('Data dosarului (înregistrare la instanță)', perioada(_f.inregistrare, (p) => _f.inregistrare = p)),
-                  sectiune('Data modificării pe portal', perioada(_f.modificare, (p) => _f.modificare = p)),
+                  sectiune(
+                    'Instanță',
+                    alegeri(
+                      valori((d) => d.institutie),
+                      _f.institutii,
+                      numeInstanta,
+                    ),
+                  ),
+                  sectiune(
+                    'Stadiu / cale de atac',
+                    alegeri(valori((d) => d.stadiuProcesual), _f.stadii),
+                  ),
+                  sectiune(
+                    'Materie',
+                    alegeri(valori((d) => d.categorie), _f.categorii),
+                  ),
+                  sectiune(
+                    'Secție',
+                    alegeri(valori((d) => d.sectie), _f.sectii),
+                  ),
+                  sectiune(
+                    'Data dosarului (înregistrare la instanță)',
+                    perioada(_f.inregistrare, (p) => _f.inregistrare = p),
+                  ),
+                  sectiune(
+                    'Data modificării pe portal',
+                    perioada(_f.modificare, (p) => _f.modificare = p),
+                  ),
                 ],
               ),
             ),
@@ -414,7 +459,9 @@ class _FoaieFiltreState extends State<_FoaieFiltre> {
                     child: FilledButton(
                       onPressed: () => Navigator.of(context).pop(_f),
                       child: Text(
-                        potrivite == 1 ? 'Arată un dosar' : 'Arată $potrivite dosare',
+                        potrivite == 1
+                            ? 'Arată un dosar'
+                            : 'Arată $potrivite dosare',
                       ),
                     ),
                   ),

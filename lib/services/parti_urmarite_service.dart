@@ -13,9 +13,14 @@ class DosarNouParte {
   final DateTime gasitLa;
   final bool citit;
 
-  const DosarNouParte({required this.dosar, required this.gasitLa, this.citit = false});
+  const DosarNouParte({
+    required this.dosar,
+    required this.gasitLa,
+    this.citit = false,
+  });
 
-  DosarNouParte citire() => DosarNouParte(dosar: dosar, gasitLa: gasitLa, citit: true);
+  DosarNouParte citire() =>
+      DosarNouParte(dosar: dosar, gasitLa: gasitLa, citit: true);
 
   factory DosarNouParte.fromJson(Map<String, dynamic> j) => DosarNouParte(
     dosar: Dosar.fromJson(j['dosar']),
@@ -60,7 +65,8 @@ class ParteUrmarita {
   static String cheiePentru(String nume, String institutie) =>
       '${nume.trim().toLowerCase()}|$institutie';
 
-  String get eticheta => institutie.isEmpty ? nume : '$nume · ${numeInstanta(institutie)}';
+  String get eticheta =>
+      institutie.isEmpty ? nume : '$nume · ${numeInstanta(institutie)}';
 
   int get necitite => dosareNoi.where((d) => !d.citit).length;
 
@@ -87,8 +93,13 @@ class ParteUrmarita {
     institutie: j['institutie'] ?? '',
     adaugataLa: DateTime.parse(j['adaugataLa']),
     ultimaVerificare: DateTime.tryParse(j['ultimaVerificare'] ?? ''),
-    cunoscute: {for (final c in (j['cunoscute'] as List? ?? const [])) c as String},
-    dosareNoi: [for (final d in (j['dosareNoi'] as List? ?? const [])) DosarNouParte.fromJson(d)],
+    cunoscute: {
+      for (final c in (j['cunoscute'] as List? ?? const [])) c as String,
+    },
+    dosareNoi: [
+      for (final d in (j['dosareNoi'] as List? ?? const []))
+        DosarNouParte.fromJson(d),
+    ],
   );
 
   Map<String, dynamic> toJson() => {
@@ -133,7 +144,10 @@ class PartiUrmariteService extends ChangeNotifier {
     try {
       _parti = brut == null
           ? []
-          : [for (final j in jsonDecode(brut) as List) ParteUrmarita.fromJson(j)];
+          : [
+              for (final j in jsonDecode(brut) as List)
+                ParteUrmarita.fromJson(j),
+            ];
     } catch (e) {
       debugPrint('Părțile urmărite nu au putut fi citite: $e');
       _parti = [];
@@ -143,7 +157,10 @@ class PartiUrmariteService extends ChangeNotifier {
 
   Future<void> _salveaza() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cheie, jsonEncode([for (final p in _parti) p.toJson()]));
+    await prefs.setString(
+      _cheie,
+      jsonEncode([for (final p in _parti) p.toJson()]),
+    );
     notifyListeners();
   }
 
@@ -161,7 +178,11 @@ class PartiUrmariteService extends ChangeNotifier {
     if (n.isEmpty || urmareste(n, institutie)) return false;
 
     final moment = acum ?? DateTime.now();
-    var parte = ParteUrmarita(nume: n, institutie: institutie, adaugataLa: moment);
+    var parte = ParteUrmarita(
+      nume: n,
+      institutie: institutie,
+      adaugataLa: moment,
+    );
     final r = await (soap ?? SoapService()).cautaDosare(
       numeParte: n,
       institutie: institutie,
@@ -188,7 +209,9 @@ class PartiUrmariteService extends ChangeNotifier {
     await incarca();
     _parti = [
       for (final p in _parti)
-        p.cheie == cheie ? p.copyWith(dosareNoi: [for (final d in p.dosareNoi) d.citire()]) : p,
+        p.cheie == cheie
+            ? p.copyWith(dosareNoi: [for (final d in p.dosareNoi) d.citire()])
+            : p,
     ];
     await _salveaza();
   }
@@ -196,7 +219,10 @@ class PartiUrmariteService extends ChangeNotifier {
   /// Caută pe portal fiecare parte urmărită și întoarce dosarele apărute de
   /// la ultima verificare. Interogările se fac pe rând. Aruncă eroarea doar
   /// dacă nicio parte nu a putut fi verificată.
-  Future<List<RezultatParte>> verificaToate({SoapService? soap, DateTime? acum}) async {
+  Future<List<RezultatParte>> verificaToate({
+    SoapService? soap,
+    DateTime? acum,
+  }) async {
     await incarca();
     if (_parti.isEmpty) return [];
 

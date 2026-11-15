@@ -40,7 +40,8 @@ void main() {
   });
 
   test('răspunsul gol înseamnă niciun dosar', () {
-    const gol = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
+    const gol =
+        '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">'
         '<soap:Body><CautareDosareResponse xmlns="portalquery.just.ro" /></soap:Body></soap:Envelope>';
     expect(parseazaRaspunsDosare(gol), isEmpty);
   });

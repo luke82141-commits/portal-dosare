@@ -22,12 +22,18 @@ Future<void> alegeCuloare(BuildContext context, Dosar dosar) {
             children: [
               Text(
                 'Culoarea dosarului ${dosar.numar}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
                 'O vezi în calendar și pe cardul dosarului.',
-                style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 18),
               Wrap(
@@ -50,10 +56,15 @@ Future<void> alegeCuloare(BuildContext context, Dosar dosar) {
                             color: c,
                             shape: BoxShape.circle,
                             border: c == actuala
-                                ? Border.all(color: AppColors.onSurface, width: 3)
+                                ? Border.all(
+                                    color: AppColors.onSurface,
+                                    width: 3,
+                                  )
                                 : null,
                           ),
-                          child: c == actuala ? const Icon(Icons.check, color: Colors.white) : null,
+                          child: c == actuala
+                              ? const Icon(Icons.check, color: Colors.white)
+                              : null,
                         ),
                       ),
                     ),
@@ -68,7 +79,11 @@ Future<void> alegeCuloare(BuildContext context, Dosar dosar) {
                         Navigator.pop(ctx);
                       },
                 icon: const Icon(Icons.auto_awesome, size: 18),
-                label: Text(aleasa == null ? 'Culoare automată (activă)' : 'Revino la culoarea automată'),
+                label: Text(
+                  aleasa == null
+                      ? 'Culoare automată (activă)'
+                      : 'Revino la culoarea automată',
+                ),
               ),
             ],
           ),

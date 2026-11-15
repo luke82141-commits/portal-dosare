@@ -25,7 +25,8 @@ class SetariNotificariService extends ChangeNotifier {
   bool important(String cheie) => _importante.contains(cheie);
 
   static int _minute(TimeOfDay t) => t.hour * 60 + t.minute;
-  static TimeOfDay _dinMinute(int m) => TimeOfDay(hour: m ~/ 60, minute: m % 60);
+  static TimeOfDay _dinMinute(int m) =>
+      TimeOfDay(hour: m ~/ 60, minute: m % 60);
 
   /// Dacă [moment] cade în orele de liniște. Intervalul poate trece peste
   /// miezul nopții (22:00–07:00); începutul e inclus, sfârșitul nu.
@@ -53,7 +54,11 @@ class SetariNotificariService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> seteazaLiniste({bool? activ, TimeOfDay? start, TimeOfDay? stop}) async {
+  Future<void> seteazaLiniste({
+    bool? activ,
+    TimeOfDay? start,
+    TimeOfDay? stop,
+  }) async {
     _activ = activ ?? _activ;
     _start = start ?? _start;
     _stop = stop ?? _stop;

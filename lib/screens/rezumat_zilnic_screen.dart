@@ -86,17 +86,25 @@ class _RezumatZilnicScreenState extends State<RezumatZilnicScreen> {
                 contentPadding: EdgeInsets.zero,
                 enabled: setari.activ,
                 title: const Text('Ora'),
-                subtitle: const Text('Vine odată cu prima verificare de după această oră'),
+                subtitle: const Text(
+                  'Vine odată cu prima verificare de după această oră',
+                ),
                 trailing: Text(
                   '${doua(setari.ora)}:${doua(setari.minut)}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 onTap: _alegeOra,
               ),
               const Divider(height: 24),
               Text(
                 'Azi, ${dataCuZi(r.zi)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (r.gol)
                 const Padding(
@@ -121,7 +129,10 @@ class _RezumatZilnicScreenState extends State<RezumatZilnicScreen> {
                 for (final t in r.procedurale)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.timer_outlined, color: AppColors.error),
+                    leading: const Icon(
+                      Icons.timer_outlined,
+                      color: AppColors.error,
+                    ),
                     title: Text(t.act),
                     subtitle: Text(
                       [
@@ -136,12 +147,21 @@ class _RezumatZilnicScreenState extends State<RezumatZilnicScreen> {
                 for (final a in r.actualizari)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.fiber_new_outlined, color: AppColors.success),
+                    leading: const Icon(
+                      Icons.fiber_new_outlined,
+                      color: AppColors.success,
+                    ),
                     title: Text('${a.dosar.numar} · ${a.dosar.instanta}'),
-                    subtitle: Text(a.modificare.text, maxLines: 3, overflow: TextOverflow.ellipsis),
-                    onTap: () => Navigator.of(
-                      context,
-                    ).push(MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: a.dosar))),
+                    subtitle: Text(
+                      a.modificare.text,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DosarDetaliuScreen(dosar: a.dosar),
+                      ),
+                    ),
                   ),
               ],
             ],
@@ -182,7 +202,10 @@ class _Termen extends StatelessWidget {
         width: 48,
         child: Text(
           t.sedinta.ora.isEmpty ? '—' : t.sedinta.ora,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
         ),
       ),
       title: Text(t.dosar.numar),
@@ -195,9 +218,9 @@ class _Termen extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      onTap: () =>
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: t.dosar))),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => DosarDetaliuScreen(dosar: t.dosar)),
+      ),
     );
   }
 }
@@ -213,7 +236,11 @@ class _Blocat extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.workspace_premium_outlined, size: 48, color: AppColors.accent),
+            const Icon(
+              Icons.workspace_premium_outlined,
+              size: 48,
+              color: AppColors.accent,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Disponibil în Portal Dosare Pro',

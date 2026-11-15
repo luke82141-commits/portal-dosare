@@ -39,7 +39,11 @@ class _SoapFals extends SoapService {
     DateTime? dataStop,
   }) async {
     if (esueaza) throw SoapException('fără rețea');
-    cereri.add({'parte': numeParte, 'institutie': institutie, 'dataStart': dataStart});
+    cereri.add({
+      'parte': numeParte,
+      'institutie': institutie,
+      'dataStart': dataStart,
+    });
     return RezultatCautare(dosare, limita);
   }
 }
@@ -97,7 +101,11 @@ void main() {
     final soap = _SoapFals([]);
     await service.adauga('Alfa SRL', soap: soap);
     await service.adauga('alfa srl', soap: soap);
-    await service.adauga('Alfa SRL', institutie: 'TribunalulPRAHOVA', soap: soap);
+    await service.adauga(
+      'Alfa SRL',
+      institutie: 'TribunalulPRAHOVA',
+      soap: soap,
+    );
     expect(service.parti.length, 2);
 
     await service.sterge(ParteUrmarita.cheiePentru('ALFA SRL', ''));
@@ -113,7 +121,10 @@ void main() {
     final soap = _SoapFals([]);
     await service.adauga('Alfa SRL', soap: soap);
     soap.esueaza = true;
-    await expectLater(service.verificaToate(soap: soap), throwsA(isA<SoapException>()));
+    await expectLater(
+      service.verificaToate(soap: soap),
+      throwsA(isA<SoapException>()),
+    );
     expect(service.parti.single.dosareNoi, isEmpty);
   });
 

@@ -21,8 +21,14 @@ class StadiuChip extends StatelessWidget {
     if (s.contains('apel')) {
       return StadiuChip._(stadiu, AppColors.accentContainer, AppColors.accent);
     }
-    if (s.contains('recurs') || s.contains('contesta') || s.contains('revizuire')) {
-      return StadiuChip._(stadiu, AppColors.successContainer, AppColors.success);
+    if (s.contains('recurs') ||
+        s.contains('contesta') ||
+        s.contains('revizuire')) {
+      return StadiuChip._(
+        stadiu,
+        AppColors.successContainer,
+        AppColors.success,
+      );
     }
     return StadiuChip._(
       stadiu.isEmpty ? '—' : stadiu,
@@ -42,10 +48,17 @@ class StadiuChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: fundal, borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: fundal,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: culoare),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: culoare,
+        ),
       ),
     );
   }
@@ -64,7 +77,10 @@ class AntetSectiune extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(titlu, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text(
+            titlu,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
         ),
         if (actiune != null)
           TextButton(
@@ -128,16 +144,26 @@ class _SectiuneExtensibilaState extends State<SectiuneExtensibila> {
                       color: AppColors.primaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(widget.icon, size: 18, color: AppColors.onPrimaryContainer),
+                    child: Icon(
+                      widget.icon,
+                      size: 18,
+                      color: AppColors.onPrimaryContainer,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text(
                     widget.titlu,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(999),
@@ -155,7 +181,10 @@ class _SectiuneExtensibilaState extends State<SectiuneExtensibila> {
                   AnimatedRotation(
                     turns: _deschis ? 0 : 0.5,
                     duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.expand_less, color: AppColors.onSurfaceVariant),
+                    child: const Icon(
+                      Icons.expand_less,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -190,7 +219,12 @@ class ParteRand extends StatelessWidget {
   final bool esteClient;
   final VoidCallback? onClient;
 
-  const ParteRand({super.key, required this.parte, this.esteClient = false, this.onClient});
+  const ParteRand({
+    super.key,
+    required this.parte,
+    this.esteClient = false,
+    this.onClient,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +234,9 @@ class ParteRand extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: esteClient ? AppColors.accentContainer : AppColors.surfaceVariant,
+            backgroundColor: esteClient
+                ? AppColors.accentContainer
+                : AppColors.surfaceVariant,
             child: Text(
               initiale(parte.nume),
               style: TextStyle(
@@ -217,7 +253,10 @@ class ParteRand extends StatelessWidget {
               children: [
                 SelectableText(
                   parte.nume.isEmpty ? '—' : parte.nume,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 if (parte.calitate.isNotEmpty || esteClient)
                   Text(
@@ -227,8 +266,12 @@ class ParteRand extends StatelessWidget {
                     ].join(' · '),
                     style: TextStyle(
                       fontSize: 12,
-                      color: esteClient ? AppColors.accent : AppColors.onSurfaceVariant,
-                      fontWeight: esteClient ? FontWeight.w600 : FontWeight.normal,
+                      color: esteClient
+                          ? AppColors.accent
+                          : AppColors.onSurfaceVariant,
+                      fontWeight: esteClient
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
               ],
@@ -236,10 +279,14 @@ class ParteRand extends StatelessWidget {
           ),
           if (onClient != null)
             IconButton(
-              tooltip: esteClient ? 'Nu mai e clientul meu' : 'Marchează drept clientul meu',
+              tooltip: esteClient
+                  ? 'Nu mai e clientul meu'
+                  : 'Marchează drept clientul meu',
               icon: Icon(
                 esteClient ? Icons.star : Icons.star_border,
-                color: esteClient ? AppColors.accent : AppColors.onSurfaceVariant,
+                color: esteClient
+                    ? AppColors.accent
+                    : AppColors.onSurfaceVariant,
               ),
               onPressed: onClient,
             ),
@@ -290,7 +337,9 @@ class SedintaRand extends StatelessWidget {
     ].join(' · ');
 
     return InkWell(
-      onLongPress: s.arePronuntare ? () => optiuniSolutie(context, s, dosar: dosar) : null,
+      onLongPress: s.arePronuntare
+          ? () => optiuniSolutie(context, s, dosar: dosar)
+          : null,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -306,7 +355,13 @@ class SedintaRand extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: s.data == null
-                  ? const Text('—', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
+                  ? const Text(
+                      '—',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
                   : Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -316,7 +371,9 @@ class SedintaRand extends StatelessWidget {
                             fontSize: 20,
                             height: 1.1,
                             fontWeight: FontWeight.bold,
-                            color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
+                            color: viitor
+                                ? AppColors.onPrimary
+                                : AppColors.onPrimaryContainer,
                           ),
                         ),
                         Text(
@@ -324,7 +381,9 @@ class SedintaRand extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
-                            color: viitor ? AppColors.onPrimary : AppColors.onPrimaryContainer,
+                            color: viitor
+                                ? AppColors.onPrimary
+                                : AppColors.onPrimaryContainer,
                           ),
                         ),
                       ],
@@ -338,7 +397,10 @@ class SedintaRand extends StatelessWidget {
                   if (antet.isNotEmpty)
                     Text(
                       antet,
-                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   const SizedBox(height: 3),
                   Text(
@@ -367,10 +429,14 @@ class SedintaRand extends StatelessWidget {
                         if (document.isNotEmpty) document,
                         // Data pronunțării apare doar dacă diferă de cea a documentului.
                         if (s.dataPronuntare != null &&
-                            formateazaData(s.dataPronuntare) != formateazaData(s.dataDocument))
+                            formateazaData(s.dataPronuntare) !=
+                                formateazaData(s.dataDocument))
                           'pronunțat ${formateazaData(s.dataPronuntare)}',
                       ].join(' · '),
-                      style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],
@@ -433,18 +499,26 @@ class StareMesaj extends StatelessWidget {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, height: 1.43, color: AppColors.onSurfaceVariant),
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.43,
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
             if (buton != null) ...[
               const SizedBox(height: 16),
               butonPrincipal
                   ? FilledButton(
-                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                      ),
                       onPressed: onButon,
                       child: Text(buton!),
                     )
                   : OutlinedButton(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                      ),
                       onPressed: onButon,
                       child: Text(buton!),
                     ),
@@ -499,7 +573,11 @@ class IncarcarePortal extends StatelessWidget {
           SizedBox(height: 10),
           Text(
             'Portalul poate răspunde mai greu. Căutarea durează de obicei câteva secunde.',
-            style: TextStyle(fontSize: 12, height: 1.33, color: AppColors.onPrimaryContainer),
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.33,
+              color: AppColors.onPrimaryContainer,
+            ),
           ),
         ],
       ),
@@ -541,7 +619,13 @@ class Pastila extends StatelessWidget {
   final bool activ;
   final VoidCallback? onTap;
 
-  const Pastila(this.text, {super.key, this.icon, this.activ = false, this.onTap});
+  const Pastila(
+    this.text, {
+    super.key,
+    this.icon,
+    this.activ = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +633,9 @@ class Pastila extends StatelessWidget {
     return Material(
       color: activ ? AppColors.primary : AppColors.card,
       shape: StadiumBorder(
-        side: activ ? BorderSide.none : const BorderSide(color: AppColors.outline),
+        side: activ
+            ? BorderSide.none
+            : const BorderSide(color: AppColors.outline),
       ),
       child: InkWell(
         customBorder: const StadiumBorder(),
@@ -563,7 +649,9 @@ class Pastila extends StatelessWidget {
                 Icon(
                   icon,
                   size: 16,
-                  color: activ ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                  color: activ
+                      ? AppColors.onPrimary
+                      : AppColors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 6),
               ],
@@ -571,7 +659,11 @@ class Pastila extends StatelessWidget {
                 child: Text(
                   text,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: culoareText),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: culoareText,
+                  ),
                 ),
               ),
             ],
