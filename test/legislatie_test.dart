@@ -390,6 +390,9 @@ void main() {
       );
       expect(etichetaTip('HOTĂRÂRE'), 'Hotărâre');
       expect(etichetaTip('ORDONANȚĂ DE URGENȚĂ'), 'OUG');
+      expect(titluPentruNumar('1212', 'DECRET'), 'DECRET nr. 1.212 din');
+      expect(titluPentruNumar('307', 'LEGE'), 'LEGE nr. 307 din');
+      expect(titluPentruNumar('12345', null), 'nr. 12.345 din');
     });
 
     test('mergi la articol, inclusiv „5^1”', () {
@@ -782,7 +785,7 @@ void main() {
     });
 
     test(
-      'Codul civil: după titlu, în anul intrării în vigoare, republicat întâi',
+      'Codul civil: după titlu, republicat întâi',
       () async {
         final cereri = <String>[];
         final client = MockClient((r) async {
@@ -793,7 +796,7 @@ void main() {
           if (r.body.contains(
                 '<d:SearchTitlu>LEGE nr. 287 din</d:SearchTitlu>',
               ) &&
-              r.body.contains('<d:SearchAn>2011</d:SearchAn>')) {
+              r.body.contains('<d:SearchAn>2009</d:SearchAn>')) {
             return http.Response.bytes(
               _utf8(
                 _raspunsCautare([
@@ -841,14 +844,15 @@ void main() {
           ani.add(
             RegExp(r'<d:SearchAn>(\d+)').firstMatch(r.body)?.group(1) ?? '-',
           );
-          if (r.body.contains('<d:SearchAn>2007</d:SearchAn>')) {
+          if (r.body.contains('<d:SearchAn>2006</d:SearchAn>')) {
             return http.Response.bytes(
               _utf8(
                 _raspunsCautare([
                   _lege(
-                    tip: 'HOTĂRÂRE',
                     numar: '307',
-                    titlu: 'HOTĂRÂRE nr. 307 din 8 martie 2007 privind altceva',
+                    id: '292080',
+                    data: '2025-01-01T00:00:00',
+                    titlu: 'LEGE nr. 307 din 5 decembrie 2024 privind înfiinţarea unui centru',
                   ),
                   _lege(
                     numar: '307',
@@ -864,7 +868,7 @@ void main() {
         });
         final d = CerereLegislatie.dinText('legea 307/2006');
         final p = await LegislatieService.cuClient(client).cauta(d.cerere);
-        expect(ani, ['2006', '2007']);
+        expect(ani, ['2006']);
         expect(p.acte.first.titlu, contains('apărarea împotriva incendiilor'));
         expect(potrivireExacta(p.acte, d.cerere, d.tip)?.numar, '307');
       },

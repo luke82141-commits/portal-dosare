@@ -369,7 +369,9 @@ class LegislatieService {
       return _cautaDupaNumar(cerere);
     }
     final expresie = cerere.text.isNotEmpty ? cerere.text : cerere.titlu;
-    final cuvinte = pagina <= 1 ? cuvinteCheie(expresie) : const <String>[];
+    final cuvinte = pagina <= 1 && cerere.an == null
+        ? cuvinteCheie(expresie)
+        : const <String>[];
     if (cuvinte.isEmpty) return _cautaPagina(cerere, pagina);
 
     PaginaLegislatie? principala;
@@ -425,27 +427,19 @@ class LegislatieService {
         toate.addAll(acte.where((a) => vazute.add(a.cheie)));
     bool gasit() => toate.any(potrivit);
 
-    if (c.an != null) {
-      final ani = <int>{?c.anVigoare, for (var k = 0; k <= 5; k++) c.an! + k};
-      for (final an in ani) {
-        adauga(
-          (await _cautaPagina(CerereLegislatie(titlu: titlu, an: an), 1)).acte,
-        );
-        if (gasit()) break;
-      }
-      // Rezervă: după număr și an, cum cere serviciul.
-      for (var p = 1; p <= 2 && !gasit(); p++) {
-        final r = await _cautaPagina(CerereLegislatie(numar: n, an: c.an), p);
-        adauga(r.acte);
-        if (!r.maiSunt) break;
-      }
-    } else {
-      // Fără an: toate actele cu numărul ăsta (vin de la cele vechi spre cele noi).
-      for (var p = 1; p <= 5; p++) {
-        final r = await _cautaPagina(CerereLegislatie(titlu: titlu), p);
-        adauga(r.acte);
-        if (!r.maiSunt) break;
-      }
+    // La căutarea după titlu, anul e o limită de jos pentru data intrării în
+    // vigoare (care nu e niciodată înaintea actului), iar ordinea e
+    // amestecată: răsfoim câteva pagini până dăm de act.
+    for (var p = 1; p <= 5 && !(c.an != null && gasit()); p++) {
+      final r = await _cautaPagina(CerereLegislatie(titlu: titlu, an: c.an), p);
+      adauga(r.acte);
+      if (!r.maiSunt) break;
+    }
+    // Rezervă: după număr, cum cere serviciul.
+    for (var p = 1; p <= 2 && !gasit(); p++) {
+      final r = await _cautaPagina(CerereLegislatie(numar: n, an: c.an), p);
+      adauga(r.acte);
+      if (!r.maiSunt) break;
     }
 
     final potrivite = toate.where(potrivit).toList()
@@ -911,7 +905,8 @@ List<ActCunoscut> acteCunoscutePotrivite(String intrare) {
 }
 
 CerereLegislatie cerereActCunoscut(ActCunoscut a) => a.numar.isEmpty
-    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI')
+    // Anul scoate Constituția din 1923 (anul e limita de jos a intrării în vigoare).
+    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI', an: 1991)
     : CerereLegislatie(
         numar: a.numar,
         an: a.an,
@@ -1122,7 +1117,12 @@ String titluPentruNumar(String numar, String? tip) {
     'DECRET' => 'DECRET ',
     _ => '',
   };
-  return '${prefix}nr. $numar din';
+  // Titlurile scriu numerele mari cu punct: „DECRET nr. 1.212 din”.
+  final cuPunct = numar.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+$)'),
+    (_) => '.',
+  );
+  return '${prefix}nr. $cuPunct din';
 }
 
 int _eRepublicat(ActNormativ a) =>
@@ -1187,7 +1187,16 @@ ActNormativ? potrivireExacta(
       if (c.an != null && a.an != c.an) continue;
       return a;
     }
-    if (tip == 'CONSTITUTIE') return a;
+  }
+  if (tip == 'CONSTITUTIE') {
+    // Forma cea mai nouă (republicată în 2003).
+    final c = acte.where((a) => _potrivesteTip(a, tip!)).toList()
+      ..sort(
+        (x, y) => (y.dataVigoare ?? DateTime(0)).compareTo(
+          x.dataVigoare ?? DateTime(0),
+        ),
+      );
+    return c.firstOrNull;
   }
   return null;
 }
