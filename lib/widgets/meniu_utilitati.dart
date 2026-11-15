@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../screens/backup_screen.dart';
 import '../screens/calculator_termene_screen.dart';
 import '../screens/excel_screen.dart';
+import '../screens/legislatie_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
 import '../screens/rezumat_zilnic_screen.dart';
@@ -58,6 +59,12 @@ class _MeniuUtilitati extends StatelessWidget {
                   messenger.showSnackBar(SnackBar(content: Text(m)));
                 });
               },
+            ),
+            _Unealta(
+              icon: Icons.menu_book_outlined,
+              titlu: 'Legislație',
+              text: 'Caută legi, coduri și ordonanțe pe legislatie.just.ro',
+              onTap: () => _deschide(context, const LegislatieScreen()),
             ),
             _Unealta(
               icon: Icons.person_search,

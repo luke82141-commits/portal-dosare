@@ -6,6 +6,7 @@ import '../data/instante_portal.dart';
 import '../models/dosar_model.dart';
 import '../services/biblioteca_service.dart';
 import '../services/client_service.dart';
+import '../services/legislatie_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatare.dart';
 import '../utils/ruta.dart';
@@ -15,6 +16,7 @@ import '../widgets/elemente.dart';
 import '../widgets/parcurs_dosar.dart';
 import 'dosare_filtrate_screen.dart';
 import 'instante_screen.dart';
+import 'legislatie_screen.dart';
 
 /// Toate datele unui dosar (Figma: „03 · Detaliu dosar”): antet albastru cu
 /// numărul și comutatorul de monitorizare, informațiile generale, apoi
@@ -590,6 +592,41 @@ class _InformatiiGenerale extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (trimiteriDinObiect(dosar.obiect) case final trimiteri when trimiteri.isNotEmpty) ...[
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Legislație pentru obiect',
+                      style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final t in trimiteri)
+                          Pastila(
+                            t.eticheta,
+                            icon: Icons.menu_book_outlined,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => LegislatieScreen(
+                                  cerereInitiala: t.cerere,
+                                  tipInitial: t.tip,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
