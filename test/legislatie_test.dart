@@ -27,8 +27,7 @@ String _lege({
   String titlu = 'LEGE nr. 85 din 25 iunie 2014 privind procedurile de prevenire a insolvenței și de insolvență',
   String emitent = 'PARLAMENTUL',
   String data = '2014-06-28T00:00:00',
-  String text =
-      'TITLUL I\nArt. 1\nScopul legii\nArt. 2\nInsolvența debitorului &lt;b&gt;x&lt;/b&gt;',
+  String text = 'TITLUL I\nArt. 1\nScopul legii\nArt. 2\nInsolvența debitorului &lt;b&gt;x&lt;/b&gt;',
 }) =>
     '<a:Legi><a:DataVigoare>$data</a:DataVigoare><a:Emitent>$emitent</a:Emitent>'
     '<a:LinkHtml>http://legislatie.just.ro/Public/DetaliiDocument/155854$tip$numar</a:LinkHtml>'
@@ -47,7 +46,11 @@ void main() {
 
   group('cererea SOAP', () {
     test('câmpurile goale pleacă nil, în ordine alfabetică, cu tokenul', () {
-      final x = cerereCautare(const CerereLegislatie(text: 'a & b'), token: 'T', pagina: 2);
+      final x = cerereCautare(
+        const CerereLegislatie(text: 'a & b'),
+        token: 'T',
+        pagina: 2,
+      );
       expect(x, contains('<d:NumarPagina>2</d:NumarPagina>'));
       expect(x, contains('<d:RezultatePagina>20</d:RezultatePagina>'));
       expect(x, contains('<d:SearchAn i:nil="true"/>'));
@@ -73,19 +76,25 @@ void main() {
   });
 
   group('răspunsul', () {
-    test('se citesc actele, linkul trece pe https, HTML-ul din text dispare', () {
-      final acte = parseazaRaspunsCautare(_raspunsCautare([_lege()]));
-      expect(acte, hasLength(1));
-      final a = acte.single;
-      expect(a.tipAct, 'LEGE');
-      expect(a.numar, '85');
-      expect(a.an, 2014);
-      expect(a.denumireScurta, 'Lege nr. 85/2014');
-      expect(a.dataVigoare, DateTime(2014, 6, 28));
-      expect(a.linkHtml, 'https://legislatie.just.ro/Public/DetaliiDocument/155854LEGE85');
-      expect(a.text, isNot(contains('<b>')));
-      expect(a.text, contains('Insolvența debitorului x'));
-    });
+    test(
+      'se citesc actele, linkul trece pe https, HTML-ul din text dispare',
+      () {
+        final acte = parseazaRaspunsCautare(_raspunsCautare([_lege()]));
+        expect(acte, hasLength(1));
+        final a = acte.single;
+        expect(a.tipAct, 'LEGE');
+        expect(a.numar, '85');
+        expect(a.an, 2014);
+        expect(a.denumireScurta, 'Lege nr. 85/2014');
+        expect(a.dataVigoare, DateTime(2014, 6, 28));
+        expect(
+          a.linkHtml,
+          'https://legislatie.just.ro/Public/DetaliiDocument/155854LEGE85',
+        );
+        expect(a.text, isNot(contains('<b>')));
+        expect(a.text, contains('Insolvența debitorului x'));
+      },
+    );
 
     test('tokenul', () => expect(parseazaToken(_raspunsToken), 'abc-123'));
 
@@ -93,7 +102,10 @@ void main() {
       const fault =
           '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><s:Fault>'
           '<faultcode>s:Client</faultcode><faultstring>Token invalid</faultstring></s:Fault></s:Body></s:Envelope>';
-      expect(() => parseazaRaspunsCautare(fault), throwsA(isA<LegislatieException>()));
+      expect(
+        () => parseazaRaspunsCautare(fault),
+        throwsA(isA<LegislatieException>()),
+      );
     });
   });
 
@@ -107,8 +119,14 @@ void main() {
     });
 
     test('„oug 195/2002” și „O.U.G. 195/2002”', () {
-      expect(CerereLegislatie.dinText('oug 195/2002').tip, 'ORDONANTA DE URGENTA');
-      expect(CerereLegislatie.dinText('O.U.G. 195/2002').tip, 'ORDONANTA DE URGENTA');
+      expect(
+        CerereLegislatie.dinText('oug 195/2002').tip,
+        'ORDONANTA DE URGENTA',
+      );
+      expect(
+        CerereLegislatie.dinText('O.U.G. 195/2002').tip,
+        'ORDONANTA DE URGENTA',
+      );
       expect(CerereLegislatie.dinText('HG 1/2016').tip, 'HOTARARE');
     });
 
@@ -147,24 +165,39 @@ void main() {
     );
 
     test('tip: Ordonanță nu prinde și OUG', () {
-      final r = aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'ORDONANTA'}));
+      final r = aplicaFiltre(
+        acte,
+        const FiltreLegislatie(tipuri: {'ORDONANTA'}),
+      );
       expect(r.map((a) => a.numar), ['2']);
-      final oug = aplicaFiltre(acte, const FiltreLegislatie(tipuri: {'ORDONANTA DE URGENTA'}));
+      final oug = aplicaFiltre(
+        acte,
+        const FiltreLegislatie(tipuri: {'ORDONANTA DE URGENTA'}),
+      );
       expect(oug.map((a) => a.numar), ['195']);
     });
 
     test('emitent fără diacritice', () {
-      final r = aplicaFiltre(acte, const FiltreLegislatie(emitent: 'guvernul romaniei'));
+      final r = aplicaFiltre(
+        acte,
+        const FiltreLegislatie(emitent: 'guvernul romaniei'),
+      );
       expect(r, hasLength(2));
     });
 
     test('interval de ani și ordine', () {
       final r = aplicaFiltre(
         acte,
-        const FiltreLegislatie(anDe: 2002, ordine: OrdineLegislatie.celeMaiVechi),
+        const FiltreLegislatie(
+          anDe: 2002,
+          ordine: OrdineLegislatie.celeMaiVechi,
+        ),
       );
       expect(r.map((a) => a.numar), ['195', '85']);
-      final noi = aplicaFiltre(acte, const FiltreLegislatie(ordine: OrdineLegislatie.celeMaiNoi));
+      final noi = aplicaFiltre(
+        acte,
+        const FiltreLegislatie(ordine: OrdineLegislatie.celeMaiNoi),
+      );
       expect(noi.first.numar, '85');
     });
 
@@ -182,8 +215,13 @@ void main() {
     });
 
     test('OUG și cod de procedură', () {
-      final t = trimiteriDinObiect('contestaţie la executare (art. 712 C.proc.civ.) OUG 195/2002');
-      expect(t.map((x) => x.eticheta), ['OUG 195/2002', 'Codul de procedură civilă']);
+      final t = trimiteriDinObiect(
+        'contestaţie la executare (art. 712 C.proc.civ.) OUG 195/2002',
+      );
+      expect(t.map((x) => x.eticheta), [
+        'OUG 195/2002',
+        'Codul de procedură civilă',
+      ]);
       expect(t.last.cerere.numar, '134');
     });
 
@@ -248,7 +286,10 @@ void main() {
 
     test('textul articolului de copiat are sursa și fără note', () {
       final t = textArticol(b, 2, 'Lege nr. 287/2009');
-      expect(t, startsWith('Art. 1 - Izvoarele dreptului civil\n(1) Sunt izvoare'));
+      expect(
+        t,
+        startsWith('Art. 1 - Izvoarele dreptului civil\n(1) Sunt izvoare'),
+      );
       expect(t, isNot(contains('modificat')));
       expect(t, endsWith('(art. 1 din Lege nr. 287/2009)'));
     });
@@ -284,12 +325,15 @@ void main() {
         'în temeiul uzucapiunii, în folosul celui care l-a posedat timp de 10 ani.\n'
         'Art. 931. - Alte cazuri\n(1) Drepturile asupra unui imobil se dobândesc prin uzucapiune.';
 
-    test('termenul în titlul articolului: arată articolul și primul alineat', () {
-      final f = fragmentDinAct(text, 'uzucapiune')!;
-      expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
-      expect(f.text, startsWith('Dreptul de proprietate'));
-      expect(f.inceputTaiat, isFalse);
-    });
+    test(
+      'termenul în titlul articolului: arată articolul și primul alineat',
+      () {
+        final f = fragmentDinAct(text, 'uzucapiune')!;
+        expect(f.articol, 'Art. 930 · Uzucapiunea extratabulară');
+        expect(f.text, startsWith('Dreptul de proprietate'));
+        expect(f.inceputTaiat, isFalse);
+      },
+    );
 
     test('termenul în corp: fără „(1)”, tăiat la cuvinte întregi', () {
       final f = fragmentDinAct(text, 'posedat', latime: 20)!;
@@ -300,12 +344,17 @@ void main() {
       expect(f.text.split(' ').first, isNot(isEmpty));
     });
 
-    test('fără potrivire', () => expect(fragmentDinAct(text, 'divorț'), isNull));
+    test(
+      'fără potrivire',
+      () => expect(fragmentDinAct(text, 'divorț'), isNull),
+    );
   });
 
   group('titlul din card', () {
     ActNormativ act(String tip, String nr, String titlu) =>
-        parseazaRaspunsCautare(_raspunsCautare([_lege(tip: tip, numar: nr, titlu: titlu)])).single;
+        parseazaRaspunsCautare(
+          _raspunsCautare([_lege(tip: tip, numar: nr, titlu: titlu)]),
+        ).single;
 
     test('codul: nume scurt, data și „republicat” dedesubt', () {
       final t = titluPrezentare(
@@ -340,7 +389,11 @@ void main() {
       );
       expect(
         titluPrezentare(
-          act('HOTARARE', '700', 'HOTĂRÂRE nr. 700 din 4 iulie 2012 pentru modificarea normelor'),
+          act(
+            'HOTARARE',
+            '700',
+            'HOTĂRÂRE nr. 700 din 4 iulie 2012 pentru modificarea normelor',
+          ),
         ).principal,
         'Hotărârea pentru modificarea normelor',
       );
@@ -388,9 +441,33 @@ void main() {
       expect(r.last.numar, '2');
     });
 
+    test(
+      'căutarea din mai multe cuvinte alege un cuvânt rar pentru titluri',
+      () {
+        expect(cuvantPentruTitlu('codul urbanismului'), 'urbanism');
+        expect(cuvantPentruTitlu('Codul construcțiilor'), 'construc');
+        expect(cuvantPentruTitlu('insolvență'), isNull);
+        expect(cuvantPentruTitlu('legea de la'), isNull);
+        expect(
+          titluContineToate(
+            'CODUL amenajării teritoriului, urbanismului şi construcţiilor',
+            radaciniCautare('codul urbanismului'),
+          ),
+          isTrue,
+        );
+        expect(acteCunoscutePotrivite('codul urbanismului').first.numar, '169');
+      },
+    );
+
     test('potrivirea exactă', () {
-      final acte = parseazaRaspunsCautare(_raspunsCautare([_lege(tip: 'HOTARARE'), _lege()]));
-      final a = potrivireExacta(acte, const CerereLegislatie(numar: '85', an: 2014), 'LEGE');
+      final acte = parseazaRaspunsCautare(
+        _raspunsCautare([_lege(tip: 'HOTARARE'), _lege()]),
+      );
+      final a = potrivireExacta(
+        acte,
+        const CerereLegislatie(numar: '85', an: 2014),
+        'LEGE',
+      );
       expect(a?.tipAct, 'LEGE');
     });
   });
@@ -404,14 +481,17 @@ void main() {
     test('Word: arhivă cu documentul și articolele', () {
       final date = actDocx(act, b);
       final arhiva = ZipDecoder().decodeBytes(date);
-      final doc = utf8.decode(arhiva.findFile('word/document.xml')!.content as List<int>);
+      final doc = utf8.decode(
+        arhiva.findFile('word/document.xml')!.content as List<int>,
+      );
       expect(doc, contains('Art. 1'));
       expect(doc, contains('ăâîșț'));
       expect(numeFisierAct(act, 'docx'), 'Lege nr 85 2014.docx');
     });
 
     test('PDF cu fonturile aplicației', () async {
-      Uint8List f(String n) => File('assets/fonts/LiberationSerif-$n.ttf').readAsBytesSync();
+      Uint8List f(String n) =>
+          File('assets/fonts/LiberationSerif-$n.ttf').readAsBytesSync();
       final date = await actPdf(
         act,
         b,
@@ -442,23 +522,59 @@ void main() {
   });
 
   group('serviciul', () {
-    test('cere token o dată, apoi caută; cererea identică vine din memorie', () async {
-      final actiuni = <String>[];
+    test(
+      'cere token o dată, apoi caută; cererea identică vine din memorie',
+      () async {
+        final actiuni = <String>[];
+        final client = MockClient((r) async {
+          final a = r.headers['SOAPAction']!;
+          actiuni.add(a);
+          if (a.contains('GetToken')) return http.Response(_raspunsToken, 200);
+          expect(r.body, contains('<tokenKey>abc-123</tokenKey>'));
+          return http.Response.bytes(_utf8(_raspunsCautare([_lege()])), 200);
+        });
+        final s = LegislatieService.cuClient(client);
+        final p = await s.cauta(const CerereLegislatie(numar: '85', an: 2014));
+        expect(p.acte.single.numar, '85');
+        expect(p.maiSunt, isFalse);
+        await s.cauta(const CerereLegislatie(numar: '85', an: 2014));
+        await s.cauta(const CerereLegislatie(numar: '85', an: 2014), pagina: 2);
+        expect(actiuni.where((a) => a.contains('GetToken')), hasLength(1));
+        expect(actiuni.where((a) => a.contains('Search')), hasLength(2));
+      },
+    );
+
+    test('„codul urbanismului” găsește codul prin titluri', () async {
+      final cereri = <String>[];
       final client = MockClient((r) async {
-        final a = r.headers['SOAPAction']!;
-        actiuni.add(a);
-        if (a.contains('GetToken')) return http.Response(_raspunsToken, 200);
-        expect(r.body, contains('<tokenKey>abc-123</tokenKey>'));
-        return http.Response.bytes(_utf8(_raspunsCautare([_lege()])), 200);
+        if (r.headers['SOAPAction']!.contains('GetToken'))
+          return http.Response(_raspunsToken, 200);
+        cereri.add(r.body);
+        if (r.body.contains('<d:SearchTitlu>urbanism</d:SearchTitlu>')) {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(
+                  numar: '7',
+                  titlu: 'HOTĂRÂRE privind certificatul de urbanism',
+                ),
+                _lege(
+                  numar: '169',
+                  titlu: 'CODUL amenajării teritoriului, urbanismului şi construcţiilor',
+                ),
+              ]),
+            ),
+            200,
+          );
+        }
+        return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
       });
       final s = LegislatieService.cuClient(client);
-      final p = await s.cauta(const CerereLegislatie(numar: '85', an: 2014));
-      expect(p.acte.single.numar, '85');
-      expect(p.maiSunt, isFalse);
-      await s.cauta(const CerereLegislatie(numar: '85', an: 2014));
-      await s.cauta(const CerereLegislatie(numar: '85', an: 2014), pagina: 2);
-      expect(actiuni.where((a) => a.contains('GetToken')), hasLength(1));
-      expect(actiuni.where((a) => a.contains('Search')), hasLength(2));
+      final p = await s.cauta(
+        const CerereLegislatie(titlu: 'codul urbanismului'),
+      );
+      expect(p.acte.map((a) => a.numar), ['169']);
+      expect(cereri, hasLength(2));
     });
 
     test('la eroare reîncearcă o dată cu token nou', () async {
@@ -473,7 +589,8 @@ void main() {
         if (cautari == 1) return http.Response('', 500);
         return http.Response.bytes(_utf8(_raspunsCautare([_lege()])), 200);
       });
-      final p = await LegislatieService.cuClient(client).cauta(const CerereLegislatie(text: 'x'));
+      final p = await LegislatieService.cuClient(client)
+          .cauta(const CerereLegislatie(text: 'x'));
       expect(p.acte, hasLength(1));
       expect(tokenuri, 2);
     });
@@ -481,57 +598,73 @@ void main() {
     test('fără internet → mesaj clar', () async {
       final client = MockClient((_) async => throw Exception('offline'));
       await expectLater(
-        LegislatieService.cuClient(client).cauta(const CerereLegislatie(text: 'x')),
-        throwsA(isA<LegislatieException>().having((e) => e.mesaj, 'mesaj', contains('internet'))),
+        LegislatieService.cuClient(client)
+            .cauta(const CerereLegislatie(text: 'x')),
+        throwsA(
+          isA<LegislatieException>().having(
+            (e) => e.mesaj,
+            'mesaj',
+            contains('internet'),
+          ),
+        ),
       );
     });
   });
 
   group('ecranele', () {
-    testWidgets('sugestii, deschidere directă, mergi la articol și căutare în act', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      ActeSalvateService.instance.reseteaza();
-      final client = MockClient((r) async {
-        if (r.headers['SOAPAction']!.contains('GetToken')) return http.Response(_raspunsToken, 200);
-        return http.Response.bytes(_utf8(_raspunsCautare([_lege(tip: 'HOTARARE'), _lege()])), 200);
-      });
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: construiesteTema(),
-          home: LegislatieScreen(service: LegislatieService.cuClient(client)),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Coduri și legi uzuale'), findsOneWidget);
+    testWidgets(
+      'sugestii, deschidere directă, mergi la articol și căutare în act',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        ActeSalvateService.instance.reseteaza();
+        final client = MockClient((r) async {
+          if (r.headers['SOAPAction']!.contains('GetToken'))
+            return http.Response(_raspunsToken, 200);
+          return http.Response.bytes(
+            _utf8(_raspunsCautare([_lege(tip: 'HOTARARE'), _lege()])),
+            200,
+          );
+        });
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construiesteTema(),
+            home: LegislatieScreen(service: LegislatieService.cuClient(client)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Coduri și legi uzuale'), findsOneWidget);
 
-      await tester.tap(find.byType(TextField));
-      await tester.enterText(find.byType(TextField), 'codul civ');
-      await tester.pump();
-      expect(find.byType(Card), findsWidgets);
-      expect(find.text('Legea nr. 287/2009'), findsOneWidget);
+        await tester.tap(find.byType(TextField));
+        await tester.enterText(find.byType(TextField), 'codul civ');
+        await tester.pump();
+        expect(find.byType(Card), findsWidgets);
+        expect(find.text('Legea nr. 287/2009'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), 'Legea 85/2014 art. 2');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
-      await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'Legea 85/2014 art. 2');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 300)),
+        );
+        await tester.pumpAndSettle();
 
-      // Deschis direct actul exact (Legea, nu Hotărârea), la articolul 2.
-      expect(find.byType(ActNormativScreen), findsOneWidget);
-      expect(find.text('Lege nr. 85/2014'), findsOneWidget);
-      expect(find.text('Art. 2'), findsOneWidget);
-      expect(find.text('Cuprins'), findsOneWidget);
-      expect(find.text('PDF'), findsOneWidget);
+        // Deschis direct actul exact (Legea, nu Hotărârea), la articolul 2.
+        expect(find.byType(ActNormativScreen), findsOneWidget);
+        expect(find.text('Lege nr. 85/2014'), findsOneWidget);
+        expect(find.text('Art. 2'), findsOneWidget);
+        expect(find.text('Cuprins'), findsOneWidget);
+        expect(find.text('PDF'), findsOneWidget);
 
-      await tester.tap(find.text('Caută în act'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'insolventa');
-      await tester.pumpAndSettle();
-      expect(find.text('1/1'), findsOneWidget);
+        await tester.tap(find.text('Caută în act'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'insolventa');
+        await tester.pumpAndSettle();
+        expect(find.text('1/1'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Adaugă la favorite'));
-      await tester.pumpAndSettle();
-      expect(ActeSalvateService.instance.acte, hasLength(1));
-    });
+        await tester.tap(find.byTooltip('Adaugă la favorite'));
+        await tester.pumpAndSettle();
+        expect(ActeSalvateService.instance.acte, hasLength(1));
+      },
+    );
   });
 }
 
