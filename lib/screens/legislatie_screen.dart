@@ -975,6 +975,7 @@ class _CardAct extends StatelessWidget {
     final fragment = fragmentDinAct(act.text, termen);
     final titlu = titluPrezentare(act);
     final (culoare, fundal) = culoriTip(act.tipAct);
+    final aprobare = act.aprobatPrin;
     final meta = [
       if (act.emitent.isNotEmpty) act.emitent,
       if (d != null) 'în vigoare din ${_zi(d)}',
@@ -1055,6 +1056,33 @@ class _CardAct extends StatelessWidget {
                       fontSize: 12.5,
                       color: AppColors.onSurfaceVariant,
                     ),
+                  ),
+                ],
+                if (aprobare != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.verified_outlined,
+                          size: 15,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          'Aprobat prin ${aprobare.denumire}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 if (fragment != null) ...[

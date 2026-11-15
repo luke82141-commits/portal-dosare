@@ -54,6 +54,10 @@ class ActNormativ {
     return a == null ? '$tip nr. $nr' : '$tip nr. $nr/$a';
   }
 
+  /// Actul prin care a fost aprobat (la regulamente, norme, anexe):
+  /// nota „Aprobat prin ORDINUL nr. 600 din 8 februarie 2023” din antet.
+  AprobareAct? get aprobatPrin => aprobareDinText(text);
+
   /// Cheie stabilă pentru dubluri: linkul oficial, dacă există.
   String get cheie => linkHtml.isNotEmpty ? linkHtml : '$tipAct|$numar|$titlu';
 
@@ -66,6 +70,78 @@ class ActNormativ {
     'publicatie': publicatie,
     'linkHtml': linkHtml,
   };
+}
+
+/// Actul care a aprobat un regulament / o normă / o anexă.
+class AprobareAct {
+  /// „Ordinul”, „Hotărârea Guvernului”, „Decizia”.
+  final String tip;
+  final String numar;
+
+  /// „8 februarie 2023”, sau null când nota dă doar anul („nr. 273/1994”).
+  final String? data;
+  final int? an;
+
+  const AprobareAct({
+    required this.tip,
+    required this.numar,
+    this.data,
+    this.an,
+  });
+
+  /// „Ordinul nr. 600 din 8 februarie 2023”.
+  String get denumire => data != null
+      ? '$tip nr. $numar din $data'
+      : (an != null ? '$tip nr. $numar/$an' : '$tip nr. $numar');
+
+  /// „Ordinul nr. 600/2023”.
+  String get scurta => an != null ? '$tip nr. $numar/$an' : '$tip nr. $numar';
+}
+
+final _reAprobare = RegExp(
+  r'aprobat[ăe]?\s+prin\s+([A-Za-zĂÂÎȘŞȚŢăâîșşțţ][A-Za-zĂÂÎȘŞȚŢăâîșşțţ\s.,-]{1,120}?)\s+'
+  r'nr\.\s*([\d.]+(?:\s*/\s*[\w.]+)?)'
+  r'(?:\s+din\s+(\d{1,2}\s+[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ]+\s+(?:18|19|20)\d{2}))?',
+  caseSensitive: false,
+);
+
+/// Nota de aprobare din primele rânduri ale textului (după antet). Ignoră
+/// trimiterile din titlu („…, aprobat prin Ordinul nr. 133/2021 EMITENT”),
+/// care țin de actul modificat, nu de cel citit.
+AprobareAct? aprobareDinText(String text) {
+  if (text.isEmpty) return null;
+  final cap = text.length > 3000 ? text.substring(0, 3000) : text;
+  // Doar nota de sub antet („Notă: Aprobat prin …”) sau un text care începe
+  // chiar cu „Aprobat prin”; în titluri și în corp, „aprobat prin” e o
+  // trimitere la alt act.
+  final m = _reAprobare.allMatches(cap).where((m) {
+    final inainte = cap.substring(m.start < 40 ? 0 : m.start - 40, m.start);
+    return m.start < 15 ||
+        RegExp(
+          r'Not[ăa]\W*$',
+          caseSensitive: false,
+        ).hasMatch(inainte.trimRight());
+  }).firstOrNull;
+  if (m == null) return null;
+  var tip = m.group(1)!.replaceAll(RegExp(r'\s+'), ' ').trim();
+  tip = tip.replaceAll(RegExp(r'[,.]+$'), '');
+  tip = tip
+      .split(' ')
+      .map(
+        (w) => w == w.toUpperCase() && w.length > 1 ? _majusculaInitiala(w) : w,
+      )
+      .join(' ');
+  var numar = m.group(2)!.replaceAll(' ', '');
+  int? an;
+  final slash = RegExp(r'^([\d.]+)/((?:18|19|20)\d{2})$').firstMatch(numar);
+  if (slash != null) {
+    numar = slash.group(1)!;
+    an = int.parse(slash.group(2)!);
+  }
+  numar = numar.replaceAll(RegExp(r'\.$'), '');
+  final data = m.group(3)?.replaceAll(RegExp(r'\s+'), ' ');
+  if (data != null) an = int.tryParse(data.split(' ').last);
+  return AprobareAct(tip: tip, numar: numar, data: data, an: an);
 }
 
 String _majusculaInitiala(String s) {
