@@ -14,7 +14,8 @@ import '../theme/app_theme.dart';
 import 'dosar_iccj.dart';
 
 /// Foaia „Utilități” din bara de jos: unelte folosite mai rar, ținute în afara
-/// ecranelor principale. Cele de sub „PRO” vin cu abonamentul.
+/// ecranelor principale. Cele de sub „PRO” vor veni cu abonamentul;
+/// în perioada de lansare sunt gratuite pentru toți.
 Future<void> deschideUtilitati(BuildContext context) => showModalBottomSheet<void>(
   context: context,
   showDragHandle: true,
@@ -84,13 +85,25 @@ class _MeniuUtilitati extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(
-                'PRO',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.6,
-                  color: AppColors.accent,
+              child: Text.rich(
+                TextSpan(
+                  text: 'PRO',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                    color: AppColors.accent,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '  ·  gratuit în perioada de lansare',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

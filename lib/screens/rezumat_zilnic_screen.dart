@@ -225,11 +225,6 @@ class _Blocat extends StatelessWidget {
               'În fiecare dimineață, termenele zilei și ce s-a schimbat în dosare.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => ProService.instance.seteaza(true),
-              child: const Text('Activează Pro (test)'),
-            ),
           ],
         ),
       ),

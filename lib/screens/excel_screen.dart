@@ -213,11 +213,6 @@ class _Blocat extends StatelessWidget {
               'Situația dosarelor și a termenelor, într-un fișier Excel.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => ProService.instance.seteaza(true),
-              child: const Text('Activează Pro (test)'),
-            ),
           ],
         ),
       ),

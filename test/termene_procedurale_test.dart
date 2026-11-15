@@ -86,7 +86,7 @@ void main() {
   });
 
   testWidgets('Calculatorul arată ultima zi și explicația', (tester) async {
-    SharedPreferences.setMockInitialValues({'pro_activ': true});
+    SharedPreferences.setMockInitialValues({});
     await ProService.instance.incarca();
     await tester.pumpWidget(
       MaterialApp(theme: construiesteTema(), home: const CalculatorTermeneScreen()),

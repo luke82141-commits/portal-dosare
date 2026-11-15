@@ -413,11 +413,6 @@ class _Blocat extends StatelessWidget {
               'Calculează ultima zi pentru apel, recurs, întâmpinare și alte acte.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => ProService.instance.seteaza(true),
-              child: const Text('Activează Pro (test)'),
-            ),
           ],
         ),
       ),

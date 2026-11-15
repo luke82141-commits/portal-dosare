@@ -531,11 +531,6 @@ class _Blocat extends StatelessWidget {
               'Termene, dosare și soluții pe ani și luni, comparate cu anul trecut.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => ProService.instance.seteaza(true),
-              child: const Text('Activează Pro (test)'),
-            ),
           ],
         ),
       ),
