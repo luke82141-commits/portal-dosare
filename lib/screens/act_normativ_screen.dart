@@ -515,6 +515,8 @@ class _Unealta extends StatelessWidget {
   }
 }
 
+/// Prima pagină a actului, în același stil ca titlurile din text: eticheta
+/// aurie, titlul centrat, datele de identificare discret, dedesubt.
 class _AntetAct extends StatelessWidget {
   final ActNormativ act;
   final bool goala;
@@ -525,71 +527,64 @@ class _AntetAct extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = act.dataVigoare;
-    final randuri = [
-      ('Emitent', act.emitent),
-      ('Publicat în', act.publicatie),
+    final date = <(IconData, String)>[
+      if (act.emitent.isNotEmpty) (Icons.account_balance_outlined, act.emitent),
+      if (act.publicatie.isNotEmpty) (Icons.menu_book_outlined, act.publicatie),
       if (d != null)
         (
-          'În vigoare din',
-          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}',
+          Icons.event_available_outlined,
+          'În vigoare din ${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}',
         ),
-    ].where((r) => r.$2.trim().isNotEmpty).toList();
+    ];
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(AppRadius.card),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  act.denumireScurta.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accentContainer,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  act.titlu.isEmpty ? act.denumireScurta : act.titlu,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onPrimary,
-                  ),
-                ),
-                if (randuri.isNotEmpty) const SizedBox(height: 12),
-                for (final r in randuri)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '${r.$1}: ',
-                            style: TextStyle(color: AppColors.onPrimary.withValues(alpha: 0.7)),
-                          ),
-                          TextSpan(text: r.$2),
-                        ],
-                      ),
-                      style: const TextStyle(fontSize: 13, color: AppColors.onPrimary),
-                    ),
-                  ),
-              ],
+          Text(
+            act.denumireScurta.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              letterSpacing: 1.4,
+              fontWeight: FontWeight.w700,
+              color: AppColors.accent,
             ),
           ),
+          const SizedBox(height: 8),
+          SelectableText(
+            titluCurat(act.titlu.isEmpty ? act.denumireScurta : act.titlu),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (final (icon, text) in date)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: AppColors.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          Container(width: 56, height: 3, color: AppColors.accent.withValues(alpha: 0.5)),
           if (goala)
             Card(
-              margin: const EdgeInsets.only(top: 12),
+              margin: const EdgeInsets.only(top: 16),
               child: ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('Serviciul nu a trimis textul acestui act.'),

@@ -212,70 +212,44 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
   @override
   Widget build(BuildContext context) {
     final vizibile = _vizibile();
+    final areRezultate = _cerere != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Legislație')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         children: [
-          TextField(
+          _CasetaCautare(
             controller: _text,
-            focusNode: _focus,
-            textInputAction: TextInputAction.search,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _cautaDinBara(),
-            decoration: InputDecoration(
-              hintText: 'Codul civil art. 1357, Legea 85/2014, uzucapiune',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _text.text.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Șterge',
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        _text.clear();
-                        _focus.requestFocus();
-                        setState(() {});
-                      },
-                    ),
-            ),
+            focus: _focus,
+            doarTitlu: _doarTitlu,
+            onSchimbat: () => setState(() {}),
+            onCauta: _cautaDinBara,
+            onMod: (v) => setState(() => _doarTitlu = v),
           ),
           if (_aratSugestii) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _Sugestii(
               lista: sugestii(_text.text, recente: _recente),
               interogare: extrageArticol(_text.text).rest,
               onAlege: _aplica,
             ),
           ] else ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('În tot textul')),
-                      ButtonSegment(value: true, label: Text('Doar în titlu')),
-                    ],
-                    selected: {_doarTitlu},
-                    showSelectedIcon: false,
-                    onSelectionChanged: (s) => setState(() => _doarTitlu = s.first),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _BaraFiltre(
-              filtre: _filtre,
-              emitenti: emitentiDin(_acte),
-              onSchimbat: (f) => setState(() => _filtre = f),
-            ),
-            const SizedBox(height: 14),
+            if (areRezultate) ...[
+              const SizedBox(height: 12),
+              _BaraFiltre(
+                filtre: _filtre,
+                emitenti: emitentiDin(_acte),
+                onSchimbat: (f) => setState(() => _filtre = f),
+              ),
+            ],
+            const SizedBox(height: 16),
             ..._continut(vizibile),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Text(
               'Sursa: Portalul Legislativ al Ministerului Justiției (legislatie.just.ro). '
               'Textele au caracter informativ; forma oficială este cea publicată în Monitorul Oficial.',
-              style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.onSurfaceVariant),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11.5, height: 1.45, color: AppColors.onSurfaceVariant),
             ),
           ],
         ],
@@ -391,25 +365,22 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           final salvate = ActeSalvateService.instance.acte;
           if (salvate.isEmpty) return const SizedBox.shrink();
           return Padding(
-            padding: const EdgeInsets.only(bottom: 18),
+            padding: const EdgeInsets.only(bottom: 22),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AntetSectiune('Favorite'),
-                const SizedBox(height: 6),
+                const _TitluSectiune('Favorite'),
                 Card(
                   child: Column(
                     children: [
                       for (final (i, s) in salvate.indexed) ...[
-                        if (i > 0) const Divider(height: 1, indent: 56),
-                        ListTile(
-                          leading: const Icon(Icons.star_rounded, color: AppColors.accent),
-                          title: Text(
-                            s.denumire,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(s.titlu, maxLines: 2, overflow: TextOverflow.ellipsis),
-                          trailing: const Icon(Icons.chevron_right),
+                        if (i > 0) const Divider(height: 1, indent: 64),
+                        _RandLista(
+                          icon: Icons.star_rounded,
+                          culoare: AppColors.accent,
+                          fundal: AppColors.accentContainer,
+                          titlu: s.denumire,
+                          subtitlu: s.titlu,
                           onTap: () => _aplica(
                             SugestieLegislatie(
                               FelSugestie.actCunoscut,
@@ -431,38 +402,304 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         },
       ),
       if (_recente.isNotEmpty) ...[
-        AntetSectiune('Căutări recente', actiune: 'Șterge', onActiune: _stergeRecente),
-        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Expanded(child: _TitluSectiune('Căutări recente')),
+            TextButton(onPressed: _stergeRecente, child: const Text('Șterge')),
+          ],
+        ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             for (final r in _recente)
-              Pastila(
-                r,
-                icon: Icons.history,
-                onTap: () {
+              ActionChip(
+                avatar: const Icon(Icons.history, size: 16),
+                label: Text(r),
+                onPressed: () {
                   _text.text = r;
                   _cautaDinBara();
                 },
               ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
       ],
-      const AntetSectiune('Coduri și legi des folosite'),
-      const SizedBox(height: 6),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      const _TitluSectiune('Coduri și legi uzuale'),
+      LayoutBuilder(
+        builder: (context, c) {
+          final latime = (c.maxWidth - 10) / 2;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final a in coduri)
+                SizedBox(
+                  width: latime,
+                  child: _TileCod(act: a, onTap: () => _aplica(_sugestieAct(a))),
+                ),
+            ],
+          );
+        },
+      ),
+    ];
+  }
+}
+
+class _TitluSectiune extends StatelessWidget {
+  final String text;
+  const _TitluSectiune(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10, left: 2),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onSurface),
+    ),
+  );
+}
+
+/// Caseta de căutare: câmp alb, cu umbră fină, și alegerea „text / titlu”
+/// dedesubt, ca pe un motor de căutare.
+class _CasetaCautare extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focus;
+  final bool doarTitlu;
+  final VoidCallback onSchimbat;
+  final VoidCallback onCauta;
+  final ValueChanged<bool> onMod;
+
+  const _CasetaCautare({
+    required this.controller,
+    required this.focus,
+    required this.doarTitlu,
+    required this.onSchimbat,
+    required this.onCauta,
+    required this.onMod,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget mod(String text, bool valoare) {
+      final activ = doarTitlu == valoare;
+      return InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => onMod(valoare),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: activ ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: activ ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: focus.hasFocus ? AppColors.primary : AppColors.outline),
+      ),
+      child: Column(
         children: [
-          for (final a in coduri)
-            Pastila(a.nume, icon: Icons.menu_book_outlined, onTap: () => _aplica(_sugestieAct(a))),
+          TextField(
+            controller: controller,
+            focusNode: focus,
+            textInputAction: TextInputAction.search,
+            onChanged: (_) => onSchimbat(),
+            onSubmitted: (_) => onCauta(),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.fromLTRB(4, 16, 4, 12),
+              hintText: 'Lege, cod sau cuvinte cheie',
+              prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+              suffixIcon: controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Șterge',
+                      icon: const Icon(Icons.cancel, size: 20),
+                      onPressed: () {
+                        controller.clear();
+                        focus.requestFocus();
+                        onSchimbat();
+                      },
+                    ),
+            ),
+          ),
+          const Divider(height: 1, indent: 14, endIndent: 14),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+            child: Row(
+              children: [
+                const Text(
+                  'Caută în',
+                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                ),
+                const SizedBox(width: 6),
+                mod('Tot textul', false),
+                mod('Titluri', true),
+                const Spacer(),
+                IconButton.filled(
+                  tooltip: 'Caută',
+                  onPressed: onCauta,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size(40, 40),
+                  ),
+                  icon: const Icon(Icons.arrow_forward, size: 20),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-      const SizedBox(height: 18),
-      const _Sfaturi(),
-    ];
+    );
+  }
+}
+
+/// Rând de listă cu pictogramă într-un cerc colorat.
+class _RandLista extends StatelessWidget {
+  final IconData icon;
+  final Color culoare;
+  final Color fundal;
+  final String titlu;
+  final InlineSpan? titluBogat;
+  final String subtitlu;
+  final Widget? dreapta;
+  final VoidCallback onTap;
+
+  const _RandLista({
+    required this.icon,
+    required this.titlu,
+    required this.subtitlu,
+    required this.onTap,
+    this.titluBogat,
+    this.dreapta,
+    this.culoare = AppColors.primary,
+    this.fundal = AppColors.primaryContainer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: fundal, shape: BoxShape.circle),
+              child: Icon(icon, size: 19, color: culoare),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(
+                    titluBogat ?? TextSpan(text: titlu),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurface,
+                    ),
+                  ),
+                  if (subtitlu.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitlu,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (dreapta != null) ...[const SizedBox(width: 8), dreapta!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Culoarea fiecărui tip de act, ca să se recunoască dintr-o privire.
+(Color, Color) culoriTip(String tip) {
+  final t = fataDiacritice(tip).toUpperCase();
+  if (t.startsWith('ORDONANTA')) return (AppColors.accent, AppColors.accentContainer);
+  if (t.startsWith('HOTAR')) return (AppColors.success, AppColors.successContainer);
+  if (t.startsWith('ORDIN') || t.startsWith('DECIZI') || t.startsWith('NORM')) {
+    return (AppColors.warning, AppColors.warningContainer);
+  }
+  if (t.startsWith('CONSTITU')) return (AppColors.onPrimaryContainer, AppColors.primaryContainer);
+  return (AppColors.primary, AppColors.primaryContainer);
+}
+
+class _TileCod extends StatelessWidget {
+  final ActCunoscut act;
+  final VoidCallback onTap;
+
+  const _TileCod({required this.act, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final (culoare, fundal) = culoriTip(act.tip);
+    return Material(
+      color: AppColors.card,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          height: 96,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.outline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(color: fundal, borderRadius: BorderRadius.circular(6)),
+                child: Text(
+                  act.numar.isEmpty ? '1991' : '${act.numar}/${act.an}',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: culoare),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                act.nume,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 14, height: 1.25, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -476,7 +713,7 @@ class _Sugestii extends StatelessWidget {
   const _Sugestii({required this.lista, required this.interogare, required this.onAlege});
 
   IconData _icon(FelSugestie f) => switch (f) {
-    FelSugestie.actCunoscut => Icons.menu_book_outlined,
+    FelSugestie.actCunoscut => Icons.menu_book_rounded,
     FelSugestie.numar => Icons.tag,
     FelSugestie.text => Icons.search,
     FelSugestie.titlu => Icons.title,
@@ -488,40 +725,37 @@ class _Sugestii extends StatelessWidget {
     if (lista.isEmpty) return const SizedBox.shrink();
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'SUGESTII',
-                style: TextStyle(
-                  fontSize: 11,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accent,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          children: [
+            for (final (i, s) in lista.indexed) ...[
+              if (i > 0) const Divider(height: 1, indent: 64),
+              _RandLista(
+                icon: _icon(s.fel),
+                culoare:
+                    s.fel == FelSugestie.recenta ||
+                        s.fel == FelSugestie.titlu ||
+                        s.fel == FelSugestie.text
+                    ? AppColors.onSurfaceVariant
+                    : AppColors.primary,
+                fundal:
+                    s.fel == FelSugestie.recenta ||
+                        s.fel == FelSugestie.titlu ||
+                        s.fel == FelSugestie.text
+                    ? AppColors.surfaceVariant
+                    : AppColors.primaryContainer,
+                titlu: s.titlu,
+                titluBogat: TextSpan(children: _evidentiaza(s.titlu, interogare)),
+                subtitlu: s.subtitlu,
+                dreapta: s.deschideDirect
+                    ? const Icon(Icons.north_east, size: 18, color: AppColors.onSurfaceVariant)
+                    : null,
+                onTap: () => onAlege(s),
               ),
-            ),
-          ),
-          for (final (i, s) in lista.indexed) ...[
-            if (i > 0) const Divider(height: 1, indent: 56),
-            ListTile(
-              dense: true,
-              leading: Icon(_icon(s.fel), color: AppColors.primary),
-              title: Text.rich(
-                TextSpan(children: _evidentiaza(s.titlu, interogare)),
-                style: const TextStyle(fontSize: 15),
-              ),
-              subtitle: Text(s.subtitlu),
-              trailing: s.deschideDirect
-                  ? const Icon(Icons.north_east, size: 18, color: AppColors.onSurfaceVariant)
-                  : null,
-              onTap: () => onAlege(s),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -559,7 +793,7 @@ List<TextSpan> _evidentiaza(String text, String interogare) {
         text: text.substring(i, j),
         style: marcat[i]
             ? const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)
-            : null,
+            : const TextStyle(fontWeight: FontWeight.w400),
       ),
     );
     i = j;
@@ -604,47 +838,6 @@ class _IncarcareLegislatie extends StatelessWidget {
   }
 }
 
-class _Sfaturi extends StatelessWidget {
-  const _Sfaturi();
-
-  @override
-  Widget build(BuildContext context) {
-    Widget rand(String a, String b) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(a, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-          Expanded(
-            child: Text(b, style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant)),
-          ),
-        ],
-      ),
-    );
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Cum cauți', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 10),
-            rand('codul civ', 'sugestii în timp ce scrii; codurile după nume'),
-            rand('Legea 85/2014', 'actul exact, după tip, număr și an'),
-            rand('c. civ. art. 1357', 'deschide direct articolul'),
-            rand('OUG 195/2002', 'merge și cu OUG, OG, HG, Decret, Ordin'),
-            rand('uzucapiune', 'cuvinte din textul actelor'),
-            rand('Filtre', 'restrâng rezultatele după tip, an și emitent'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _CardAct extends StatelessWidget {
   final ActNormativ act;
   final String? articol;
@@ -670,116 +863,100 @@ class _CardAct extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = act.dataVigoare;
     final fragment = _fragment;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
+    final (culoare, fundal) = culoriTip(act.tipAct);
+    final meta = [
+      if (act.emitent.isNotEmpty) act.emitent,
+      if (d != null) 'în vigoare din ${_zi(d)}',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  StadiuChip.stadiu(act.denumireScurta),
-                  if (articol != null) ...[
-                    const SizedBox(width: 6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.card),
+              border: Border.all(color: AppColors.outline),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.accentContainer,
-                        borderRadius: BorderRadius.circular(999),
+                        color: fundal,
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'art. $articol',
+                        act.denumireScurta,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: culoare),
+                      ),
+                    ),
+                    if (articol != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '→ art. $articol',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.accent,
                         ),
                       ),
-                    ),
+                    ],
+                    const Spacer(),
+                    const Icon(Icons.chevron_right, size: 20, color: AppColors.onSurfaceVariant),
                   ],
-                  const Spacer(),
-                  const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text.rich(
-                TextSpan(
-                  children: _evidentiaza(
-                    act.titlu.isEmpty ? act.denumireScurta : act.titlu,
-                    termen,
+                ),
+                const SizedBox(height: 8),
+                Text.rich(
+                  TextSpan(
+                    children: _evidentiaza(
+                      titluCurat(act.titlu.isEmpty ? act.denumireScurta : act.titlu),
+                      termen,
+                    ),
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.onSurface,
                   ),
                 ),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15, height: 1.35, fontWeight: FontWeight.w600),
-              ),
-              if (fragment != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
-                  ),
-                  child: Text.rich(
+                if (fragment != null) ...[
+                  const SizedBox(height: 8),
+                  Text.rich(
                     TextSpan(children: _evidentiaza(fragment, termen)),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
-                      height: 1.4,
+                      height: 1.45,
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
-                ),
-              ],
-              if (act.emitent.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.account_balance_outlined,
-                      size: 14,
-                      color: AppColors.onSurfaceVariant,
+                ],
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant.withValues(alpha: 0.85),
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        act.emitent,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ],
-              if (act.publicatie.isNotEmpty || d != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.event_outlined, size: 14, color: AppColors.onSurfaceVariant),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        [
-                          if (act.publicatie.isNotEmpty) act.publicatie,
-                          if (d != null) 'în vigoare din ${_zi(d)}',
-                        ].join(' · '),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),

@@ -432,12 +432,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Coduri și legi des folosite'), findsOneWidget);
+      expect(find.text('Coduri și legi uzuale'), findsOneWidget);
 
       await tester.tap(find.byType(TextField));
       await tester.enterText(find.byType(TextField), 'codul civ');
       await tester.pump();
-      expect(find.text('SUGESTII'), findsOneWidget);
+      expect(find.byType(Card), findsWidgets);
       expect(find.text('Legea nr. 287/2009'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'Legea 85/2014 art. 2');

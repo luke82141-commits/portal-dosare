@@ -910,3 +910,7 @@ class ActeSalvateService extends ChangeNotifier {
     return !salvat;
   }
 }
+
+/// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”).
+String titluCurat(String titlu) =>
+    titlu.replaceAll(RegExp(r'\*+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
