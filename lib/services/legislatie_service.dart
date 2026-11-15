@@ -89,6 +89,10 @@ class CerereLegislatie {
   /// 287/2009 a intrat în vigoare în 2011); serviciul filtrează după el.
   final int? anVigoare;
 
+  /// Cuvintele de după număr („legea 307 incendii” → „incendii”): actele
+  /// cu numărul cerut care le au în titlu vin primele.
+  final String cuvinte;
+
   const CerereLegislatie({
     this.text = '',
     this.titlu = '',
@@ -96,6 +100,7 @@ class CerereLegislatie {
     this.an,
     this.tip,
     this.anVigoare,
+    this.cuvinte = '',
   });
 
   bool get goala =>
@@ -111,6 +116,12 @@ class CerereLegislatie {
       r'(?:\s*/\s*|\s+din\s+|\s+)(?<an>(?:18|19|20)\d{2})$',
       caseSensitive: false,
     ).firstMatch(s);
+    final tipBrut = m?.namedGroup('tip')?.trim() ?? '';
+    if (m != null && tipBrut.isNotEmpty && tipDinAbreviere(tipBrut) == null) {
+      // „apararea impotriva incendiilor 307 2006”: cuvintele nu sunt un tip.
+      final libera = _dinCuvinte(s);
+      if (libera != null) return libera;
+    }
     if (m != null) {
       final tip = tipDinAbreviere(m.namedGroup('tip') ?? '');
       return (
@@ -134,7 +145,107 @@ class CerereLegislatie {
         tip: tipFaraAn,
       );
     }
+    // „legea 307 incendii”, „legea 307/2006 incendii”: tip, număr, poate an,
+    // apoi cuvinte din titlu.
+    final g = RegExp(
+      r'^(?<tip>[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ\. ]+?)\s*(?:nr\.?\s*)?(?<nr>\d{1,5})'
+      r'(?:\s*/\s*(?<an>(?:18|19|20)\d{2})|\s+din\s+(?<an2>(?:18|19|20)\d{2}))?'
+      r'\s+(?<rest>[^\d\s][\s\S]*)$',
+      caseSensitive: false,
+    ).firstMatch(s);
+    final tipCuvinte = g == null ? null : tipDinAbreviere(g.namedGroup('tip')!);
+    if (tipCuvinte != null) {
+      final an = g!.namedGroup('an') ?? g.namedGroup('an2');
+      return (
+        cerere: CerereLegislatie(
+          numar: g.namedGroup('nr')!,
+          an: an == null ? null : int.parse(an),
+          tip: tipCuvinte,
+          cuvinte: g.namedGroup('rest')!.trim(),
+        ),
+        tip: tipCuvinte,
+      );
+    }
+    final libera = _dinCuvinte(s);
+    if (libera != null) return libera;
     return (cerere: CerereLegislatie(text: s), tip: null);
+  }
+
+  /// Ordine liberă: „incendii legea 307”, „307 2006 incendii”, „hg 1 2020”.
+  /// Caută un număr de act oriunde în frază (nu după „art.”/„alin.”), tipul
+  /// și anul, dacă apar; restul cuvintelor ordonează rezultatele.
+  static ({CerereLegislatie cerere, String? tip})? _dinCuvinte(String s) {
+    var t = fataDiacritice(s.toLowerCase());
+    String? tip;
+    final oug = RegExp(r'\bordonant[ae]i? de urgenta\b|\bo\.?u\.?g\.?(?=\s|$)');
+    if (oug.hasMatch(t)) {
+      tip = 'ORDONANTA DE URGENTA';
+      t = t.replaceAll(oug, ' ');
+    }
+    final cuvinte = t
+        .split(RegExp(r'[\s,;]+'))
+        .where((c) => c.isNotEmpty)
+        .toList();
+    final reNumar = RegExp(
+      r'^(?:nr\.?)?(\d{1,5})(?:/((?:18|19|20)\d{2}))?\.?$',
+    );
+    final reAn = RegExp(r'^(18|19|20)\d{2}$');
+    final numere = [
+      for (var i = 0; i < cuvinte.length; i++)
+        if (reNumar.hasMatch(cuvinte[i]) &&
+            !RegExp(r'^(art|alin|lit|pct|articolul|alineatul)\.?$')
+                .hasMatch(i > 0 ? cuvinte[i - 1] : ''))
+          i,
+    ];
+    if (numere.isEmpty) return null;
+    // Un an singur („codul fiscal 2015”) nu e număr de act.
+    final iNumar = numere.firstWhere(
+      (i) =>
+          !reAn.hasMatch(reNumar.firstMatch(cuvinte[i])![1]!) ||
+          reNumar.firstMatch(cuvinte[i])![2] != null,
+      orElse: () => numere.length > 1 ? numere.first : -1,
+    );
+    if (iNumar < 0) return null;
+    // „codul civil 2”: fără tip și fără an, un număr scurt e prea vag.
+    final faraAn =
+        reNumar.firstMatch(cuvinte[iNumar])![2] == null &&
+        !cuvinte.any(reAn.hasMatch);
+    if (tip == null &&
+        faraAn &&
+        reNumar.firstMatch(cuvinte[iNumar])![1]!.length < 3 &&
+        !cuvinte.any(
+          (c) => tipDinAbreviere(c) != null && tipDinAbreviere(c) != 'COD',
+        )) {
+      return null;
+    }
+    final m = reNumar.firstMatch(cuvinte[iNumar])!;
+    final numar = m[1]!;
+    int? an = m[2] == null ? null : int.parse(m[2]!);
+    final rest = <String>[];
+    for (var i = 0; i < cuvinte.length; i++) {
+      if (i == iNumar) continue;
+      final c = cuvinte[i];
+      if (an == null && reAn.hasMatch(c)) {
+        an = int.parse(c);
+        continue;
+      }
+      if (c == 'nr' || c == 'nr.' || c == 'din') continue;
+      final tipCuvant = tipDinAbreviere(c);
+      if (tip == null && tipCuvant != null && tipCuvant != 'COD') {
+        tip = tipCuvant;
+        continue;
+      }
+      if (!_cuvinteComune.contains(c)) rest.add(c);
+    }
+    return (
+      cerere: CerereLegislatie(
+        numar: numar,
+        an: an,
+        tip: tip,
+        cuvinte: rest.join(' '),
+      ),
+      tip: tip,
+    );
   }
 }
 
@@ -372,7 +483,11 @@ class LegislatieService {
     final cuvinte = pagina <= 1 && cerere.an == null
         ? cuvinteCheie(expresie)
         : const <String>[];
-    if (cuvinte.isEmpty) return _cautaPagina(cerere, pagina);
+    // Un singur cuvânt căutat deja în titluri nu are ce completa.
+    final singurCuvantInTitlu =
+        cerere.titlu.isNotEmpty && radaciniCautare(expresie).length <= 1;
+    if (cuvinte.isEmpty || singurCuvantInTitlu)
+      return _cautaPagina(cerere, pagina);
 
     PaginaLegislatie? principala;
     Object? eroare;
@@ -381,27 +496,45 @@ class LegislatieService {
     } catch (e) {
       eroare = e;
     }
+    // Cuvintele cheie, în orice ordine: aducem titlurile care conțin fiecare
+    // cuvânt rar și le păstrăm pe cele care au cele mai multe dintre
+    // cuvintele căutate; ordinea finală o dă relevanța.
     final radacini = radaciniCautare(expresie);
+    final minim = radacini.length <= 2
+        ? radacini.length
+        : (radacini.length * 0.6).ceil();
+    int potriviri(ActNormativ a) {
+      final t = _norm(a.titlu);
+      return radacini.where(t.contains).length;
+    }
+
     final dinTitluri = <ActNormativ>[];
+    final vazuteTitluri = <String>{};
     try {
-      final incercari = [
+      final incercari = <String>{
         ...cuvinte,
-        radacinaCuvant(fataDiacritice(cuvinte.first)),
-      ];
-      for (final cuvant in incercari.toSet()) {
+        for (final c in cuvinte) radacinaCuvant(fataDiacritice(c)),
+      };
+      for (final cuvant in incercari) {
         for (var p = 1; p <= 2; p++) {
           final r = await _cautaPagina(CerereLegislatie(titlu: cuvant), p);
           dinTitluri.addAll(
-            r.acte.where((a) => titluContineToate(a.titlu, radacini)),
+            r.acte.where(
+              (a) => potriviri(a) >= minim && vazuteTitluri.add(a.cheie),
+            ),
           );
           if (!r.maiSunt) break;
         }
-        if (dinTitluri.isNotEmpty) break;
+        final complete = dinTitluri
+            .where((a) => potriviri(a) == radacini.length)
+            .length;
+        if (complete >= 3) break;
       }
     } catch (_) {
       // Căutarea suplimentară e un bonus; dacă pică, rămâne cea principală.
     }
     if (principala == null && dinTitluri.isEmpty) throw eroare!;
+    dinTitluri.sort((x, y) => potriviri(y).compareTo(potriviri(x)));
     final vazute = <String>{};
     final acte = [
       ...dinTitluri,
@@ -442,8 +575,13 @@ class LegislatieService {
       if (!r.maiSunt) break;
     }
 
+    final radacini = radaciniCautare(c.cuvinte);
+    int cuCuvinte(ActNormativ a) =>
+        radacini.isNotEmpty && titluContineToate(a.titlu, radacini) ? 1 : 0;
     final potrivite = toate.where(potrivit).toList()
       ..sort((x, y) {
+        final w = cuCuvinte(y).compareTo(cuCuvinte(x));
+        if (w != 0) return w;
         // Cele mai noi întâi; la același act, forma republicată.
         final a = (y.an ?? 0).compareTo(x.an ?? 0);
         if (a != 0) return a;
@@ -931,14 +1069,17 @@ List<SugestieLegislatie> sugestii(
       SugestieLegislatie(
         FelSugestie.numar,
         '${tip == null ? 'Actul' : etichetaTip(tip)} nr. ${nr.cerere.numar}'
-        '${nr.cerere.an == null ? '' : '/${nr.cerere.an}'}$faraArt',
+        '${nr.cerere.an == null ? '' : '/${nr.cerere.an}'}'
+        '${nr.cerere.cuvinte.isEmpty ? '' : ' · ${nr.cerere.cuvinte}'}$faraArt',
         nr.cerere.an == null
             ? 'Toate actele cu acest număr, din toți anii'
             : 'Caută actul exact',
         nr.cerere,
         tip: tip,
         articol: articol,
-        deschideDirect: tip != null && nr.cerere.an != null,
+        deschideDirect:
+            tip != null &&
+            (nr.cerere.an != null || nr.cerere.cuvinte.isNotEmpty),
       ),
     );
   }
@@ -1089,21 +1230,17 @@ bool titluContineToate(String titlu, List<String> radacini) {
 /// cele mai lungi două cuvinte necomune, așa cum au fost scrise (serviciul
 /// nu ține cont de diacritice și majuscule). Gol când nu e cazul.
 List<String> cuvinteCheie(String interogare) {
-  final cuvinte = interogare
-      .toLowerCase()
-      .split(RegExp(r'[^a-zăâîșşțţ0-9]+'))
-      .where((c) => c.isNotEmpty)
-      .toList();
-  if (cuvinte.length < 2) return const [];
   final rare =
-      cuvinte
+      interogare
+          .toLowerCase()
+          .split(RegExp(r'[^a-zăâîșşțţ0-9]+'))
           .where(
-            (c) => !_cuvinteComune.contains(fataDiacritice(c)) && c.length >= 5,
+            (c) => c.length >= 4 && !_cuvinteComune.contains(fataDiacritice(c)),
           )
           .toSet()
           .toList()
         ..sort((a, b) => b.length.compareTo(a.length));
-  return rare.take(2).toList();
+  return rare.take(3).toList();
 }
 
 /// Titlul după care căutăm un act cu număr: „LEGE nr. 307 din”. La tipurile
@@ -1185,6 +1322,10 @@ ActNormativ? potrivireExacta(
           c.numar.replaceAll('.', '').trim())
         continue;
       if (c.an != null && a.an != c.an) continue;
+      if (c.cuvinte.isNotEmpty &&
+          !titluContineToate(a.titlu, radaciniCautare(c.cuvinte))) {
+        continue;
+      }
       return a;
     }
   }

@@ -98,10 +98,12 @@ List<String>? randuriPortal(String text) {
     final bucati = c
         .split(RegExp(r'[\s\u00a0]+\.\.\.(?=[\s\u00a0]|$)|[─━]{3,}|-{6,}'))
         .expand(
-          // Etichetele de alineat și literă vin după 2+ spații.
+          // Etichetele de alineat, punct („I.”, „1.”) și literă vin după 2+
+          // spații sau după „:” / „;”.
           (b) => b.split(
             RegExp(
-              r'[ \t\u00a0]{2,}(?=\(\d+(?:\^\d+)?\)[\s\u00a0]|[a-z]{1,2}(?:\^\d+)?\)[\s\u00a0])',
+              r'(?:[ \t\u00a0]{2,}|(?<=[:;])[ \t\u00a0]+)'
+              r'(?=(?:\(\d+(?:\^\d+)?\)|[a-z]{1,2}(?:\^\d+)?\)|[IVX]{1,4}\.|\d{1,3}(?:\^\d+)?\.)[\s\u00a0])',
             ),
           ),
         );
@@ -192,7 +194,9 @@ String _preproceseaza(String text) {
     },
   );
   return dupaAlineate.replaceAllMapped(
-    RegExp(r'([:;])[ \t\u00a0]+([a-z]{1,2}\)[ \u00a0])'),
+    RegExp(
+      r'([:;])[ \t\u00a0]+([a-z]{1,2}\)[ \u00a0]|[IVX]{1,4}\.[ \u00a0]|\d{1,3}\.[ \u00a0])',
+    ),
     (m) => '${m[1]}\n${m[2]}',
   );
 }
@@ -377,6 +381,19 @@ List<BlocAct> _blocuriCorp(String l, String? articol) {
   }
   if (_reNota.hasMatch(l))
     return [BlocAct(TipBloc.nota, text: l, articol: articol)];
+  // Punctele cu cifre romane („I. cu amendă de la 500 lei la 1.000 lei:”)
+  // grupează literele de sub ele, ca un alineat.
+  final roman = RegExp(r'^([IVX]{1,4}\.)\s+(.+)$').firstMatch(l);
+  if (roman != null && articol != null) {
+    return [
+      BlocAct(
+        TipBloc.alineat,
+        eticheta: roman[1]!,
+        text: roman[2]!.trim(),
+        articol: articol,
+      ),
+    ];
+  }
   final lit = _reLitera.firstMatch(l);
   if (lit != null && articol != null) {
     return [
