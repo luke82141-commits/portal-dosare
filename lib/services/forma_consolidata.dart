@@ -14,6 +14,12 @@ import 'legislatie_service.dart';
 
 const _baza = 'https://legislatie.just.ro';
 
+/// Portalul refuză (403) cererile cu identificarea implicită a clienților
+/// HTTP; cu una de browser răspunde normal (verificat 15.11.2026).
+const _antetBrowser = {
+  'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36',
+};
+
 /// Id-ul actului din linkul lui: „.../Public/DetaliiDocument/73657” → „73657”.
 String? idDinLink(String link) =>
     RegExp(r'DetaliiDocument(?:Afis)?/(\d+)').firstMatch(link)?.group(1);
@@ -246,7 +252,7 @@ Modificare? modificareDinText(String text, {String? idAct}) {
   final verb = m.group(5)!.toLowerCase();
   final tip = verb.startsWith('modificat')
       ? TipModificare.modificat
-      : verb.startsWith('completat')
+      : verb.startsWith('completat') || verb.startsWith('introdus')
       ? TipModificare.completat
       : verb.startsWith('abrogat')
       ? TipModificare.abrogat
@@ -303,6 +309,10 @@ class FormaConsolidata {
   /// Textul simplu, pentru copiere și căutare.
   String get textSimplu => blocuri.map((b) => b.textComplet).join('\n');
 }
+
+final _reNotaVeche = RegExp(
+  r'^\*{0,4}\)?\s*(?:Art\.|Articolul|Alin\.|Alineatul|Lit\.|Litera|Literele|Pct\.|Punctul|Partea|Titlul|Capitolul|Sec[țţ]iunea)[^\n]{0,200}?\b(?:a|au)\s+(?:fost|revenit)\b',
+);
 
 class _Constructor {
   final blocuri = <BlocAct>[];
@@ -404,14 +414,31 @@ class _Constructor {
         final corp = n.copilCu('${cls}_BDY');
         final t = _TextInline();
         if (corp != null) _inline(corp, t);
-        final g = t.gata();
-        final roman = RegExp(r'^[IVXLC]+\.$').hasMatch(ttl);
+        var g = t.gata();
+        var eticheta = ttl;
+        // Formele vechi au eticheta în text: „g) cererile pentru ...”.
+        if (eticheta.isEmpty && cls != 'S_LIN') {
+          final e = RegExp(r'^([a-z]{1,2}(?:\^\d+)?\)|\d{1,3}(?:\^\d+)?\.)\s+')
+              .firstMatch(g.text);
+          if (e != null) {
+            eticheta = e.group(1)!;
+            final n = e.end;
+            g = (
+              text: g.text.substring(n),
+              legaturi: [
+                for (final l in g.legaturi)
+                  if (l.start >= n) Legatura(l.start - n, l.end - n, l.idAct),
+              ],
+            );
+          }
+        }
+        final roman = RegExp(r'^[IVXLC]+\.$').hasMatch(eticheta);
         blocuri.add(
           BlocAct(
             cls == 'S_ALN' || (cls == 'S_PCT' && roman)
                 ? TipBloc.alineat
                 : TipBloc.litera,
-            eticheta: ttl.isEmpty && cls == 'S_LIN' ? '–' : ttl,
+            eticheta: eticheta.isEmpty && cls == 'S_LIN' ? '–' : eticheta,
             text: g.text,
             articol: articol,
             actualizat: n.albastru,
@@ -430,10 +457,14 @@ class _Constructor {
                 idAct: g.legaturi.isEmpty ? null : g.legaturi.first.idAct,
               )
             : null;
+        // Formele vechi: linii „------” și note „Art. 2 a fost modificat de ...”.
+        if (RegExp(r'^-{3,}$').hasMatch(g.text)) return;
+        final notaVeche =
+            mod == null && g.text.length < 700 && _reNotaVeche.hasMatch(g.text);
         if (g.text.isNotEmpty) {
           blocuri.add(
             BlocAct(
-              mod != null ? TipBloc.nota : TipBloc.text,
+              mod != null || notaVeche ? TipBloc.nota : TipBloc.text,
               text: g.text,
               articol: articol,
               modificare: mod,
@@ -660,11 +691,11 @@ const _tipuriPortal = {
 /// „ORD DE URGENTA        80 30/06/2021” → „OUG nr. 80/2021”.
 String denumireActScurta(String act) {
   final a = act.replaceAll(RegExp(r'\s+'), ' ').trim();
-  final m = RegExp(r'^(.+?) (\d+) (\d{2})/(\d{2})/(\d{4})$').firstMatch(a);
+  final m = RegExp(r'^(.+?)(?: (\d+))? (\d{2})/(\d{2})/(\d{4})$').firstMatch(a);
   if (m == null) return a;
   final tip = m.group(1)!.toUpperCase();
   final nume = _tipuriPortal[tip] ?? _capitalizeaza(tip);
-  if (m.group(2) == '0')
+  if ((m.group(2) ?? '0') == '0')
     return '$nume din ${m.group(3)}.${m.group(4)}.${m.group(5)}';
   return '$nume nr. ${m.group(2)}/${m.group(5)}';
 }
@@ -741,9 +772,10 @@ List<ActiuneSuferita> actiuniDinForma(FormaConsolidata f) {
   for (final b in f.blocuri) {
     final m = b.modificare;
     if (m == null) continue;
-    final art = RegExp(r'Articolul\s+(\d+(?:\^\d+)?)')
-        .firstMatch(m.element)
-        ?.group(1);
+    final art = RegExp(
+      r'(?:Articolul|\bart\.)\s*(\d+(?:\^\d+)?)',
+      caseSensitive: false,
+    ).firstMatch(m.element)?.group(1);
     final sectiune = art != null
         ? 'ART. $art'
         : m.element.startsWith('Titlul actului')
@@ -833,7 +865,7 @@ class FormaConsolidataService {
   Future<FormaConsolidata?> forma(String id) async {
     if (_forme.containsKey(id)) return _forme[id];
     final r = await _client
-        .get(Uri.parse(linkAct(id)))
+        .get(Uri.parse(linkAct(id)), headers: _antetBrowser)
         .timeout(const Duration(seconds: 40));
     if (r.statusCode != 200) {
       throw Exception('Portalul legislativ a răspuns cu ${r.statusCode}.');
@@ -852,6 +884,7 @@ class FormaConsolidataService {
         .post(
           Uri.parse('$_baza/Public/actiuniSuferite'),
           headers: {
+            ..._antetBrowser,
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
           },
           body: 'contor=$id',

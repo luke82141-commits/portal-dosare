@@ -1084,7 +1084,13 @@ class _CardStare extends StatelessWidget {
       formaText = formaInitiala
           ? 'Afișez forma inițială, din Monitorul Oficial.'
           : [
-              d == null ? 'Text la zi' : 'Text la zi, consolidat la ${_zi(d)}',
+              abrogat
+                  ? (d == null
+                        ? 'Ultima formă consolidată'
+                        : 'Ultima formă, consolidată la ${_zi(d)}')
+                  : d == null
+                  ? 'Text la zi'
+                  : 'Text la zi, consolidat la ${_zi(d)}',
               if (n > 0)
                 '$n ${n == 1 ? 'modificare marcată' : 'modificări marcate'} în text',
             ].join(' · ');
@@ -1137,7 +1143,8 @@ class _CardStare extends StatelessWidget {
                     text: abrogatDe.denumireAct,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  if (abrogatDe.data != null)
+                  if (abrogatDe.data != null &&
+                      !abrogatDe.denumireAct.contains(_zi(abrogatDe.data!)))
                     TextSpan(text: ' din ${_zi(abrogatDe.data!)}'),
                   const TextSpan(text: '.'),
                 ],

@@ -44,7 +44,7 @@ class BlocAct {
 
   /// „Abrogat.”, „Abrogată.”: elementul nu mai e în vigoare.
   bool get abrogat => RegExp(
-    r'^\(?abrogat[ăa]?\.?\)?$',
+    r'^\(?abrogat[ăa]?[.;]?\)?$',
     caseSensitive: false,
   ).hasMatch(text.trim());
 

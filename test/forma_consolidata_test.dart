@@ -116,6 +116,44 @@ void main() {
       expect(f.blocuri.first.modificare!.element, 'Titlul actului normativ');
     });
 
+    test('forma veche (CPC 1865): articole, litere și note', () {
+      final f = formaDinHtml(fixture('cpc1865_consolidat.html'))!;
+      expect(
+        f.titlu,
+        startsWith('CODUL DE PROCEDURĂ CIVILĂ din 9 septembrie 1865'),
+      );
+      expect(f.dataConsolidare, DateTime(2013, 1, 31));
+      final b = f.blocuri;
+      expect(b.where((x) => x.tip == TipBloc.articol).length, greaterThan(700));
+      final i = indiceArticol(b, '2')!;
+      final a = b.skip(i).firstWhere((x) => x.tip == TipBloc.litera);
+      expect(a.eticheta, 'a)');
+      expect(a.abrogat, isTrue);
+      expect(
+        b.where(
+          (x) => x.tip == TipBloc.nota && x.text.startsWith('Pct. 2 al art. 1'),
+        ),
+        isNotEmpty,
+      );
+      expect(b.where((x) => RegExp(r'^-{3,}$').hasMatch(x.text)), isEmpty);
+    });
+
+    test('Legea 50/1991: abrogată de Codul din 2026', () {
+      final f = formaDinHtml(fixture('abrogat_1515.html'))!;
+      expect(f.titlu, 'LEGE nr. 50 din 29 iulie 1991 (**republicată**)');
+      final s = StareAct(actiuniDinJson(fixture('actiuni_1515.json')));
+      expect(s.abrogat, isTrue);
+      expect(s.abrogatDe!.idAct, '313329');
+      expect(s.abrogatDe!.denumireAct, 'Codul din 05.08.2026');
+      final ist = actiuniDinForma(f);
+      expect(ist.first.sectiune, 'ART. 1');
+      expect(
+        ist.where((a) => a.operatie == 'COMPLETAT DE'),
+        isNotEmpty,
+        reason: '„a fost introdus” e o completare',
+      );
+    });
+
     test('pagină fără act: null', () {
       expect(formaDinHtml('<html><body>Eroare</body></html>'), isNull);
     });
