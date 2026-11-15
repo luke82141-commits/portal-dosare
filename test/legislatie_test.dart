@@ -372,6 +372,58 @@ void main() {
       );
     });
 
+    test('puncte cu cifre romane și litere după „:”', () {
+      const t =
+          'x\n\t\t\t\t + \n\t\t\t  Articolul 45     Constituie contravenţii următoarele fapte şi se '
+          'sancţionează după cum urmează: I. cu amendă de la 500 lei la 1.000 lei:  a)    '
+          'nerespectarea obligaţiilor;    ...     b)    neasigurarea mijloacelor;    ...    '
+          'II. cu amendă de la 1.000 lei la 2.500 lei: a) neîntocmirea planului; b) altceva.   ...   ';
+      final b = structureazaAct(t);
+      final a = blocuriArticol(b, indiceArticol(b, '45')!);
+      expect(a.map((x) => x.eticheta), [
+        'Art. 45',
+        '',
+        'I.',
+        'a)',
+        'b)',
+        'II.',
+        'a)',
+        'b)',
+      ]);
+      expect(
+        a[1].text,
+        'Constituie contravenţii următoarele fapte şi se sancţionează după cum urmează:',
+      );
+      expect(a[2].text, 'cu amendă de la 500 lei la 1.000 lei:');
+      expect(a[2].tip, TipBloc.alineat);
+    });
+
+    test('„legea 307 incendii”: tip, număr și cuvinte din titlu', () {
+      final d = CerereLegislatie.dinText('legea 307 incendii');
+      expect(d.cerere.numar, '307');
+      expect(d.cerere.an, isNull);
+      expect(d.cerere.cuvinte, 'incendii');
+      expect(d.tip, 'LEGE');
+      final e = CerereLegislatie.dinText('Legea nr. 307/2006 incendii');
+      expect(e.cerere.an, 2006);
+      final acte = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(
+            numar: '307',
+            id: '1',
+            titlu: 'LEGE nr. 307 din 5 decembrie 2024 privind un centru',
+          ),
+          _lege(
+            numar: '307',
+            id: '2',
+            titlu: 'LEGE nr. 307 din 12 iulie 2006 privind apărarea împotriva incendiilor',
+          ),
+        ]),
+      );
+      expect(potrivireExacta(acte, d.cerere, d.tip)?.an, 2006);
+      expect(sugestii('legea 307 incendii').first.deschideDirect, isTrue);
+    });
+
     test('emitent cu „?” și titlu cu antet', () {
       expect(emitentReparat('Pre?edintele României'), 'Președintele României');
       expect(
@@ -784,54 +836,51 @@ void main() {
       expect(cereri, hasLength(2));
     });
 
-    test(
-      'Codul civil: după titlu, republicat întâi',
-      () async {
-        final cereri = <String>[];
-        final client = MockClient((r) async {
-          if (r.headers['SOAPAction']!.contains('GetToken')) {
-            return http.Response(_raspunsToken, 200);
-          }
-          cereri.add(r.body);
-          if (r.body.contains(
-                '<d:SearchTitlu>LEGE nr. 287 din</d:SearchTitlu>',
-              ) &&
-              r.body.contains('<d:SearchAn>2009</d:SearchAn>')) {
-            return http.Response.bytes(
-              _utf8(
-                _raspunsCautare([
-                  _lege(
-                    numar: '287',
-                    data: '2011-10-01T00:00:00',
-                    titlu: '﻿   LEGE nr. 287 din 17 iulie 2009 privind Codul civil EMITENT: PARLAMENTUL',
-                  ),
-                  _lege(
-                    numar: '287',
-                    data: '2011-10-01T00:00:00',
-                    id: '130142',
-                    titlu: 'LEGE nr. 287 din 17 iulie 2009*) (*republicată*) privind Codul civil',
-                  ),
-                ]),
-              ),
-              200,
-            );
-          }
-          return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
-        });
-        final s = LegislatieService.cuClient(client);
-        final civil = acteCunoscute.firstWhere((a) => a.nume == 'Codul civil');
-        final p = await s.cauta(cerereActCunoscut(civil));
-        expect(cereri, hasLength(1));
-        expect(p.acte, hasLength(2));
-        expect(p.acte.first.titlu, contains('republicat'));
-        expect(
-          p.acte.last.titlu,
-          'LEGE nr. 287 din 17 iulie 2009 privind Codul civil',
-        );
-        expect(p.acte.first.an, 2009);
-        expect(p.acte.first.denumireScurta, 'Lege nr. 287/2009');
-      },
-    );
+    test('Codul civil: după titlu, republicat întâi', () async {
+      final cereri = <String>[];
+      final client = MockClient((r) async {
+        if (r.headers['SOAPAction']!.contains('GetToken')) {
+          return http.Response(_raspunsToken, 200);
+        }
+        cereri.add(r.body);
+        if (r.body.contains(
+              '<d:SearchTitlu>LEGE nr. 287 din</d:SearchTitlu>',
+            ) &&
+            r.body.contains('<d:SearchAn>2009</d:SearchAn>')) {
+          return http.Response.bytes(
+            _utf8(
+              _raspunsCautare([
+                _lege(
+                  numar: '287',
+                  data: '2011-10-01T00:00:00',
+                  titlu: '﻿   LEGE nr. 287 din 17 iulie 2009 privind Codul civil EMITENT: PARLAMENTUL',
+                ),
+                _lege(
+                  numar: '287',
+                  data: '2011-10-01T00:00:00',
+                  id: '130142',
+                  titlu: 'LEGE nr. 287 din 17 iulie 2009*) (*republicată*) privind Codul civil',
+                ),
+              ]),
+            ),
+            200,
+          );
+        }
+        return http.Response.bytes(_utf8(_raspunsCautare([])), 200);
+      });
+      final s = LegislatieService.cuClient(client);
+      final civil = acteCunoscute.firstWhere((a) => a.nume == 'Codul civil');
+      final p = await s.cauta(cerereActCunoscut(civil));
+      expect(cereri, hasLength(1));
+      expect(p.acte, hasLength(2));
+      expect(p.acte.first.titlu, contains('republicat'));
+      expect(
+        p.acte.last.titlu,
+        'LEGE nr. 287 din 17 iulie 2009 privind Codul civil',
+      );
+      expect(p.acte.first.an, 2009);
+      expect(p.acte.first.denumireScurta, 'Lege nr. 287/2009');
+    });
 
     test(
       '„legea 307/2006”: anul din titlu, nu din intrarea în vigoare',

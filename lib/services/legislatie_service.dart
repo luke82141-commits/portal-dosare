@@ -89,6 +89,10 @@ class CerereLegislatie {
   /// 287/2009 a intrat în vigoare în 2011); serviciul filtrează după el.
   final int? anVigoare;
 
+  /// Cuvintele de după număr („legea 307 incendii” → „incendii”): actele
+  /// cu numărul cerut care le au în titlu vin primele.
+  final String cuvinte;
+
   const CerereLegislatie({
     this.text = '',
     this.titlu = '',
@@ -96,6 +100,7 @@ class CerereLegislatie {
     this.an,
     this.tip,
     this.anVigoare,
+    this.cuvinte = '',
   });
 
   bool get goala =>
@@ -132,6 +137,27 @@ class CerereLegislatie {
       return (
         cerere: CerereLegislatie(numar: f!.namedGroup('nr')!, tip: tipFaraAn),
         tip: tipFaraAn,
+      );
+    }
+    // „legea 307 incendii”, „legea 307/2006 incendii”: tip, număr, poate an,
+    // apoi cuvinte din titlu.
+    final g = RegExp(
+      r'^(?<tip>[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ\. ]+?)\s*(?:nr\.?\s*)?(?<nr>\d{1,5})'
+      r'(?:\s*/\s*(?<an>(?:18|19|20)\d{2})|\s+din\s+(?<an2>(?:18|19|20)\d{2}))?'
+      r'\s+(?<rest>[^\d\s][\s\S]*)$',
+      caseSensitive: false,
+    ).firstMatch(s);
+    final tipCuvinte = g == null ? null : tipDinAbreviere(g.namedGroup('tip')!);
+    if (tipCuvinte != null) {
+      final an = g!.namedGroup('an') ?? g.namedGroup('an2');
+      return (
+        cerere: CerereLegislatie(
+          numar: g.namedGroup('nr')!,
+          an: an == null ? null : int.parse(an),
+          tip: tipCuvinte,
+          cuvinte: g.namedGroup('rest')!.trim(),
+        ),
+        tip: tipCuvinte,
       );
     }
     return (cerere: CerereLegislatie(text: s), tip: null);
@@ -442,8 +468,13 @@ class LegislatieService {
       if (!r.maiSunt) break;
     }
 
+    final radacini = radaciniCautare(c.cuvinte);
+    int cuCuvinte(ActNormativ a) =>
+        radacini.isNotEmpty && titluContineToate(a.titlu, radacini) ? 1 : 0;
     final potrivite = toate.where(potrivit).toList()
       ..sort((x, y) {
+        final w = cuCuvinte(y).compareTo(cuCuvinte(x));
+        if (w != 0) return w;
         // Cele mai noi întâi; la același act, forma republicată.
         final a = (y.an ?? 0).compareTo(x.an ?? 0);
         if (a != 0) return a;
@@ -931,14 +962,17 @@ List<SugestieLegislatie> sugestii(
       SugestieLegislatie(
         FelSugestie.numar,
         '${tip == null ? 'Actul' : etichetaTip(tip)} nr. ${nr.cerere.numar}'
-        '${nr.cerere.an == null ? '' : '/${nr.cerere.an}'}$faraArt',
+        '${nr.cerere.an == null ? '' : '/${nr.cerere.an}'}'
+        '${nr.cerere.cuvinte.isEmpty ? '' : ' · ${nr.cerere.cuvinte}'}$faraArt',
         nr.cerere.an == null
             ? 'Toate actele cu acest număr, din toți anii'
             : 'Caută actul exact',
         nr.cerere,
         tip: tip,
         articol: articol,
-        deschideDirect: tip != null && nr.cerere.an != null,
+        deschideDirect:
+            tip != null &&
+            (nr.cerere.an != null || nr.cerere.cuvinte.isNotEmpty),
       ),
     );
   }
@@ -1185,6 +1219,10 @@ ActNormativ? potrivireExacta(
           c.numar.replaceAll('.', '').trim())
         continue;
       if (c.an != null && a.an != c.an) continue;
+      if (c.cuvinte.isNotEmpty &&
+          !titluContineToate(a.titlu, radaciniCautare(c.cuvinte))) {
+        continue;
+      }
       return a;
     }
   }
