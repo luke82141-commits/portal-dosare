@@ -1090,7 +1090,7 @@ class _CardStare extends StatelessWidget {
                         : 'Ultima formă, consolidată la ${_zi(d)}')
                   : d == null
                   ? 'Text la zi'
-                  : 'Text la zi, consolidat la ${_zi(d)}',
+                  : 'Text la zi · ultima modificare: ${_zi(d)}',
               if (n > 0)
                 '$n ${n == 1 ? 'modificare marcată' : 'modificări marcate'} în text',
             ].join(' · ');
