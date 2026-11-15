@@ -479,11 +479,11 @@ List<ActNormativ> parseazaRaspunsCautare(String body) {
       tipAct: text(e, 'TipAct').toUpperCase(),
       numar: text(e, 'Numar'),
       dataVigoare: _data(text(e, 'DataVigoare')),
-      titlu: text(e, 'Titlu'),
+      titlu: titluFaraAntet(text(e, 'Titlu')),
       emitent: text(e, 'Emitent'),
       publicatie: text(e, 'Publicatie'),
       linkHtml: link,
-      text: curataText(text(e, 'Text')),
+      text: textFaraAntet(curataText(text(e, 'Text'))),
     );
   }).toList();
 }
@@ -1149,6 +1149,58 @@ class ActeSalvateService extends ChangeNotifier {
     } catch (_) {}
     return !salvat;
   }
+}
+
+/// Titlul vine uneori cu antetul paginii lipit: „LEGE nr. 169 ... construcţiilor
+/// EMITENT Parlamentul PUBLICAT ÎN Monitorul Oficial nr. 661 ...”.
+String titluFaraAntet(String titlu) =>
+    titlu.replaceFirst(RegExp(r'\s+EMITENT\b[\s\S]*$'), '').trim();
+
+/// Textul începe uneori cu același antet („... EMITENT PARLAMENTUL ROMÂNIEI
+/// Publicat în MONITORUL OFICIAL nr. 661 din 10 august 2026”), care e deja
+/// afișat frumos deasupra; îl scoatem.
+String textFaraAntet(String text) {
+  final m = RegExp(
+    r'^[\s\S]{0,700}?\bEMITENT\b[\s\S]{0,300}?MONITORUL OFICIAL\s+(?:nr\.\s*)?\d+\s+din\s+\d{1,2}\s+\S+\s+\d{4}\s*',
+    caseSensitive: false,
+  ).firstMatch(text);
+  return m == null ? text : text.substring(m.end).trim();
+}
+
+/// Legile care aprobă un cod („Legea 169/2026 privind Codul amenajării
+/// teritoriului...”) au codul ca anexă, publicată pe portal ca act separat;
+/// textul legii are doar câteva rânduri. Întoarce numele codului.
+String? numeCodAnexat(ActNormativ a) {
+  final m = RegExp(
+    r'\b(?:privind|pentru aprobarea|de aprobare a)\s+(Codul(?:ui)?\s+.+)$',
+    caseSensitive: false,
+  ).firstMatch(titluCurat(a.titlu));
+  if (m == null) return null;
+  final articole = RegExp(r'\b(?:Articolul|Art\.)\s*\d+')
+      .allMatches(a.text)
+      .length;
+  if (articole > 5) return null;
+  final nume = m[1]!
+      .replaceFirst(RegExp(r'^Codului', caseSensitive: false), 'Codul')
+      .replaceFirst(RegExp(r'\s*\(.*$'), '')
+      .trim();
+  return _majusculaInitiala(nume);
+}
+
+/// Codul anexat, din rezultatele unei căutări după numele lui.
+ActNormativ? alegeCodAnexat(
+  List<ActNormativ> rezultate,
+  ActNormativ lege,
+  String nume,
+) {
+  final radacini = radaciniCautare(nume);
+  final potrivite = rezultate
+      .where(
+        (a) => a.cheie != lege.cheie && titluContineToate(a.titlu, radacini),
+      )
+      .toList();
+  return potrivite.where((a) => _norm(a.titlu).startsWith('cod')).firstOrNull ??
+      potrivite.where((a) => !_norm(a.titlu).startsWith('lege')).firstOrNull;
 }
 
 /// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”).

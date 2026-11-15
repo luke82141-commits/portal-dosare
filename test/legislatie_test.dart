@@ -281,7 +281,7 @@ void main() {
     test('textul real de pe portal: „+”, denumiri și alineate lipite', () {
       const real =
           'Aplicarea legii penale în timp\n+\nArticolul 3 Activitatea legii penale Legea penală se '
-          'aplică infracţiunilor săvârșite în timpul cât ea se află în vigoare.\n+\n'
+          'aplică infracţiunilor săvârșite în timpul cât ea se află în vigoare. ...\n+\n'
           'Articolul 4 Aplicarea legii penale de dezincriminare Legea penală nu se aplică '
           'faptelor săvârșite sub legea veche, dacă nu mai sunt prevăzute de legea nouă. În acest '
           'caz, executarea pedepselor, a măsurilor educative și a măsurilor de siguranţă, '
@@ -289,11 +289,12 @@ void main() {
           'judecătorești privitoare la aceste fapte încetează prin intrarea în vigoare a legii noi.\n+\n'
           'Articolul 5 Aplicarea legii penale mai favorabile până la judecarea definitivă a cauzei '
           '(1) În cazul în care au intervenit una sau mai multe legi penale, se aplică legea mai '
-          'favorabilă. (2) Dispoziţiile alin. (1) se aplică și actelor normative următoare: '
+          'favorabilă. ... (2) Dispoziţiile alin. (1) se aplică și actelor normative următoare: '
           'a) declarate neconstituţionale; b) aprobate cu modificări.\n+\n'
           'Articolul 6 Prezenta lege intră în vigoare la data publicării în Monitorul Oficial.';
       final r = structureazaAct(real);
       expect(r.where((x) => x.textComplet == '+'), isEmpty);
+      expect(r.where((x) => x.text.contains('...')), isEmpty);
       final art = r.where((x) => x.tip == TipBloc.articol).toList();
       expect(art.map((x) => x.eticheta), [
         'Art. 3',
@@ -498,6 +499,46 @@ void main() {
         expect(acteCunoscutePotrivite('codul urbanismului').first.numar, '169');
       },
     );
+
+    test('legea care aprobă un cod: antet scos și codul găsit separat', () {
+      const titlu =
+          'LEGE nr. 169 din 5 august 2026 privind Codul amenajării teritoriului, '
+          'urbanismului și construcţiilor EMITENT Parlamentul PUBLICAT ÎN Monitorul Oficial '
+          'nr. 661 din 10 august 2026';
+      final lege = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(
+            numar: '169',
+            titlu: titlu,
+            text:
+                'LEGE nr. 169 din 5 august 2026 privind Codul amenajării teritoriului, '
+                'urbanismului și construcțiilor EMITENT PARLAMENTUL ROMÂNIEI Publicat în '
+                'MONITORUL OFICIAL nr. 661 din 10 august 2026 CODUL AMENAJĂRII TERITORIULUI, '
+                'URBANISMULUI ȘI CONSTRUCȚIILOR',
+          ),
+        ]),
+      ).single;
+      expect(lege.titlu, endsWith('construcţiilor'));
+      expect(
+        lege.text,
+        'CODUL AMENAJĂRII TERITORIULUI, URBANISMULUI ȘI CONSTRUCȚIILOR',
+      );
+      final nume = numeCodAnexat(lege)!;
+      expect(nume, startsWith('Codul amenajării teritoriului'));
+      final rezultate = parseazaRaspunsCautare(
+        _raspunsCautare([
+          _lege(numar: '169', titlu: titlu),
+          _lege(numar: '1', titlu: 'HOTĂRÂRE privind certificatul de urbanism'),
+          _lege(
+            numar: '0',
+            tip: 'COD',
+            titlu: 'CODUL amenajării teritoriului, urbanismului şi construcţiilor din 5 august 2026',
+          ),
+        ]),
+      );
+      expect(alegeCodAnexat(rezultate, lege, nume)?.tipAct, 'COD');
+      expect(numeCodAnexat(rezultate[1]), isNull);
+    });
 
     test('potrivirea exactă', () {
       final acte = parseazaRaspunsCautare(

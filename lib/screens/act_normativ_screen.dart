@@ -19,7 +19,15 @@ class ActNormativScreen extends StatefulWidget {
   /// Articolul la care se deschide („1357”).
   final String? articolInitial;
 
-  const ActNormativScreen({super.key, required this.act, this.articolInitial});
+  /// Pentru teste; altfel serviciul comun.
+  final LegislatieService? service;
+
+  const ActNormativScreen({
+    super.key,
+    required this.act,
+    this.articolInitial,
+    this.service,
+  });
 
   @override
   State<ActNormativScreen> createState() => _ActNormativScreenState();
@@ -40,6 +48,11 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
   int _curent = 0;
   int? _articolEvidentiat;
   bool _seExporta = false;
+
+  /// Codul anexat legii („Codul amenajării teritoriului...”), căutat separat.
+  String? _numeCod;
+  ActNormativ? _cod;
+  bool _cautCod = false;
 
   ActNormativ get _act => widget.act;
 
@@ -63,6 +76,8 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     final blocuri = await structureazaInFundal(text);
     if (!mounted) return;
     setState(() => _blocuri = blocuri);
+    final cod = numeCodAnexat(_act);
+    if (cod != null) _gasesteCod(cod);
     final art = widget.articolInitial;
     if (art != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _mergiLaArticol(art));
@@ -125,12 +140,21 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
           controller: c,
           autofocus: true,
           keyboardType: TextInputType.text,
-          decoration: const InputDecoration(hintText: 'Ex.: 1357 sau 5^1', prefixText: 'Art. '),
+          decoration: const InputDecoration(
+            hintText: 'Ex.: 1357 sau 5^1',
+            prefixText: 'Art. ',
+          ),
           onSubmitted: (v) => Navigator.pop(context, v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Renunță')),
-          FilledButton(onPressed: () => Navigator.pop(context, c.text), child: const Text('Mergi')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Renunță'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, c.text),
+            child: const Text('Mergi'),
+          ),
         ],
       ),
     );
@@ -152,14 +176,18 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       builder: (context) => _Cuprins(intrari: intrari),
     );
     if (ales != null) {
-      setState(() => _articolEvidentiat = b[ales].tip == TipBloc.articol ? ales : null);
+      setState(
+        () => _articolEvidentiat = b[ales].tip == TipBloc.articol ? ales : null,
+      );
       _saltLa(ales);
     }
   }
 
   void _deschideCautarea() {
     setState(() => _cautareDeschisa = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusCauta.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusCauta.requestFocus(),
+    );
   }
 
   void _inchideCautarea() {
@@ -184,6 +212,37 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     if (_potriviri.isEmpty) return;
     setState(() => _curent = (_curent + pas) % _potriviri.length);
     _saltLa(_potriviri[_curent]);
+  }
+
+  Future<void> _gasesteCod(String nume) async {
+    setState(() {
+      _numeCod = nume;
+      _cautCod = true;
+    });
+    ActNormativ? gasit;
+    try {
+      final service = widget.service ?? LegislatieService.instance;
+      final p = await service.cauta(CerereLegislatie(titlu: nume));
+      gasit = alegeCodAnexat(p.acte, _act, nume);
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _cod = gasit;
+      _cautCod = false;
+    });
+  }
+
+  void _deschideCod() {
+    final cod = _cod;
+    if (cod == null) {
+      _deschidePortal();
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ActNormativScreen(act: cod, service: widget.service),
+      ),
+    );
   }
 
   Future<void> _deschidePortal() async {
@@ -219,7 +278,9 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       final String tip;
       if (format == 'pdf') {
         Future<Uint8List> font(String nume) async =>
-            (await rootBundle.load('assets/fonts/LiberationSerif-$nume.ttf')).buffer.asUint8List();
+            (await rootBundle.load('assets/fonts/LiberationSerif-$nume.ttf'))
+                .buffer
+                .asUint8List();
         final normal = await font('Regular');
         final bold = await font('Bold');
         final italic = await font('Italic');
@@ -258,14 +319,22 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
-                [antet.eticheta, if (antet.titlu.isNotEmpty) antet.titlu].join(' · '),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                [
+                  antet.eticheta,
+                  if (antet.titlu.isNotEmpty) antet.titlu,
+                ].join(' · '),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.copy),
               title: const Text('Copiază articolul'),
-              subtitle: const Text('Cu trimiterea la act, gata de pus într-o cerere'),
+              subtitle: const Text(
+                'Cu trimiterea la act, gata de pus într-o cerere',
+              ),
               onTap: () => Navigator.pop(context, 'copiaza'),
             ),
             ListTile(
@@ -281,7 +350,9 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       await Clipboard.setData(ClipboardData(text: text));
       _arata('${antet.eticheta} a fost copiat.');
     } else if (ales == 'trimite') {
-      await SharePlus.instance.share(ShareParams(text: text, subject: antet.eticheta));
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: antet.eticheta),
+      );
     }
   }
 
@@ -305,7 +376,9 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
                 onPressed: () async {
                   final acum = await ActeSalvateService.instance.comuta(_act);
                   _arata(
-                    acum ? 'Actul a fost adăugat la favorite.' : 'Actul a fost scos din favorite.',
+                    acum
+                        ? 'Actul a fost adăugat la favorite.'
+                        : 'Actul a fost scos din favorite.',
                   );
                 },
               );
@@ -322,10 +395,19 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
             },
             itemBuilder: (_) => [
               if (_act.linkHtml.isNotEmpty)
-                const PopupMenuItem(value: 'portal', child: Text('Forma de pe legislatie.just.ro')),
-              const PopupMenuItem(value: 'partajeaza', child: Text('Trimite linkul actului')),
+                const PopupMenuItem(
+                  value: 'portal',
+                  child: Text('Forma de pe legislatie.just.ro'),
+                ),
+              const PopupMenuItem(
+                value: 'partajeaza',
+                child: Text('Trimite linkul actului'),
+              ),
               if (_act.text.isNotEmpty)
-                const PopupMenuItem(value: 'copiaza', child: Text('Copiază tot textul')),
+                const PopupMenuItem(
+                  value: 'copiaza',
+                  child: Text('Copiază tot textul'),
+                ),
             ],
           ),
         ],
@@ -343,17 +425,32 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
               itemCount: blocuri.length + 1,
               itemBuilder: (context, i) {
                 if (i == 0)
-                  return _AntetAct(act: _act, goala: blocuri.isEmpty, onPortal: _deschidePortal);
+                  return _AntetAct(
+                    act: _act,
+                    goala: blocuri.isEmpty && _numeCod == null,
+                    onPortal: _deschidePortal,
+                    cod: _numeCod == null
+                        ? null
+                        : _CardCod(
+                            nume: _numeCod!,
+                            seCauta: _cautCod,
+                            gasit: _cod != null,
+                            onDeschide: _deschideCod,
+                          ),
+                  );
                 final k = i - 1;
                 final b = blocuri[k];
-                final potrivireCurenta = _potriviri.isNotEmpty && _potriviri[_curent] == k;
+                final potrivireCurenta =
+                    _potriviri.isNotEmpty && _potriviri[_curent] == k;
                 return _VizualBloc(
                   bloc: b,
                   marime: _marime,
                   termen: _cautareDeschisa ? _cauta.text : '',
                   curent: potrivireCurenta,
                   evidentiat: _articolEvidentiat == k,
-                  onArticol: b.tip == TipBloc.articol ? () => _actiuniArticol(k) : null,
+                  onArticol: b.tip == TipBloc.articol
+                      ? () => _actiuniArticol(k)
+                      : null,
                 );
               },
             ),
@@ -440,7 +537,10 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
           const SizedBox(width: 8),
           Text(
             !areTermen ? '' : (n == 0 ? '0' : '${_curent + 1}/$n'),
-            style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
           IconButton(
             tooltip: 'Anterior',
@@ -469,7 +569,12 @@ class _Unealta extends StatelessWidget {
   final VoidCallback? onTap;
   final bool incarca;
 
-  const _Unealta({required this.icon, required this.text, this.onTap, this.incarca = false});
+  const _Unealta({
+    required this.icon,
+    required this.text,
+    this.onTap,
+    this.incarca = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +600,9 @@ class _Unealta extends StatelessWidget {
                     : Icon(
                         icon,
                         size: 18,
-                        color: activ ? AppColors.onPrimaryContainer : AppColors.onSurfaceVariant,
+                        color: activ
+                            ? AppColors.onPrimaryContainer
+                            : AppColors.onSurfaceVariant,
                       ),
                 const SizedBox(width: 6),
                 Text(
@@ -503,7 +610,9 @@ class _Unealta extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: activ ? AppColors.onPrimaryContainer : AppColors.onSurfaceVariant,
+                    color: activ
+                        ? AppColors.onPrimaryContainer
+                        : AppColors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -522,7 +631,14 @@ class _AntetAct extends StatelessWidget {
   final bool goala;
   final VoidCallback onPortal;
 
-  const _AntetAct({required this.act, required this.goala, required this.onPortal});
+  final Widget? cod;
+
+  const _AntetAct({
+    required this.act,
+    required this.goala,
+    required this.onPortal,
+    this.cod,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -574,14 +690,22 @@ class _AntetAct extends StatelessWidget {
                     child: Text(
                       text,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.onSurfaceVariant),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           const SizedBox(height: 12),
-          Container(width: 56, height: 3, color: AppColors.accent.withValues(alpha: 0.5)),
+          Container(
+            width: 56,
+            height: 3,
+            color: AppColors.accent.withValues(alpha: 0.5),
+          ),
+          ?cod,
           if (goala)
             Card(
               margin: const EdgeInsets.only(top: 16),
@@ -592,6 +716,88 @@ class _AntetAct extends StatelessWidget {
                 onTap: onPortal,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Legea doar aprobă codul; prevederile sunt în cod, publicat separat.
+class _CardCod extends StatelessWidget {
+  final String nume;
+  final bool seCauta;
+  final bool gasit;
+  final VoidCallback onDeschide;
+
+  const _CardCod({
+    required this.nume,
+    required this.seCauta,
+    required this.gasit,
+    required this.onDeschide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 18),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.menu_book_rounded,
+                color: AppColors.accent,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Prevederile sunt în cod',
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Legea aprobă $nume, care e publicat separat, ca anexă.',
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: seCauta ? null : onDeschide,
+              icon: seCauta
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      gasit
+                          ? Icons.arrow_forward_rounded
+                          : Icons.open_in_new_rounded,
+                    ),
+              label: Text(
+                seCauta
+                    ? 'Caut codul…'
+                    : gasit
+                    ? 'Deschide codul'
+                    : 'Deschide pe legislatie.just.ro',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -623,7 +829,8 @@ class _VizualBloc extends StatelessWidget {
     final r = <InlineSpan>[];
     var start = 0;
     for (final (a, b) in p) {
-      if (a > start) r.add(TextSpan(text: text.substring(start, a), style: stil));
+      if (a > start)
+        r.add(TextSpan(text: text.substring(start, a), style: stil));
       r.add(
         TextSpan(
           text: text.substring(a, b),
@@ -635,14 +842,19 @@ class _VizualBloc extends StatelessWidget {
       );
       start = b;
     }
-    if (start < text.length) r.add(TextSpan(text: text.substring(start), style: stil));
+    if (start < text.length)
+      r.add(TextSpan(text: text.substring(start), style: stil));
     return r;
   }
 
   @override
   Widget build(BuildContext context) {
     final m = marime;
-    final corp = TextStyle(fontSize: 15 * m, height: 1.55, color: AppColors.onSurface);
+    final corp = TextStyle(
+      fontSize: 15 * m,
+      height: 1.55,
+      color: AppColors.onSurface,
+    );
     switch (bloc.tip) {
       case TipBloc.structura:
         return Padding(
@@ -681,7 +893,11 @@ class _VizualBloc extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 10),
-              Container(width: 40, height: 3, color: AppColors.accent.withValues(alpha: 0.5)),
+              Container(
+                width: 40,
+                height: 3,
+                color: AppColors.accent.withValues(alpha: 0.5),
+              ),
             ],
           ),
         );
@@ -689,7 +905,9 @@ class _VizualBloc extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(top: 16, bottom: 6),
           child: Material(
-            color: evidentiat || curent ? AppColors.accentContainer : AppColors.primaryContainer,
+            color: evidentiat || curent
+                ? AppColors.accentContainer
+                : AppColors.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
@@ -700,7 +918,10 @@ class _VizualBloc extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
@@ -733,7 +954,11 @@ class _VizualBloc extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(Icons.more_vert, size: 18, color: AppColors.onPrimaryContainer),
+                    const Icon(
+                      Icons.more_vert,
+                      size: 18,
+                      color: AppColors.onPrimaryContainer,
+                    ),
                   ],
                 ),
               ),
@@ -815,7 +1040,9 @@ class _CuprinsState extends State<_Cuprins> {
     final f = fataDiacritice(_filtru.toLowerCase());
     final lista = widget.intrari
         .where((e) => arataArticole || !e.eArticol)
-        .where((e) => f.isEmpty || fataDiacritice(e.text.toLowerCase()).contains(f))
+        .where(
+          (e) => f.isEmpty || fataDiacritice(e.text.toLowerCase()).contains(f),
+        )
         .toList();
     return DraggableScrollableSheet(
       expand: false,
@@ -863,13 +1090,22 @@ class _CuprinsState extends State<_Cuprins> {
                 return InkWell(
                   onTap: () => Navigator.pop(context, e.indice),
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(16.0 + e.nivel * 14, 10, 16, 10),
+                    padding: EdgeInsets.fromLTRB(
+                      16.0 + e.nivel * 14,
+                      10,
+                      16,
+                      10,
+                    ),
                     child: Text(
                       e.text,
                       style: TextStyle(
                         fontSize: e.eArticol ? 13.5 : 14.5,
-                        fontWeight: e.eArticol ? FontWeight.w400 : FontWeight.w600,
-                        color: e.eArticol ? AppColors.onSurface : AppColors.primary,
+                        fontWeight: e.eArticol
+                            ? FontWeight.w400
+                            : FontWeight.w600,
+                        color: e.eArticol
+                            ? AppColors.onSurface
+                            : AppColors.primary,
                       ),
                     ),
                   ),
