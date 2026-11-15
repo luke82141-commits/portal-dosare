@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/acte_cunoscute.dart';
 import '../services/legislatie_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/elemente.dart';
 import 'act_normativ_screen.dart';
 
-/// Căutare în Portalul Legislativ (legislatie.just.ro): text liber sau titlu,
-/// număr și an („Legea 85/2014”), cu filtre după tip, an și emitent.
+/// Căutare în Portalul Legislativ (legislatie.just.ro). Bara înțelege
+/// „Legea 85/2014”, „OUG 195/2002”, numele codurilor („codul civ”) și
+/// „codul civil art. 1357”; în timp ce scrii arată sugestii. Rezultatele
+/// au filtre după tip, an și emitent și sunt ordonate după relevanță.
 class LegislatieScreen extends StatefulWidget {
   /// Căutare pornită direct (ex. din obiectul unui dosar).
   final CerereLegislatie? cerereInitiala;
@@ -33,6 +36,7 @@ const _cheieRecente = 'legislatie_cautari_recente';
 
 class _LegislatieScreenState extends State<LegislatieScreen> {
   final _text = TextEditingController();
+  final _focus = FocusNode();
   late final LegislatieService _service = widget.service ?? LegislatieService.instance;
 
   bool _doarTitlu = false;
@@ -45,10 +49,17 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
   String? _eroare;
   List<String> _recente = [];
 
+  /// Când căutarea vine dintr-un act anume (cod, favorit, „Legea 85/2014”),
+  /// îl deschidem direct, eventual la [_articol].
+  bool _deschideDirect = false;
+  String? _articol;
+
   @override
   void initState() {
     super.initState();
     _incarcaRecente();
+    ActeSalvateService.instance.incarca();
+    _focus.addListener(() => setState(() {}));
     final c = widget.cerereInitiala;
     if (c != null) {
       _text.text = widget.etichetaInitiala ?? _textPentru(c);
@@ -60,6 +71,7 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
   @override
   void dispose() {
     _text.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -97,18 +109,48 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     } catch (_) {}
   }
 
+  /// Enter în bară: număr („85/2014”) sau un act cunoscut („codul civil”)
+  /// merg direct la act; altfel căutăm textul.
   void _cautaDinBara() {
     final intrare = _text.text.trim();
     if (intrare.isEmpty) return;
-    FocusScope.of(context).unfocus();
-    final interpretat = CerereLegislatie.dinText(intrare);
-    var cerere = interpretat.cerere;
-    if (_doarTitlu && cerere.text.isNotEmpty) cerere = CerereLegislatie(titlu: cerere.text);
-    if (interpretat.tip != null) {
-      _filtre = _filtre.copyWith(tipuri: {interpretat.tip!});
+    final lista = sugestii(intrare);
+    final directa = lista.where(
+      (s) => s.fel == FelSugestie.numar || s.fel == FelSugestie.actCunoscut,
+    );
+    final (:rest, :articol) = extrageArticol(intrare);
+    if (directa.isNotEmpty && (directa.first.fel == FelSugestie.numar || rest.length >= 4)) {
+      _aplica(directa.first, intrare);
+      return;
     }
-    _salveazaRecenta(intrare);
-    _porneste(cerere);
+    _aplica(
+      SugestieLegislatie(
+        _doarTitlu ? FelSugestie.titlu : FelSugestie.text,
+        rest,
+        '',
+        _doarTitlu ? CerereLegislatie(titlu: rest) : CerereLegislatie(text: rest),
+        articol: articol,
+      ),
+      intrare,
+    );
+  }
+
+  void _aplica(SugestieLegislatie s, [String? deSalvat]) {
+    FocusScope.of(context).unfocus();
+    final eticheta = deSalvat ?? s.titlu.replaceAll('„', '').replaceAll('”', '');
+    _text.text = eticheta;
+    setState(() {
+      _filtre = FiltreLegislatie(
+        tipuri: s.tip != null ? {s.tip!} : const {},
+        ordine: _filtre.ordine,
+      );
+      _deschideDirect = s.deschideDirect;
+      _articol = s.articol;
+      if (s.fel == FelSugestie.titlu) _doarTitlu = true;
+      if (s.fel == FelSugestie.text) _doarTitlu = false;
+    });
+    _salveazaRecenta(eticheta);
+    _porneste(s.cerere);
   }
 
   Future<void> _porneste(CerereLegislatie cerere) async {
@@ -138,6 +180,12 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         _pagina++;
         _maiSunt = p.maiSunt;
       });
+      if (_deschideDirect) {
+        _deschideDirect = false;
+        final tip = _filtre.tipuri.length == 1 ? _filtre.tipuri.first : null;
+        final exact = potrivireExacta(_acte, cerere, tip);
+        if (exact != null) _deschide(exact);
+      }
     } catch (e) {
       if (mounted) setState(() => _eroare = e.toString());
     } finally {
@@ -145,14 +193,25 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     }
   }
 
-  void _cautaRecenta(String s) {
-    _text.text = s;
-    _cautaDinBara();
+  void _deschide(ActNormativ a) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => ActNormativScreen(act: a, articolInitial: _articol),
+    ),
+  );
+
+  List<ActNormativ> _vizibile() {
+    final filtrate = aplicaFiltre(_acte, _filtre);
+    final c = _cerere;
+    if (_filtre.ordine != OrdineLegislatie.relevanta || c == null) return filtrate;
+    final q = c.text.isNotEmpty ? c.text : c.titlu;
+    return q.isEmpty ? filtrate : ordoneazaDupaRelevanta(filtrate, q);
   }
+
+  bool get _aratSugestii => _focus.hasFocus && _text.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
-    final vizibile = aplicaFiltre(_acte, _filtre);
+    final vizibile = _vizibile();
     return Scaffold(
       appBar: AppBar(title: const Text('Legislație')),
       body: ListView(
@@ -160,42 +219,65 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         children: [
           TextField(
             controller: _text,
+            focusNode: _focus,
             textInputAction: TextInputAction.search,
+            onChanged: (_) => setState(() {}),
             onSubmitted: (_) => _cautaDinBara(),
             decoration: InputDecoration(
-              hintText: 'Ex.: Legea 85/2014, OUG 195/2002, uzucapiune',
+              hintText: 'Codul civil art. 1357, Legea 85/2014, uzucapiune',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                tooltip: 'Caută',
-                icon: const Icon(Icons.arrow_forward),
-                onPressed: _cautaDinBara,
-              ),
+              suffixIcon: _text.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Șterge',
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        _text.clear();
+                        _focus.requestFocus();
+                        setState(() {});
+                      },
+                    ),
             ),
           ),
-          const SizedBox(height: 10),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('În tot textul')),
-              ButtonSegment(value: true, label: Text('Doar în titlu')),
-            ],
-            selected: {_doarTitlu},
-            showSelectedIcon: false,
-            onSelectionChanged: (s) => setState(() => _doarTitlu = s.first),
-          ),
-          const SizedBox(height: 10),
-          _BaraFiltre(
-            filtre: _filtre,
-            emitenti: emitentiDin(_acte),
-            onSchimbat: (f) => setState(() => _filtre = f),
-          ),
-          const SizedBox(height: 14),
-          ..._continut(vizibile),
-          const SizedBox(height: 20),
-          const Text(
-            'Sursa: Portalul Legislativ al Ministerului Justiției (legislatie.just.ro). '
-            'Textele au caracter informativ; forma oficială este cea publicată în Monitorul Oficial.',
-            style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.onSurfaceVariant),
-          ),
+          if (_aratSugestii) ...[
+            const SizedBox(height: 8),
+            _Sugestii(
+              lista: sugestii(_text.text, recente: _recente),
+              interogare: extrageArticol(_text.text).rest,
+              onAlege: _aplica,
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('În tot textul')),
+                      ButtonSegment(value: true, label: Text('Doar în titlu')),
+                    ],
+                    selected: {_doarTitlu},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) => setState(() => _doarTitlu = s.first),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _BaraFiltre(
+              filtre: _filtre,
+              emitenti: emitentiDin(_acte),
+              onSchimbat: (f) => setState(() => _filtre = f),
+            ),
+            const SizedBox(height: 14),
+            ..._continut(vizibile),
+            const SizedBox(height: 20),
+            const Text(
+              'Sursa: Portalul Legislativ al Ministerului Justiției (legislatie.just.ro). '
+              'Textele au caracter informativ; forma oficială este cea publicată în Monitorul Oficial.',
+              style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
@@ -228,6 +310,7 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
       ];
     }
     final ascunse = _acte.length - vizibile.length;
+    final c = _cerere!;
     return [
       Row(
         children: [
@@ -255,9 +338,9 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
       for (final a in vizibile)
         _CardAct(
           act: a,
-          onTap: () =>
-              Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => ActNormativScreen(act: a))),
+          articol: _articol,
+          termen: c.text.isNotEmpty ? c.text : c.titlu,
+          onTap: () => _deschide(a),
         ),
       if (vizibile.isEmpty)
         StareMesaj(
@@ -290,16 +373,63 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
     ];
   }
 
+  SugestieLegislatie _sugestieAct(ActCunoscut a) => SugestieLegislatie(
+    FelSugestie.actCunoscut,
+    a.nume,
+    a.trimitere,
+    cerereActCunoscut(a),
+    tip: a.tip,
+    deschideDirect: true,
+  );
+
   List<Widget> _ecranInitial() {
-    const exemple = [
-      ('Codul civil', CerereLegislatie(numar: '287', an: 2009), 'LEGE'),
-      ('Codul de procedură civilă', CerereLegislatie(numar: '134', an: 2010), 'LEGE'),
-      ('Codul penal', CerereLegislatie(numar: '286', an: 2009), 'LEGE'),
-      ('Codul de procedură penală', CerereLegislatie(numar: '135', an: 2010), 'LEGE'),
-      ('Codul muncii', CerereLegislatie(numar: '53', an: 2003), 'LEGE'),
-      ('Insolvența (Legea 85/2014)', CerereLegislatie(numar: '85', an: 2014), 'LEGE'),
-    ];
+    final coduri = acteCunoscute.take(10).toList();
     return [
+      ListenableBuilder(
+        listenable: ActeSalvateService.instance,
+        builder: (context, _) {
+          final salvate = ActeSalvateService.instance.acte;
+          if (salvate.isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const AntetSectiune('Favorite'),
+                const SizedBox(height: 6),
+                Card(
+                  child: Column(
+                    children: [
+                      for (final (i, s) in salvate.indexed) ...[
+                        if (i > 0) const Divider(height: 1, indent: 56),
+                        ListTile(
+                          leading: const Icon(Icons.star_rounded, color: AppColors.accent),
+                          title: Text(
+                            s.denumire,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(s.titlu, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _aplica(
+                            SugestieLegislatie(
+                              FelSugestie.actCunoscut,
+                              s.denumire,
+                              '',
+                              s.cerere,
+                              tip: s.tip,
+                              deschideDirect: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
       if (_recente.isNotEmpty) ...[
         AntetSectiune('Căutări recente', actiune: 'Șterge', onActiune: _stergeRecente),
         const SizedBox(height: 6),
@@ -308,7 +438,14 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
           runSpacing: 8,
           children: [
             for (final r in _recente)
-              Pastila(r, icon: Icons.history, onTap: () => _cautaRecenta(r)),
+              Pastila(
+                r,
+                icon: Icons.history,
+                onTap: () {
+                  _text.text = r;
+                  _cautaDinBara();
+                },
+              ),
           ],
         ),
         const SizedBox(height: 18),
@@ -319,22 +456,115 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          for (final e in exemple)
-            Pastila(
-              e.$1,
-              icon: Icons.menu_book_outlined,
-              onTap: () {
-                _text.text = e.$1;
-                setState(() => _filtre = _filtre.copyWith(tipuri: {e.$3}));
-                _porneste(e.$2);
-              },
-            ),
+          for (final a in coduri)
+            Pastila(a.nume, icon: Icons.menu_book_outlined, onTap: () => _aplica(_sugestieAct(a))),
         ],
       ),
       const SizedBox(height: 18),
       const _Sfaturi(),
     ];
   }
+}
+
+/// Lista de sugestii de sub bară, ca la motoarele de căutare juridice:
+/// actele cunoscute întâi, apoi căutarea în text și în titluri.
+class _Sugestii extends StatelessWidget {
+  final List<SugestieLegislatie> lista;
+  final String interogare;
+  final void Function(SugestieLegislatie) onAlege;
+
+  const _Sugestii({required this.lista, required this.interogare, required this.onAlege});
+
+  IconData _icon(FelSugestie f) => switch (f) {
+    FelSugestie.actCunoscut => Icons.menu_book_outlined,
+    FelSugestie.numar => Icons.tag,
+    FelSugestie.text => Icons.search,
+    FelSugestie.titlu => Icons.title,
+    FelSugestie.recenta => Icons.history,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (lista.isEmpty) return const SizedBox.shrink();
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'SUGESTII',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accent,
+                ),
+              ),
+            ),
+          ),
+          for (final (i, s) in lista.indexed) ...[
+            if (i > 0) const Divider(height: 1, indent: 56),
+            ListTile(
+              dense: true,
+              leading: Icon(_icon(s.fel), color: AppColors.primary),
+              title: Text.rich(
+                TextSpan(children: _evidentiaza(s.titlu, interogare)),
+                style: const TextStyle(fontSize: 15),
+              ),
+              subtitle: Text(s.subtitlu),
+              trailing: s.deschideDirect
+                  ? const Icon(Icons.north_east, size: 18, color: AppColors.onSurfaceVariant)
+                  : null,
+              onTap: () => onAlege(s),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Literele scrise apar îngroșate în sugestie („Codul civil”).
+List<TextSpan> _evidentiaza(String text, String interogare) {
+  final cuvinte = fataDiacritice(interogare.toLowerCase())
+      .split(RegExp(r'\s+'))
+      .where((c) => c.length >= 2)
+      .toList();
+  final baza = fataDiacritice(text.toLowerCase());
+  if (cuvinte.isEmpty || baza.length != text.length) return [TextSpan(text: text)];
+  final marcat = List.filled(text.length, false);
+  for (final c in cuvinte) {
+    var start = 0;
+    while (true) {
+      final i = baza.indexOf(c, start);
+      if (i < 0) break;
+      for (var k = i; k < i + c.length; k++) {
+        marcat[k] = true;
+      }
+      start = i + c.length;
+    }
+  }
+  final r = <TextSpan>[];
+  var i = 0;
+  while (i < text.length) {
+    var j = i;
+    while (j < text.length && marcat[j] == marcat[i]) {
+      j++;
+    }
+    r.add(
+      TextSpan(
+        text: text.substring(i, j),
+        style: marcat[i]
+            ? const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)
+            : null,
+      ),
+    );
+    i = j;
+  }
+  return r;
 }
 
 class _IncarcareLegislatie extends StatelessWidget {
@@ -402,7 +632,9 @@ class _Sfaturi extends StatelessWidget {
           children: [
             const Text('Cum cauți', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
+            rand('codul civ', 'sugestii în timp ce scrii; codurile după nume'),
             rand('Legea 85/2014', 'actul exact, după tip, număr și an'),
+            rand('c. civ. art. 1357', 'deschide direct articolul'),
             rand('OUG 195/2002', 'merge și cu OUG, OG, HG, Decret, Ordin'),
             rand('uzucapiune', 'cuvinte din textul actelor'),
             rand('Filtre', 'restrâng rezultatele după tip, an și emitent'),
@@ -415,13 +647,29 @@ class _Sfaturi extends StatelessWidget {
 
 class _CardAct extends StatelessWidget {
   final ActNormativ act;
+  final String? articol;
+  final String termen;
   final VoidCallback onTap;
 
-  const _CardAct({required this.act, required this.onTap});
+  const _CardAct({required this.act, required this.onTap, this.articol, this.termen = ''});
+
+  /// Primul loc din text unde apare termenul căutat, cu puțin context.
+  String? get _fragment {
+    final t = termen.trim();
+    if (t.length < 3 || act.text.isEmpty) return null;
+    final baza = fataDiacritice(act.text.toLowerCase());
+    final i = baza.indexOf(fataDiacritice(t.toLowerCase()));
+    if (i < 0 || baza.length != act.text.length) return null;
+    final start = (i - 70).clamp(0, act.text.length);
+    final end = (i + t.length + 110).clamp(0, act.text.length);
+    final f = act.text.substring(start, end).replaceAll(RegExp(r'\s+'), ' ').trim();
+    return '${start > 0 ? '…' : ''}$f${end < act.text.length ? '…' : ''}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final d = act.dataVigoare;
+    final fragment = _fragment;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -435,36 +683,100 @@ class _CardAct extends StatelessWidget {
               Row(
                 children: [
                   StadiuChip.stadiu(act.denumireScurta),
+                  if (articol != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentContainer,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'art. $articol',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
                 ],
               ),
               const SizedBox(height: 10),
-              Text(
-                act.titlu.isEmpty ? act.denumireScurta : act.titlu,
+              Text.rich(
+                TextSpan(
+                  children: _evidentiaza(
+                    act.titlu.isEmpty ? act.denumireScurta : act.titlu,
+                    termen,
+                  ),
+                ),
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 15, height: 1.35, fontWeight: FontWeight.w600),
               ),
+              if (fragment != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    border: Border(left: BorderSide(color: AppColors.accent, width: 3)),
+                  ),
+                  child: Text.rich(
+                    TextSpan(children: _evidentiaza(fragment, termen)),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
               if (act.emitent.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  act.emitent,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.account_balance_outlined,
+                      size: 14,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        act.emitent,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               if (act.publicatie.isNotEmpty || d != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    if (act.publicatie.isNotEmpty) act.publicatie,
-                    if (d != null) 'în vigoare din ${_zi(d)}',
-                  ].join(' · '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.event_outlined, size: 14, color: AppColors.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        [
+                          if (act.publicatie.isNotEmpty) act.publicatie,
+                          if (d != null) 'în vigoare din ${_zi(d)}',
+                        ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
