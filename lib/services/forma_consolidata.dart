@@ -392,21 +392,34 @@ class _Constructor {
         return;
       case 'S_ART':
         final ttl = _textDin(n.copilCu('S_ART_TTL'));
-        final nr = RegExp(r'(\d+(?:\s*\^\s*\d+)?)')
-            .firstMatch(ttl)
-            ?.group(1)
-            ?.replaceAll(' ', '');
-        articol = nr ?? articol;
+        final nr = RegExp(
+          r'(\d{1,3}(?:\.\d{3})+(?!\d)(?:\s*\^\s*\d+)?|\d+(?:\s*\^\s*\d+)?)',
+        ).firstMatch(ttl)?.group(1);
+        articol = nr == null ? articol : nrArticol(nr);
+        final corp = n.copilCu('S_ART_BDY');
+        var denumire = _textDin(n.copilCu('S_ART_DEN'));
+        // Codurile (civil, penal, de procedură) au S_ART_DEN gol, iar
+        // denumirea marginală e primul paragraf din corp: „Dovada denumirii
+        // și sediului”. O mutăm în capul articolului.
+        if (denumire.isEmpty && corp != null) {
+          final primul = corp.noduri.where((k) => !_ascuns(k)).firstOrNull;
+          if (primul != null && primul.clasa == 'S_PAR') {
+            final t = _textDin(primul);
+            if (_eDenumire(t)) {
+              denumire = t;
+              corp.copii.remove(primul);
+            }
+          }
+        }
         blocuri.add(
           BlocAct(
             TipBloc.articol,
             eticheta: nr == null ? ttl : 'Art. $nr',
-            titlu: _textDin(n.copilCu('S_ART_DEN')),
+            titlu: denumire,
             articol: articol,
             actualizat: n.albastru,
           ),
         );
-        final corp = n.copilCu('S_ART_BDY');
         if (corp != null) copii(corp);
         return;
       case 'S_ALN' || 'S_LIT' || 'S_PCT' || 'S_LIN':
@@ -773,7 +786,7 @@ List<ActiuneSuferita> actiuniDinForma(FormaConsolidata f) {
     final m = b.modificare;
     if (m == null) continue;
     final art = RegExp(
-      r'(?:Articolul|\bart\.)\s*(\d+(?:\^\d+)?)',
+      r'(?:Articolul|\bart\.)\s*(\d{1,3}(?:\.\d{3})+(?!\d)(?:\^\d+)?|\d+(?:\^\d+)?)',
       caseSensitive: false,
     ).firstMatch(m.element)?.group(1);
     final sectiune = art != null
@@ -899,4 +912,14 @@ class FormaConsolidataService {
     _stari[id] = s;
     return s;
   }
+}
+
+/// Un paragraf scurt, fără punct la final, care nu e o notă sau un alineat:
+/// denumirea marginală a unui articol din coduri.
+bool _eDenumire(String t) {
+  final x = t.trim();
+  if (x.isEmpty || x.length > 160) return false;
+  if (RegExp(r'[.;:,]$').hasMatch(x)) return false;
+  if (RegExp(r'^(\(|\*|Not[aă]|\[|[a-z]\)|\d)').hasMatch(x)) return false;
+  return RegExp(r'^[A-ZĂÂÎȘŞȚŢ]').hasMatch(x);
 }

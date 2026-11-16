@@ -100,7 +100,7 @@ final _reStructura = RegExp(
 final _reAnexa = RegExp(r'^(ANEXA|Anexa)(\s+(?:nr\.\s*)?\d+)?\s*[-–.:]?\s*$');
 
 final _reArticol = RegExp(
-  r'^(?:Art\.|ART\.|Articolul|ARTICOLUL|Art)\s*(\d+(?:\s*\^\s*\d+)?)\s*[.:]?\s*(?:[-–—]\s*)?(.*)$',
+  r'^(?:Art\.|ART\.|Articolul|ARTICOLUL|Art)\s*(\d{1,3}(?:\.\d{3})+(?!\d)(?:\s*\^\s*\d+)?|\d+(?:\s*\^\s*\d+)?)\s*[.:]?\s*(?:[-–—]\s*)?(.*)$',
 );
 final _reAlineat = RegExp(r'^\((\d+(?:\^\d+)?)\)\s*(.*)$');
 final _reLitera = RegExp(
@@ -110,7 +110,15 @@ final _reNota = RegExp(
   r'^(\(la \d{1,2}[-.]\d{1,2}[-.]\d{4}|Not[aă]\b|NOT[AĂ]\b|\(\*|\*\)|Text actualizat|Reglementări)',
 );
 
-String _nrArticol(String s) => s.replaceAll(RegExp(r'\s+'), '');
+/// „2.500” → „2500”, „5 ^ 1” → „5^1”: codurile scriu miile cu punct.
+String nrArticol(String s) => s
+    .replaceAll(RegExp(r'\s+'), '')
+    .replaceAllMapped(
+      RegExp(r'^(\d{1,3})((?:\.\d{3})+)'),
+      (m) => m[1]! + m[2]!.replaceAll('.', ''),
+    );
+
+String _nrArticol(String s) => nrArticol(s);
 
 /// Unele texte vin fără rânduri noi; le despărțim înainte de articole,
 /// alineate și titluri, ca să poată fi structurate.
@@ -182,10 +190,12 @@ List<String>? randuriPortal(String text) {
       continue;
     }
     final art = RegExp(
-      r'^(Articolul|ARTICOLUL|Art\.)[\s\u00a0]+(\d+(?:[\s\u00a0]*\^[\s\u00a0]*\d+)?)[\s\u00a0]*',
+      r'^(Articolul|ARTICOLUL|Art\.)[\s\u00a0]+(\d{1,3}(?:\.\d{3})+(?!\d)(?:[\s\u00a0]*\^[\s\u00a0]*\d+)?|\d+(?:[\s\u00a0]*\^[\s\u00a0]*\d+)?)[\s\u00a0]*',
     ).firstMatch(b);
     if (art != null) {
-      r.add('Articolul ${art[2]!.replaceAll(RegExp(r'[\s\u00a0]'), '')}');
+      r.add(
+        'Articolul ${nrArticol(art[2]!.replaceAll(RegExp(r'[\s\u00a0]'), ''))}',
+      );
       var rest = b.substring(art.end);
       // Denumirea: până la primele 2+ spații, dacă nu e deja textul.
       final sep = spatii.firstMatch(rest);
@@ -386,7 +396,7 @@ List<BlocAct> structureazaAct(String text) {
     final a = _reArticol.firstMatch(l);
     if (a != null &&
         (l.length < 400 ||
-            RegExp(r'^(Art\.\s*\d+\s*\.?\s*[-–]|Articolul\s+\d)')
+            RegExp(r'^(Art\.\s*\d+(?:\.\d{3})*\s*\.?\s*[-–]|Articolul\s+\d)')
                 .hasMatch(l))) {
       articol = _nrArticol(a[1]!);
       var rest = (a[2] ?? '').trim();
@@ -467,7 +477,9 @@ List<BlocAct> _blocuriCorp(String l, String? articol) {
 
 /// Indicele blocului cu titlul articolului [nr] („712”, „5^1”, „art. 712”).
 int? indiceArticol(List<BlocAct> blocuri, String nr) {
-  final m = RegExp(r'(\d+(?:\s*\^\s*\d+)?)').firstMatch(nr);
+  final m = RegExp(
+    r'(\d{1,3}(?:\.\d{3})+(?!\d)(?:\s*\^\s*\d+)?|\d+(?:\s*\^\s*\d+)?)',
+  ).firstMatch(nr);
   if (m == null) return null;
   final cautat = _nrArticol(m[1]!);
   final i = blocuri.indexWhere(

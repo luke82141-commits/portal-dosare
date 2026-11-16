@@ -138,7 +138,11 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
     final cod = numeCodAnexat(_act);
     if (cod != null) _gasesteCod(cod);
     final art = widget.articolInitial;
-    if (art != null) {
+    // Dacă articolul nu e în textul inițial, așteptăm forma la zi (care sare
+    // singură la el), fără mesajul „nu apare”.
+    if (art != null &&
+        (indiceArticol(blocuri, art) != null ||
+            idDinLink(_act.linkHtml) == null)) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _mergiLaArticol(art));
     }
   }
@@ -164,13 +168,15 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
         if (areText && !_formaInitiala) _schimbaBlocuri(f.blocuri);
       });
       final art = widget.articolInitial;
-      if (areText && art != null) {
+      if (art != null) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _mergiLaArticol(art),
         );
       }
     } catch (_) {
       if (mounted) setState(() => _eroareLaZi = true);
+      final art = widget.articolInitial;
+      if (art != null && mounted) _mergiLaArticol(art);
     }
     await stare;
     if (mounted) setState(() => _seIncarcaLaZi = false);
