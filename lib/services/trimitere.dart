@@ -22,7 +22,8 @@ class Trimitere {
   String toString() => eticheta;
 }
 
-const _nr = r'(\d+(?:\s*\^\s*\d+)?|[IVXLC]+\b)';
+const _nr =
+    r'(\d{1,3}(?:\.\d{3})+(?!\d)(?:\s*\^\s*\d+)?|\d+(?:\s*\^\s*\d+)?|[IVXLC]+\b)';
 
 final _reArt = RegExp(
   r'\b(?:art\.|articol(?:ul|ului|ele|elor)?)\s*' + _nr,
@@ -36,7 +37,7 @@ final _reAlin = RegExp(r'^\s*,?\s*alin\.\s*\((\d+(?:\s*\^\s*\d+)?)\)');
 final _reLit = RegExp(r'^\s*,?\s*lit\.\s*([a-z]{1,2}(?:\^\d+)?)\)');
 final _rePct = RegExp(r'^\s*,?\s*pct\.\s*(\d+(?:\^\d+)?)');
 
-String _curat(String s) => s.replaceAll(RegExp(r'\s+'), '');
+String _curat(String s) => nrArticol(s);
 
 /// Ce prevedere arată un link: din textul lui („art. 2 pct. 39 din Legea
 /// nr. 273/2006”) sau, când linkul e doar actul („Legea nr. 10/1995”), din
