@@ -82,11 +82,15 @@ class AprobareAct {
   final String? data;
   final int? an;
 
+  /// Id-ul actului pe portal, când îl știm (din căutare).
+  final String? idAct;
+
   const AprobareAct({
     required this.tip,
     required this.numar,
     this.data,
     this.an,
+    this.idAct,
   });
 
   /// „Ordinul nr. 600 din 8 februarie 2023”.
@@ -142,6 +146,97 @@ AprobareAct? aprobareDinText(String text) {
   final data = m.group(3)?.replaceAll(RegExp(r'\s+'), ' ');
   if (data != null) an = int.tryParse(data.split(' ').last);
   return AprobareAct(tip: tip, numar: numar, data: data, an: an);
+}
+
+/// Tipurile de acte care nu se emit singure, ci se aprobă prin alt act.
+bool seAproba(ActNormativ a) {
+  final t = a.tipAct.toUpperCase();
+  return RegExp(
+    r'^(REGULAMENT|NORM|METODOLOGI|ANEX|INSTRUC|NORMATIV|PROCEDUR|STATUT|GHID|PRECIZ|PLAN|PROGRAM|STRATEGI|CONDI|CRITERI|NOMENCLATOR|LIST)',
+  ).hasMatch(t);
+}
+
+final _reDataTitlu = RegExp(
+  r'\bdin\s+(\d{1,2})\s+([a-zA-ZăâîșşțţĂÂÎȘŞȚŢ]+)\s+((?:18|19|20)\d{2})',
+);
+
+String? _dataDinTitlu(String titlu) {
+  final m = _reDataTitlu.firstMatch(titlu);
+  if (m == null) return null;
+  return '${int.parse(m.group(1)!)} ${m.group(2)!.toLowerCase()} ${m.group(3)}';
+}
+
+/// „MONITORUL OFICIAL nr. 223 din 9 aprilie 2010” → „223|9 aprilie 2010”.
+String? _monitor(String publicatie) {
+  final m = RegExp(
+    r'nr\.\s*([\d.]+)\s*(?:bis\s*)?din\s+(\d{1,2})\s+([a-zA-ZăâîșşțţĂÂÎȘŞȚŢ]+)\s+(\d{4})',
+    caseSensitive: false,
+  ).firstMatch(publicatie);
+  if (m == null) return null;
+  return '${m.group(1)!.replaceAll('.', '')}|${int.parse(m.group(2)!)} ${m.group(3)!.toLowerCase()} ${m.group(4)}';
+}
+
+/// Căutarea actului de aprobare: „aprob*” + primele cuvinte din denumirea
+/// regulamentului („regulament* avizare* verificare* recept*”).
+CerereLegislatie? cerereAprobare(ActNormativ act) {
+  final titlu = titluCurat(act.titlu);
+  final m = _reDataTitlu.firstMatch(titlu);
+  final descriere = m == null ? titlu : titlu.substring(m.end);
+  final tip = act.tipAct.split(' ').first.toLowerCase();
+  final termeni = interogarePrefixe(descriere)
+      .split(' ')
+      .where((t) => t.isNotEmpty)
+      .take(4)
+      .toList();
+  if (termeni.isEmpty) return null;
+  final cap = tip.length > 4 ? '${radacinaCuvant(tip)}*' : '$tip*';
+  return CerereLegislatie(
+    titlu: ['aprob*', if (!termeni.contains(cap)) cap, ...termeni].join(' '),
+  );
+}
+
+/// Actul de aprobare dintre rezultate: altul decât [act], „…aprobarea…”
+/// în titlu, din aceeași zi sau publicat în același Monitor Oficial.
+AprobareAct? aprobareDinRezultate(ActNormativ act, List<ActNormativ> acte) {
+  final zi = _dataDinTitlu(titluCurat(act.titlu));
+  final mo = _monitor(act.publicatie);
+  for (final b in acte) {
+    if (b.cheie == act.cheie || seAproba(b)) continue;
+    final t = titluCurat(b.titlu);
+    if (!RegExp(r'aprob', caseSensitive: false).hasMatch(t)) continue;
+    final ziB = _dataDinTitlu(t);
+    final moB = _monitor(b.publicatie);
+    final aceeasiZi = zi != null && ziB == zi;
+    final acelasiMo = mo != null && moB == mo;
+    if (!aceeasiZi && !acelasiMo) continue;
+    final nr = b.numar.trim();
+    if (nr.isEmpty || nr == '0') continue;
+    return AprobareAct(
+      tip: articulat(b.tipAct),
+      numar: numarCuPunct(nr),
+      data: ziB,
+      an: b.an,
+      idAct: RegExp(r'(\d+)$').firstMatch(b.linkHtml)?.group(1),
+    );
+  }
+  return null;
+}
+
+/// „ORDIN” → „Ordinul”, „HOTĂRÂRE” → „Hotărârea”.
+String articulat(String tipAct) {
+  final t = tipAct.toUpperCase().trim();
+  const m = {
+    'ORDIN': 'Ordinul',
+    'HOTĂRÂRE': 'Hotărârea',
+    'LEGE': 'Legea',
+    'DECIZIE': 'Decizia',
+    'DECRET': 'Decretul',
+    'ORDONANȚĂ': 'Ordonanța',
+    'ORDONANȚĂ DE URGENȚĂ': 'Ordonanța de urgență',
+    'DISPOZIȚIE': 'Dispoziția',
+    'INSTRUCȚIUNE': 'Instrucțiunea',
+  };
+  return m[t] ?? etichetaTip(tipAct);
 }
 
 String _majusculaInitiala(String s) {
@@ -691,6 +786,28 @@ class LegislatieService {
     }
     final restul = toate.where((a) => !potrivit(a));
     return PaginaLegislatie([...potrivite, ...restul], false);
+  }
+
+  final _aprobari = <String, Future<AprobareAct?>>{};
+
+  /// Prin ce act a fost aprobat un regulament / o normă. Întâi nota din
+  /// text; la actele mai vechi, fără notă, căutăm ordinul / hotărârea „pentru
+  /// aprobarea Regulamentului …” din aceeași zi și același Monitor Oficial.
+  Future<AprobareAct?> aprobareAct(ActNormativ act) {
+    final din = act.aprobatPrin;
+    if (din != null) return Future.value(din);
+    if (!seAproba(act)) return Future.value(null);
+    return _aprobari.putIfAbsent(act.cheie, () async {
+      try {
+        final cerere = cerereAprobare(act);
+        if (cerere == null) return null;
+        final r = await _cautaPagina(cerere, 1);
+        return aprobareDinRezultate(act, r.acte);
+      } catch (_) {
+        _aprobari.remove(act.cheie);
+        return null;
+      }
+    });
   }
 
   Future<PaginaLegislatie> _cautaPagina(

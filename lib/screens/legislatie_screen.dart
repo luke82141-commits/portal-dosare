@@ -348,6 +348,7 @@ class _LegislatieScreenState extends State<LegislatieScreen> {
       for (final a in vizibile)
         _CardAct(
           act: a,
+          aprobare: _service.aprobareAct(a),
           articol: _articol,
           termen: c.text.isNotEmpty ? c.text : c.titlu,
           onTap: () => _deschide(
@@ -962,9 +963,13 @@ class _CardAct extends StatelessWidget {
   final String termen;
   final VoidCallback onTap;
 
+  /// Actul de aprobare (la regulamente vechi se caută în fundal).
+  final Future<AprobareAct?>? aprobare;
+
   const _CardAct({
     required this.act,
     required this.onTap,
+    this.aprobare,
     this.articol,
     this.termen = '',
   });
@@ -975,7 +980,6 @@ class _CardAct extends StatelessWidget {
     final fragment = fragmentDinAct(act.text, termen);
     final titlu = titluPrezentare(act);
     final (culoare, fundal) = culoriTip(act.tipAct);
-    final aprobare = act.aprobatPrin;
     final meta = [
       if (act.emitent.isNotEmpty) act.emitent,
       if (d != null) 'în vigoare din ${_zi(d)}',
@@ -1058,33 +1062,41 @@ class _CardAct extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (aprobare != null) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 1),
-                        child: Icon(
-                          Icons.verified_outlined,
-                          size: 15,
-                          color: AppColors.accent,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          'Aprobat prin ${aprobare.denumire}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                FutureBuilder<AprobareAct?>(
+                  future: aprobare,
+                  initialData: act.aprobatPrin,
+                  builder: (context, snap) {
+                    final aprobare = snap.data;
+                    if (aprobare == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: Icon(
+                              Icons.verified_outlined,
+                              size: 15,
+                              color: AppColors.accent,
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              'Aprobat prin ${aprobare.denumire}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    );
+                  },
+                ),
                 if (fragment != null) ...[
                   const SizedBox(height: 10),
                   Container(
