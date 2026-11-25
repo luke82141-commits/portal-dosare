@@ -4,6 +4,7 @@ import '../screens/backup_screen.dart';
 import '../screens/calculator_termene_screen.dart';
 import '../screens/excel_screen.dart';
 import '../screens/instante_screen.dart';
+import '../screens/lexsnap_screen.dart';
 import '../screens/monitor_oficial_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
@@ -118,6 +119,12 @@ class _MeniuUtilitati extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            _Unealta(
+              icon: Icons.document_scanner_outlined,
+              titlu: 'LexSnap',
+              text: 'Fotografiezi o hârtie și vezi legile și articolele care o privesc',
+              onTap: () => _deschide(context, const LexSnapScreen()),
             ),
             _Unealta(
               icon: Icons.wb_sunny_outlined,
