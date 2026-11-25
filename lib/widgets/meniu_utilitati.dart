@@ -4,6 +4,7 @@ import '../screens/backup_screen.dart';
 import '../screens/calculator_termene_screen.dart';
 import '../screens/excel_screen.dart';
 import '../screens/instante_screen.dart';
+import '../screens/monitor_oficial_screen.dart';
 import '../screens/parti_urmarite_screen.dart';
 import '../screens/rapoarte_screen.dart';
 import '../screens/rezumat_zilnic_screen.dart';
@@ -123,6 +124,12 @@ class _MeniuUtilitati extends StatelessWidget {
               titlu: 'Rezumatul zilnic',
               text: 'Dimineața: termenele zilei, ce s-a schimbat și ce expiră',
               onTap: () => _deschide(context, const RezumatZilnicScreen()),
+            ),
+            _Unealta(
+              icon: Icons.newspaper_outlined,
+              titlu: 'Monitorul Oficial',
+              text: 'Alerte pe domeniile tale și raportul de dimineață cu ce a apărut ieri',
+              onTap: () => _deschide(context, const MonitorOficialScreen()),
             ),
             _Unealta(
               icon: Icons.calculate_outlined,
