@@ -44,6 +44,8 @@ class BackupService {
     'liniste_start_v1',
     'liniste_stop_v1',
     'dosare_importante_v1',
+    // Domeniile și setările pentru Monitorul Oficial (fără actele aflate).
+    'monitor_oficial_v1',
   ];
 
   static String numeFisier(DateTime d) =>

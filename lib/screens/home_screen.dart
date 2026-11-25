@@ -19,6 +19,7 @@ import 'cautare_screen.dart';
 import 'dosar_detaliu_screen.dart';
 import 'dosare_selectie_screen.dart';
 import 'legislatie_screen.dart';
+import 'monitor_oficial_screen.dart';
 import 'monitorizate_screen.dart';
 import 'notificari_screen.dart';
 import 'rezumat_zilnic_screen.dart';
@@ -69,8 +70,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     MonitorizareService.instance.deschideBiblioteca.addListener(_laNotificare);
     MonitorizareService.instance.deschideRezumat.addListener(_laRezumat);
+    MonitorizareService.instance.deschideMonitorOficial.addListener(_laMonitorOficial);
     _laNotificare();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _laRezumat());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _laRezumat();
+      _laMonitorOficial();
+    });
     _actualizeaza();
     BibliotecaService.instance.addListener(_programeazaWidgeturi);
     ProService.instance.addListener(_programeazaWidgeturi);
@@ -135,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _laNotificare,
     );
     MonitorizareService.instance.deschideRezumat.removeListener(_laRezumat);
+    MonitorizareService.instance.deschideMonitorOficial.removeListener(_laMonitorOficial);
     super.dispose();
   }
 
@@ -186,6 +192,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     semnal.value = false;
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const RezumatZilnicScreen()));
+  }
+
+  /// O alertă din Monitorul Oficial deschide ecranul lui.
+  void _laMonitorOficial() {
+    final semnal = MonitorizareService.instance.deschideMonitorOficial;
+    if (!semnal.value || !mounted) return;
+    semnal.value = false;
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MonitorOficialScreen()));
   }
 
   void _laNotificare() {

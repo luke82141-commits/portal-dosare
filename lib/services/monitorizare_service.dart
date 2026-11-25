@@ -9,6 +9,8 @@ import '../models/dosar_model.dart';
 import '../utils/formatare.dart';
 import 'biblioteca_service.dart';
 import 'iccj_service.dart';
+import 'monitor_oficial_service.dart';
+import 'sursa_legislatie_mo.dart';
 import 'parti_urmarite_service.dart';
 import 'pro_service.dart';
 import 'rezumat_service.dart';
@@ -23,6 +25,8 @@ const _canalPartiId = 'dosare_noi_parti';
 const _canalLinisteId = 'ore_de_liniste';
 const _canalRezumatId = 'rezumat_zilnic';
 const payloadRezumat = 'rezumat';
+const _canalMoId = 'monitorul_oficial';
+const payloadMonitorOficial = 'monitor_oficial';
 
 /// Cât de des verifică telefonul portalul, în fundal. Android nu permite mai
 /// des de 15 minute și poate întârzia rulările când economisește bateria.
@@ -80,8 +84,14 @@ class MonitorizareService {
   /// Devine true când aplicația a fost deschisă din rezumatul zilnic.
   final ValueNotifier<bool> deschideRezumat = ValueNotifier(false);
 
+  /// Devine true când aplicația a fost deschisă dintr-o alertă din
+  /// Monitorul Oficial.
+  final ValueNotifier<bool> deschideMonitorOficial = ValueNotifier(false);
+
   void _dinNotificare(String? payload) {
-    if (payload == payloadRezumat) {
+    if (payload == payloadMonitorOficial) {
+      deschideMonitorOficial.value = true;
+    } else if (payload == payloadRezumat) {
       deschideRezumat.value = true;
     } else {
       deschideBiblioteca.value = true;
@@ -155,7 +165,10 @@ class MonitorizareService {
     if (programata && !await _eDatorata(moment)) {
       final rezultate = await _verificaDosare(serviciu, iccj, moment, doarIccj: true);
       await actualizeazaWidgeturi(acum: acum);
-      if (programata) await trimiteRezumatulDacaEOra(moment);
+      if (programata) {
+        await trimiteRezumatulDacaEOra(moment);
+        await verificaMonitorulOficial(moment);
+      }
       return rezultate;
     }
     final rezultate = await _verificaDosare(serviciu, iccj, moment);
@@ -173,7 +186,10 @@ class MonitorizareService {
     await prefs.setString(_cheieUltimaVerificare, (acum ?? DateTime.now()).toIso8601String());
     // Widgeturile de pe ecran se reîmprospătează odată cu verificarea orară.
     await actualizeazaWidgeturi(acum: acum);
-    if (programata) await trimiteRezumatulDacaEOra(moment);
+    if (programata) {
+      await trimiteRezumatulDacaEOra(moment);
+      await verificaMonitorulOficial(moment);
+    }
     return rezultate;
   }
 
@@ -197,6 +213,57 @@ class MonitorizareService {
     } catch (e) {
       debugPrint('Rezumatul zilnic nu a putut fi trimis: $e');
     }
+  }
+
+  /// Monitorul Oficial (Pro): dimineața, raportul pentru ziua de ieri; în
+  /// rest, la cel mult 3 ore, alertă pentru actele noi de azi. O eroare aici
+  /// nu strică verificarea dosarelor.
+  Future<void> verificaMonitorulOficial(DateTime acum) async {
+    try {
+      await ProService.instance.incarca();
+      final mo = MonitorOficialService.instance;
+      await mo.incarca();
+      if (!ProService.instance.activ || !mo.areDomenii) return;
+      mo.sursa ??= SursaLegislatieMO();
+      if (mo.eTimpulRaportului(acum)) {
+        final r = await mo.raport(acum);
+        if (r != null) {
+          if (r.gasite.isNotEmpty || mo.raportSiCandEGol) {
+            final t = textRaportMO(r.gasite, r.zile);
+            await _notificaMO('raport_mo', t.titlu, t.sumar, t.linii);
+          }
+          await mo.marcheazaRaport(acum, r.gasite);
+        }
+      }
+      if (mo.alerteImediate && acum.hour >= 7 && acum.hour < 23) {
+        final noi = await mo.noiAzi(acum);
+        if (noi.isNotEmpty) {
+          final t = textActeNoi(noi);
+          await _notificaMO('acte_noi_mo', t.titlu, t.sumar, t.linii);
+        }
+      }
+    } catch (e) {
+      debugPrint('Verificarea Monitorului Oficial a eșuat: $e');
+    }
+  }
+
+  Future<void> _notificaMO(String id, String titlu, String sumar, List<String> linii) async {
+    if (!_suportat) return;
+    await _pornesteNotificari();
+    await _notificari.show(
+      id: id.hashCode & 0x7fffffff,
+      title: titlu,
+      body: sumar,
+      notificationDetails: NotificationDetails(
+        android: _detaliiAndroid(
+          _canalMoId,
+          'Monitorul Oficial',
+          'Actele noi pe domeniile alese și raportul de dimineață',
+          [sumar, ...linii].join('\n'),
+        ),
+      ),
+      payload: payloadMonitorOficial,
+    );
   }
 
   Future<void> _notificaRezumat(Rezumat r) async {
