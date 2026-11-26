@@ -54,6 +54,7 @@ dependencies:
   scrollable_positioned_list: ^0.3.8
   google_mlkit_text_recognition: ^1.0.3
   image_picker: ^1.2.4
+  pdfrx: ^3.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

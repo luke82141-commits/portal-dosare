@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:legal_management_app/lexsnap/analiza_document.dart';
+import 'package:legal_management_app/lexsnap/fisier_service.dart';
 import 'package:legal_management_app/lexsnap/lexsnap_service.dart';
 import 'package:legal_management_app/lexsnap/ocr_service.dart';
 import 'package:legal_management_app/lexsnap/sugestii_aparare.dart';
@@ -357,6 +358,119 @@ void main() {
       expect(find.byKey(const Key('lexsnap_text')), findsOneWidget);
     });
   });
+  group('fișiere (PDF și imagini)', () {
+    test('PDF: textul din fișier; paginile scanate cu OCR', () async {
+      final ocr = _OcrPeCale({
+        '/tmp/p1.png': 'Text scanat de pe pagina a doua, conform OG 2/2001.',
+      });
+      final pdf = _PdfFals([
+        'Pagina 1: PROCES-VERBAL de constatare a contravenției, text din fișier.',
+        '',
+        '  ',
+      ]);
+      final progres = <String>[];
+      final r = await CititorFisiere(
+        ocr: ocr,
+        deschidePdf: (_) async => pdf,
+      ).citeste('/doc.PDF', progres: (p, t) => progres.add('$p/$t'));
+      expect(r.pagini, 3);
+      expect(r.paginiOcr, 2);
+      expect(r.trunchiat, isFalse);
+      expect(r.text, contains('text din fișier'));
+      expect(r.text, contains('Text scanat'));
+      expect(ocr.citite, ['/tmp/p1.png', '/tmp/p2.png']);
+      expect(progres, ['1/3', '2/3', '3/3']);
+      expect(pdf.inchis, isTrue);
+      expect(analizeazaDocument(r.text).acte.single.cerere.numar, '2');
+    });
+
+    test('PDF lung: doar primele $maxPaginiPdf pagini', () async {
+      final pdf = _PdfFals(
+        List.filled(
+          40,
+          'Pagina cu destul text ca să nu fie considerată scanată.',
+        ),
+      );
+      final r = await CititorFisiere(
+        ocr: _OcrPeCale({}),
+        deschidePdf: (_) async => pdf,
+      ).citeste('/a.pdf');
+      expect(r.pagini, maxPaginiPdf);
+      expect(r.trunchiat, isTrue);
+    });
+
+    test('imagine: direct la OCR', () async {
+      final ocr = _OcrPeCale({'/poza.jpeg': 'Somație de plată'});
+      final r = await CititorFisiere(
+        ocr: ocr,
+        deschidePdf: (_) => throw StateError('nu e PDF'),
+      ).citeste('/poza.jpeg');
+      expect(r.text, 'Somație de plată');
+    });
+
+    testWidgets('ecranul: încarcă un PDF', (t) async {
+      SharedPreferences.setMockInitialValues({});
+      await t.pumpWidget(
+        MaterialApp(
+          home: LexSnapScreen(
+            ocr: _OcrPeCale({}),
+            alegeFisier: () async => '/dosar/pv.pdf',
+            deschidePdf: (_) async => _PdfFals([_procesVerbal, _procesVerbal]),
+            service: LegislatieService.cuClient(_client()),
+          ),
+        ),
+      );
+      await t.tap(find.text('Încarcă fișier (PDF, JPG, PNG)'));
+      for (var i = 0; i < 20; i++) {
+        await t.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await t.pump();
+      }
+      expect(find.text('PDF, 2 pagini'), findsOneWidget);
+      expect(find.text('Proces-verbal de contravenție'), findsOneWidget);
+    });
+
+    testWidgets('ecranul: fișier de alt tip', (t) async {
+      SharedPreferences.setMockInitialValues({});
+      await t.pumpWidget(
+        MaterialApp(home: LexSnapScreen(alegeFisier: () async => '/a.docx')),
+      );
+      await t.tap(find.text('Încarcă fișier (PDF, JPG, PNG)'));
+      await t.pump();
+      expect(find.textContaining('Pot citi doar PDF'), findsOneWidget);
+    });
+  });
+}
+
+class _OcrPeCale implements OcrService {
+  final Map<String, String> texte;
+  final citite = <String>[];
+  _OcrPeCale(this.texte);
+
+  @override
+  Future<String> citeste(String cale) async {
+    citite.add(cale);
+    return texte[cale] ?? '';
+  }
+}
+
+class _PdfFals implements SursaPdf {
+  final List<String> pagini;
+  bool inchis = false;
+  _PdfFals(this.pagini);
+
+  @override
+  Future<int> get numarPagini async => pagini.length;
+
+  @override
+  Future<String> text(int i) async => pagini[i];
+
+  @override
+  Future<String> imagine(int i) async => '/tmp/p$i.png';
+
+  @override
+  Future<void> inchide() async => inchis = true;
 }
 
 class _OcrFals implements OcrService {
