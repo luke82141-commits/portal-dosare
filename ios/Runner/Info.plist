@@ -11,6 +11,11 @@
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 			</dict>
+			<key>api.scj.ro</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
 		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
