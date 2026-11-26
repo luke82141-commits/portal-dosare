@@ -37,6 +37,8 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Reguli R8 suplimentare (ML Kit: scripturi OCR neincluse).
+            proguardFiles("proguard-rules.pro")
         }
     }
 }

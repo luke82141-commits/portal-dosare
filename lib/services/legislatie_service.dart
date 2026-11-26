@@ -938,11 +938,37 @@ List<ActNormativ> parseazaRaspunsCautare(String body) {
       dataVigoare: _data(text(e, 'DataVigoare')),
       titlu: titluFaraAntet(text(e, 'Titlu')),
       emitent: emitentReparat(text(e, 'Emitent')),
-      publicatie: text(e, 'Publicatie'),
+      publicatie: publicatieCompleta(
+        text(e, 'Publicatie'),
+        text(e, 'Titlu'),
+        text(e, 'Text'),
+      ),
       linkHtml: link,
       text: textFaraAntet(curataText(text(e, 'Text'))),
     );
   }).toList();
+}
+
+final _reMonitorInAntet = RegExp(
+  r'Monitorul\s+Oficial\b.{0,40}?nr\.\s*[\d.]+(?:\s*bis)?\s*din\s+\d{1,2}\s+'
+  r'[a-zA-ZăâîșşțţĂÂÎȘŞȚŢ]+\s+\d{4}',
+  caseSensitive: false,
+  dotAll: true,
+);
+
+/// Câmpul Publicatie vine adesea doar ca „Monitorul Oficial” (verificat
+/// 26.11.2026); numărul și ziua sunt în antetul titlului („PUBLICAT ÎN
+/// Monitorul Oficial nr. 979 din 25 noiembrie 2026”) sau al textului.
+/// Le luăm de acolo, înainte ca antetul să fie scos.
+String publicatieCompleta(String publicatie, String titluBrut, String textBrut) {
+  if (RegExp(r'nr\.\s*[\d.]+', caseSensitive: false).hasMatch(publicatie)) {
+    return publicatie;
+  }
+  for (final sursa in [titluBrut, textBrut]) {
+    final m = _reMonitorInAntet.firstMatch(sursa);
+    if (m != null) return m.group(0)!.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+  return publicatie;
 }
 
 /// Data poate veni ca ISO („2014-06-28T00:00:00”) sau „28.06.2014”.
