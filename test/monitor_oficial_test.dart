@@ -305,4 +305,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Hotărâre nr. 900'), findsOneWidget);
   });
+
+  test('Publicatie fără număr: Monitorul se ia din antetul titlului', () {
+    // Forma reală a răspunsului (26.11.2026): Publicatie e doar „Monitorul Oficial”.
+    const xml = '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
+        '<SearchResponse xmlns="http://tempuri.org/"><SearchResult '
+        'xmlns:a="http://schemas.datacontract.org/2004/07/FreeWebService"><a:Legi>'
+        '<a:DataVigoare>2026-11-25</a:DataVigoare><a:Emitent>Curtea Constitutionala</a:Emitent>'
+        '<a:LinkHtml>http://legislatie.just.ro/Public/DetaliiDocument/316590</a:LinkHtml>'
+        '<a:Numar>398</a:Numar><a:Publicatie>Monitorul Oficial</a:Publicatie>'
+        '<a:Text> DECIZIA nr. 398 din 30 aprilie 2026 </a:Text><a:TipAct>DECIZIE</a:TipAct>'
+        '<a:Titlu> DECIZIA nr. 398 din 30 aprilie 2026  referitoare la excepția de '
+        'neconstituționalitate      EMITENT      Curtea Constituțională       PUBLICAT ÎN \n'
+        '\t\t\t  Monitorul Oficial nr. 979 din 25 noiembrie 2026     </a:Titlu>'
+        '</a:Legi></SearchResult></SearchResponse></s:Body></s:Envelope>';
+    final acte = parseazaRaspunsCautare(xml);
+    expect(acte.single.publicatie, 'Monitorul Oficial nr. 979 din 25 noiembrie 2026');
+    final p = actPublicatDin(acte.single, DateTime(2026, 11, 25));
+    expect(p, isNotNull);
+    expect(p!.monitor, '979');
+    expect(p.dataPublicarii, DateTime(2026, 11, 25));
+  });
 }

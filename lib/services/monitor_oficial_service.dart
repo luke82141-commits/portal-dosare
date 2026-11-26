@@ -513,7 +513,9 @@ class MonitorOficialService extends ChangeNotifier {
   static final MonitorOficialService instance = MonitorOficialService._();
 
   static const _cheie = 'monitor_oficial_v1';
-  static const _cheieActe = 'monitor_oficial_acte_v1';
+  // v2: în v1 zilele erau salvate goale (numărul Monitorului nu era citit
+  // din antet), iar zilele trecute nu se mai cer din nou.
+  static const _cheieActe = 'monitor_oficial_acte_v2';
 
   /// Sursa folosită; se setează la pornire (și în teste).
   SursaMonitorOficial? sursa;
