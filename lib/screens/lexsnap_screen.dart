@@ -4,11 +4,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../lexsnap/ai_proxy.dart';
 import '../lexsnap/analiza_document.dart';
 import '../lexsnap/fisier_service.dart';
 import '../lexsnap/lexsnap_service.dart';
 import '../lexsnap/ocr_service.dart';
 import '../lexsnap/sugestii_aparare.dart';
+import '../lexsnap/surse_aparare.dart';
+import '../services/forma_consolidata.dart';
 import '../services/legislatie_service.dart';
 import '../services/pro_service.dart';
 import '../theme/app_theme.dart';
@@ -39,7 +42,13 @@ class LexSnapScreen extends StatefulWidget {
 
   /// Citirea PDF-urilor (în teste, simulată).
   final DeschidePdf? deschidePdf;
-  final FurnizorSugestii furnizorSugestii;
+
+  /// Cine scrie sugestiile de apărare; implicit proxy-ul AI, dacă e
+  /// configurat ([furnizorImplicit]).
+  final FurnizorSugestii? furnizorSugestii;
+
+  /// Forma la zi a actelor (în teste, simulată).
+  final FormaConsolidataService? forme;
 
   const LexSnapScreen({
     super.key,
@@ -48,7 +57,8 @@ class LexSnapScreen extends StatefulWidget {
     this.alegeImagine,
     this.alegeFisier,
     this.deschidePdf,
-    this.furnizorSugestii = const FurnizorNeconfigurat(),
+    this.furnizorSugestii,
+    this.forme,
   });
 
   @override
@@ -396,7 +406,15 @@ class _LexSnapScreenState extends State<LexSnapScreen> {
           ),
         ),
       const SizedBox(height: 24),
-      _CardSugestii(disponibil: widget.furnizorSugestii.disponibil),
+      _SectiuneSugestii(
+        key: ObjectKey(a),
+        furnizor: widget.furnizorSugestii ?? furnizorImplicit(),
+        prevederi: _prevederi,
+        cautareGata: !_cauta,
+        textDocument: () => _text.text,
+        pregatire: PregatireSurse(service: widget.service, forme: widget.forme),
+        onDeschide: _deschide,
+      ),
     ];
   }
 }
@@ -496,13 +514,112 @@ class _CardPrevedere extends StatelessWidget {
   }
 }
 
-/// Pasul 3, încă nepornit: locul sugestiilor de apărare.
-class _CardSugestii extends StatelessWidget {
-  final bool disponibil;
-  const _CardSugestii({required this.disponibil});
+/// Pasul 3: sugestiile de apărare, scrise de AI doar din articolele găsite
+/// și păstrate doar dacă fiecare citat e verificat cuvânt cu cuvânt.
+class _SectiuneSugestii extends StatefulWidget {
+  final FurnizorSugestii furnizor;
+  final List<PrevedereGasita> prevederi;
+  final bool cautareGata;
+  final String Function() textDocument;
+  final PregatireSurse pregatire;
+  final void Function(ActNormativ act, [String? articol]) onDeschide;
+
+  const _SectiuneSugestii({
+    super.key,
+    required this.furnizor,
+    required this.prevederi,
+    required this.cautareGata,
+    required this.textDocument,
+    required this.pregatire,
+    required this.onDeschide,
+  });
+
+  @override
+  State<_SectiuneSugestii> createState() => _SectiuneSugestiiState();
+}
+
+enum _Faza { inactiv, pregatire, asteapta, gata, eroare }
+
+class _SectiuneSugestiiState extends State<_SectiuneSugestii> {
+  var _faza = _Faza.inactiv;
+  String? _eroare;
+  List<SugestieAparare> _sugestii = const [];
+  int _ascunse = 0;
+  Map<String, ArticolSursa> _surse = const {};
+  Map<String, ActNormativ> _acte = const {};
+
+  bool get _areArticole =>
+      widget.prevederi.any((p) => p.gasita && p.cautare.articole.isNotEmpty);
+
+  Future<void> _genereaza() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Trimiți la serviciul AI?'),
+        content: const Text(
+          'Textul documentului și articolele găsite vor fi trimise la un '
+          'serviciu AI, prin serverul nostru. Înainte de trimitere ascundem '
+          'CNP-ul, IBAN-ul, telefonul, emailul, seria buletinului și numărul '
+          'mașinii; numele rămân. Nu păstrăm documentul.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Renunț'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Trimite'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() {
+      _faza = _Faza.pregatire;
+      _eroare = null;
+    });
+    try {
+      final r = await widget.pregatire.pregateste(widget.prevederi);
+      if (!mounted) return;
+      if (r.surse.isEmpty) {
+        setState(() {
+          _faza = _Faza.gata;
+          _sugestii = const [];
+          _ascunse = 0;
+        });
+        return;
+      }
+      setState(() => _faza = _Faza.asteapta);
+      final brute = await widget.furnizor.sugereaza(
+        widget.textDocument(),
+        r.surse,
+      );
+      final bune = pastreazaDoarVerificate(brute, r.surse);
+      if (!mounted) return;
+      setState(() {
+        _faza = _Faza.gata;
+        _sugestii = bune;
+        _ascunse = brute.length - bune.length;
+        _surse = {for (final s in r.surse) s.id: s};
+        _acte = r.acte;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _faza = _Faza.eroare;
+          _eroare = e is EroareSugestii
+              ? e.mesaj
+              : 'Nu am putut genera sugestiile. Încearcă din nou.';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final disponibil = widget.furnizor.disponibil;
+    final lucreaza = _faza == _Faza.pregatire || _faza == _Faza.asteapta;
     return Card(
       color: AppColors.accentContainer,
       child: Padding(
@@ -523,18 +640,169 @@ class _CardSugestii extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              disponibil
-                  ? 'Argumente bazate doar pe articolele de mai sus, fiecare cu '
-                        'citatul exact din lege.'
-                  : 'În curând: argumente bazate doar pe articolele de mai sus, '
-                        'fiecare cu citatul exact din lege.',
-            ),
-            const SizedBox(height: 8),
+            if (!disponibil)
+              const Text(
+                'În curând: argumente bazate doar pe articolele de mai sus, '
+                'fiecare cu citatul exact din lege.',
+              )
+            else if (_faza == _Faza.inactiv || _faza == _Faza.eroare) ...[
+              const Text(
+                'Argumente scrise de AI doar din articolele de mai sus. '
+                'Păstrăm doar sugestiile al căror citat apare exact în lege.',
+              ),
+              if (_eroare != null) ...[
+                const SizedBox(height: 8),
+                Text(_eroare!, style: const TextStyle(color: AppColors.error)),
+              ],
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: widget.cautareGata && _areArticole
+                    ? _genereaza
+                    : null,
+                icon: const Icon(Icons.auto_awesome),
+                label: Text(
+                  _faza == _Faza.eroare
+                      ? 'Încearcă din nou'
+                      : 'Generează sugestii',
+                ),
+              ),
+              if (widget.cautareGata && !_areArticole)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Nu am găsit articole anume, deci nu am din ce argumenta.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+            ] else if (lucreaza)
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _faza == _Faza.pregatire
+                          ? 'Citesc articolele la zi...'
+                          : 'AI-ul analizează documentul...',
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              if (_sugestii.isEmpty)
+                const Text(
+                  mesajFaraPrevedere,
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              for (final (i, s) in _sugestii.indexed)
+                _CardSugestie(
+                  numar: i + 1,
+                  sugestie: s,
+                  surse: _surse,
+                  acte: _acte,
+                  onDeschide: widget.onDeschide,
+                ),
+              if (_ascunse > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    _ascunse == 1
+                        ? 'Am ascuns o sugestie al cărei citat nu se regăsește exact în lege.'
+                        : 'Am ascuns $_ascunse sugestii ale căror citate nu se regăsesc exact în lege.',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ],
+            const SizedBox(height: 12),
             const Text(
               avertismentLexSnap,
               style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardSugestie extends StatelessWidget {
+  final int numar;
+  final SugestieAparare sugestie;
+  final Map<String, ArticolSursa> surse;
+  final Map<String, ActNormativ> acte;
+  final void Function(ActNormativ act, [String? articol]) onDeschide;
+
+  const _CardSugestie({
+    required this.numar,
+    required this.sugestie,
+    required this.surse,
+    required this.acte,
+    required this.onDeschide,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$numar. ${sugestie.text}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            for (final c in sugestie.citari) ...[
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: acte[c.sursa] == null
+                    ? null
+                    : () => onDeschide(acte[c.sursa]!, c.articol),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      left: BorderSide(color: AppColors.accent, width: 3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          'Art. ${c.articol}',
+                          if (c.alineat != null) 'alin. (${c.alineat})',
+                          if (surse[c.sursa] != null)
+                            '— ${surse[c.sursa]!.act}',
+                        ].join(' '),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '„${c.citat.trim()}”',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
