@@ -293,7 +293,7 @@ List<_Mentiune> _mentiuniActe(String n) {
 /// Între articol și act stau doar legături: „ din ”, „ al ”, „, ”, „ din
 /// Legea ...”. Mai mult de atât înseamnă că articolul nu ține de acel act.
 final _reLegatura = RegExp(
-  r'^[\s,]*(?:\)|alin\.?\s*\(?\d+\)?|lit\.?\s*[a-z]\)|pct\.?\s*\d+|teza\s+\S+|[\s,])*'
+  r'^[\s,]*(?:\)|alin\.?\s*\(?\d+\)?|lit\.?\s*[a-z]\)|pct\.?\s*\d+|teza\s+\S+|(?:si|și)\s+urm(?:atoarele|\.)?|[\s,])*'
   r'(?:din|al|a|ale|la|cf\.?|conform|potrivit)?\s*(?:noul\s+|actualul\s+)?$',
 );
 
@@ -321,6 +321,14 @@ List<ActDeCautat> trimiteriDinDocument(String text) {
         urmator.start - m.end <= 40 &&
         _reLegatura.hasMatch(n.substring(m.end, urmator.start))) {
       articole.putIfAbsent(urmator.act.cheie, () => []).addAll(cerute);
+      continue;
+    }
+    // Actul chiar înainte: „Codul muncii, art. 45”, „Legea 53/2003 - art. 45”.
+    final precedent = acte.where((a) => a.end <= m.start).lastOrNull;
+    if (precedent != null &&
+        m.start - precedent.end <= 4 &&
+        RegExp(r'^[\s,;:–-]*$').hasMatch(n.substring(precedent.end, m.start))) {
+      articole.putIfAbsent(precedent.act.cheie, () => []).addAll(cerute);
     } else {
       faraAct.addAll(cerute);
     }
@@ -353,6 +361,20 @@ List<ArticolCerut> _art(List<String> nr) => [
   for (final n in nr) ArticolCerut(n),
 ];
 
+TipDocument _executareSilita() => TipDocument(
+  'Act de executare silită',
+  'Contestația la executare și termenul ei.',
+  [
+    _actCunoscut(
+      '134',
+      2010,
+      MotivPrevedere.tipDocument,
+      'Contestația la executare',
+      _art(['712', '714', '715']),
+    ),
+  ],
+);
+
 /// Prevederi uzuale pentru fiecare fel de document. Articolele sunt doar
 /// punctele de plecare: omul le citește și decide.
 final _reguli = <_Regula>[
@@ -376,21 +398,9 @@ final _reguli = <_Regula>[
   ),
   _Regula(
     RegExp(
-      r'executare\w* silit|executor\w* judecatoresc|somati[ae]\w*(?! de plata)|popri\w*|incuviintar\w* (?:a )?executar',
+      r'executare\w* silit|executor\w* judecatoresc|popri\w*|incuviintar\w* (?:a )?executar',
     ),
-    () => TipDocument(
-      'Act de executare silită',
-      'Contestația la executare și termenul ei.',
-      [
-        _actCunoscut(
-          '134',
-          2010,
-          MotivPrevedere.tipDocument,
-          'Contestația la executare',
-          _art(['712', '714', '715']),
-        ),
-      ],
-    ),
+    _executareSilita,
   ),
   _Regula(
     RegExp(r'ordonant\w* de plata|somati\w* de plata'),
@@ -408,6 +418,9 @@ final _reguli = <_Regula>[
       ],
     ),
   ),
+  // „Somație” singură e de obicei a executorului; dar o somație a
+  // creditorului care pomenește ordonanța de plată e prinsă mai sus.
+  _Regula(RegExp(r'somati[ae]\w*'), _executareSilita),
   _Regula(
     RegExp(
       r'cerere\w* de chemare in judecata|\bciteaz\w*|\bcitati\w*|intampinar\w*',

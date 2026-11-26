@@ -26,6 +26,21 @@ void main() {
     );
     expect(titluCurat('CODUL CIVIL din 17 iulie 2009 (**republicat**)'),
         'CODUL CIVIL din 17 iulie 2009 (republicat)');
+    expect(titluCurat('CODUL CIVIL din 17 iulie 2009 (**republicat**) (Legea nr. 287/2009*)'),
+        'CODUL CIVIL din 17 iulie 2009 (republicat) (Legea nr. 287/2009)');
+  });
+
+  test('codul deschis după id se numește „Codul civil”, nu „Cod”', () {
+    const a = ActNormativ(
+      tipAct: 'COD',
+      numar: '',
+      titlu: 'CODUL CIVIL din 17 iulie 2009 (republicat) (Legea nr. 287/2009)',
+      emitent: '',
+      publicatie: '',
+      linkHtml: '',
+      text: '',
+    );
+    expect(a.denumireScurta, 'Codul civil');
   });
 
   test('un act cu articole nu e ciot', () {

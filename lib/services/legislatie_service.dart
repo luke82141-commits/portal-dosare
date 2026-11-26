@@ -49,7 +49,18 @@ class ActNormativ {
   String get denumireScurta {
     final tip = tipAct.isEmpty ? 'Act' : etichetaTip(tipAct);
     final nr = numar.trim();
-    if (nr.isEmpty || nr == '0') return tip;
+    if (nr.isEmpty || nr == '0') {
+      // „CODUL CIVIL din 17 iulie 2009 ...” → „Codul civil”, nu doar „Cod”.
+      final cod = RegExp(
+        r'^\s*(COD(?:UL)?\s+[^(*]+?)\s+din\b',
+        caseSensitive: false,
+      ).firstMatch(titlu);
+      if (cod != null) {
+        final n = cod[1]!.toLowerCase();
+        return '${n[0].toUpperCase()}${n.substring(1)}';
+      }
+      return tip;
+    }
     final a = an;
     return a == null ? '$tip nr. $nr' : '$tip nr. $nr/$a';
   }
@@ -1284,8 +1295,11 @@ List<ActCunoscut> acteCunoscutePotrivite(String intrare) {
 }
 
 CerereLegislatie cerereActCunoscut(ActCunoscut a) => a.numar.isEmpty
-    // Anul scoate Constituția din 1923 (anul e limita de jos a intrării în vigoare).
-    ? const CerereLegislatie(titlu: 'CONSTITUȚIA ROMÂNIEI', an: 1991)
+    // Pe portal titlul e „CONSTITUŢIE*) din 21 noiembrie 1991 (republicată)”;
+    // „CONSTITUȚIA ROMÂNIEI” nu mai găsește Constituția, doar acte care o
+    // pomenesc (verificat 26.11.2026). „CONSTITUȚIE din …” prinde doar forma
+    // republicată, cea în vigoare.
+    ? const CerereLegislatie(titlu: 'CONSTITUȚIE din 21 noiembrie 1991')
     : CerereLegislatie(
         numar: a.numar,
         an: a.an,
@@ -1857,12 +1871,31 @@ ActNormativ? alegeCodAnexat(
 /// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”) și
 /// fără trimiterile la note de subsol („din 17 iulie 2009*)” → „din 17 iulie
 /// 2009”), din care altfel rămânea o paranteză în plus.
-String titluCurat(String titlu) => titlu
-    .replaceAllMapped(RegExp(r'\(\*+([^*()]+?)\*+\)'), (m) => '(${m[1]})')
-    .replaceAll(RegExp(r'\*+\)'), '')
-    .replaceAll(RegExp(r'\*+'), '')
-    .replaceAll(RegExp(r'\s+'), ' ')
-    .trim();
+String titluCurat(String titlu) {
+  final t = titlu.replaceAllMapped(
+    RegExp(r'\(\*+([^*()]+?)\*+\)'),
+    (m) => '(${m[1]})',
+  );
+  // „*)” e trimitere la notă doar când nu închide o paranteză deschisă:
+  // „(Legea nr. 287/2009*)” își păstrează „)”.
+  final b = StringBuffer();
+  var adancime = 0;
+  for (var i = 0; i < t.length; i++) {
+    final c = t[i];
+    if (c == '*') {
+      var j = i;
+      while (j < t.length && t[j] == '*') {
+        j++;
+      }
+      i = j < t.length && t[j] == ')' && adancime == 0 ? j : j - 1;
+      continue;
+    }
+    if (c == '(') adancime++;
+    if (c == ')' && adancime > 0) adancime--;
+    b.write(c);
+  }
+  return b.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+}
 
 /// Titlul arătat în cardul de rezultat, fără majusculele și fără repetarea
 /// tipului și numărului (care sunt deja în eticheta colorată):
