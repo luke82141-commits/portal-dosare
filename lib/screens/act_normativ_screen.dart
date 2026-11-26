@@ -162,6 +162,22 @@ class _ActNormativScreenState extends State<ActNormativScreen> {
       final f = await _fs.forma(id);
       if (!mounted) return;
       final areText = f != null && f.blocuri.isNotEmpty;
+      // Legea are pe portal doar trimiterea către actul cu textul (Codul
+      // muncii, Legea 53/2003): deschidem direct acel act, în locul ei.
+      final tinta = areText ? idActDinCiot(f.blocuri, idPropriu: id) : null;
+      if (tinta != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => ActNormativScreen.dupaId(
+              tinta,
+              articolInitial: widget.articolInitial,
+              service: widget.service,
+              formaService: widget.formaService,
+            ),
+          ),
+        );
+        return;
+      }
       setState(() {
         _forma = areText ? f : null;
         _eroareLaZi = !areText;

@@ -174,6 +174,21 @@ void main() {
       ]);
     });
 
+    test('somația creditorului cu ordonanță de plată: art. 1014, art. 45 după act', () {
+      final a = analizeazaDocument(
+        'SOMAȚIE. Potrivit art. 1350 din Codul civil, sunteți în întârziere. '
+        'Vom formula cerere de emitere a ordonanței de plată, conform '
+        'art. 1014 și următoarele din Codul de procedură civilă. Raportul de '
+        'muncă e guvernat de Legea nr. 53/2003 – Codul muncii, art. 45.',
+      );
+      expect(a.tipDocument?.nume, startsWith('Somație / cerere de ordonanță de plată'));
+      final cpc = a.acte.firstWhere((x) => x.cerere.numar == '134');
+      expect(cpc.articole.map((x) => x.articol), contains('1014'));
+      expect(cpc.articole.map((x) => x.articol), isNot(contains('712')));
+      final muncii = a.acte.firstWhere((x) => x.eticheta.contains('Codul muncii'));
+      expect(muncii.articole.map((x) => x.articol), contains('45'));
+    });
+
     test('somație de plată nu e executare silită', () {
       expect(
         tipDocumentDin('SOMAȚIE DE PLATĂ către debitor')?.nume,

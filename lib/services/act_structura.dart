@@ -83,6 +83,28 @@ class Modificare {
   });
 }
 
+/// Unele acte sunt pe portal doar un „ciot”: legea republicată (de exemplu
+/// Legea 53/2003) are ca text numai trimiterea „CODUL MUNCII” către actul cu
+/// textul propriu-zis. Întoarce id-ul acelui act, dacă [blocuri] nu au
+/// niciun articol și au o singură trimitere (orice id diferit de [idPropriu]).
+String? idActDinCiot(List<BlocAct> blocuri, {String? idPropriu}) {
+  if (blocuri.any((b) => b.tip == TipBloc.articol || b.tip == TipBloc.alineat)) {
+    return null;
+  }
+  final ids = <String>{
+    for (final b in blocuri)
+      if (b.tip != TipBloc.nota)
+        for (final l in b.legaturi) l.idAct,
+  }..remove(idPropriu);
+  if (ids.length != 1) return null;
+  final text = blocuri
+      .where((b) => b.tip != TipBloc.nota)
+      .map((b) => b.textComplet)
+      .join(' ')
+      .trim();
+  return text.length <= 300 ? ids.single : null;
+}
+
 /// O trimitere din text către alt act: caracterele [start, end) din text.
 class Legatura {
   final int start;
