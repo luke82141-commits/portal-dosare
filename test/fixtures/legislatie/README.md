@@ -90,3 +90,6 @@ de comprimare, ca fixture-urile să conțină exact octeții primiți.
 - Observație: serverul răspunde acum `403 Forbidden` (nginx) la cererile fără
   antet `User-Agent` de browser (ex. `curl` implicit); cu
   `User-Agent: Mozilla/5.0` răspunsul este `200`.
+- `lege53_ciot.html.gz`: Legea 53/2003 republicată (DetaliiDocument/128646),
+  descărcată live pe 26.11.2026. Pe portal textul ei e doar trimiterea
+  „CODUL MUNCII” către DetaliiDocumentAfis/309240, unde e textul codului.

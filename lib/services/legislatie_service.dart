@@ -1854,9 +1854,15 @@ ActNormativ? alegeCodAnexat(
       .firstOrNull;
 }
 
-/// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”).
-String titluCurat(String titlu) =>
-    titlu.replaceAll(RegExp(r'\*+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+/// Titlul fără marcajele portalului („(**republicat**)” → „(republicat)”) și
+/// fără trimiterile la note de subsol („din 17 iulie 2009*)” → „din 17 iulie
+/// 2009”), din care altfel rămânea o paranteză în plus.
+String titluCurat(String titlu) => titlu
+    .replaceAllMapped(RegExp(r'\(\*+([^*()]+?)\*+\)'), (m) => '(${m[1]})')
+    .replaceAll(RegExp(r'\*+\)'), '')
+    .replaceAll(RegExp(r'\*+'), '')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
 
 /// Titlul arătat în cardul de rezultat, fără majusculele și fără repetarea
 /// tipului și numărului (care sunt deja în eticheta colorată):
