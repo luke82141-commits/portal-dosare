@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import '../services/act_export.dart' show structureazaInFundal;
-import '../services/act_structura.dart';
-import 'lexsnap_service.dart';
+import '../services/act_structura.dart' show nrArticol;
+import 'prompt_aparare.dart';
 
-/// LexSnap, pasul 3 (NU e activ încă): sugestii de apărare scrise de un
+export 'prompt_aparare.dart';
+
+/// LexSnap, pasul 3: sugestii de apărare scrise de un
 /// model AI, prin proxy-ul de pe serverul OVH (cheia Gemini/Groq stă acolo,
 /// nu în aplicație).
 ///
@@ -25,33 +26,6 @@ const avertismentLexSnap =
     'avocat înainte de a lua o decizie.';
 
 const mesajFaraPrevedere = 'Nu am găsit o prevedere aplicabilă.';
-
-/// Un articol găsit la pasul 2, singurul material din care modelul are voie
-/// să argumenteze.
-class ArticolSursa {
-  /// „S1”, „S2”: cum îl citează modelul.
-  final String id;
-
-  /// „Ordonanță nr. 2/2001”.
-  final String act;
-
-  /// Cheia actului în Legislație ([ActNormativ.cheie]), pentru deschidere.
-  final String cheieAct;
-
-  /// „31”, „5^1”.
-  final String articol;
-
-  /// Textul articolului, câte un alineat / o literă pe rând („(1) ...”).
-  final String text;
-
-  const ArticolSursa({
-    required this.id,
-    required this.act,
-    required this.cheieAct,
-    required this.articol,
-    required this.text,
-  });
-}
 
 class CitareLegala {
   /// Id-ul sursei („S1”).
@@ -185,49 +159,7 @@ List<SugestieAparare> pastreazaDoarVerificate(
 }
 
 // ---------------------------------------------------------------------------
-// Ce trimitem modelului și ce așteptăm înapoi
-
-/// Promptul pentru proxy. Documentul e trunchiat; sursele sunt complete.
-String construiestePrompt(String textDocument, List<ArticolSursa> surse) {
-  final doc = textDocument.length > 6000
-      ? '${textDocument.substring(0, 6000)} […]'
-      : textDocument;
-  final b = StringBuffer()
-    ..writeln(
-      'Ești un asistent juridic pentru dreptul românesc. Primești un document '
-      'și o listă de articole de lege (SURSE). Propune argumente pe care '
-      'destinatarul documentului le-ar putea folosi în apărarea sa.',
-    )
-    ..writeln()
-    ..writeln('REGULI OBLIGATORII:')
-    ..writeln(
-      '1. Folosește DOAR SURSELE de mai jos. Nu cita alte legi, '
-      'articole sau jurisprudență.',
-    )
-    ..writeln(
-      '2. Fiecare argument are cel puțin o citare: id-ul sursei, '
-      'articolul, alineatul (dacă e cazul) și un citat copiat EXACT, '
-      'cuvânt cu cuvânt, din textul sursei (minimum 3 cuvinte).',
-    )
-    ..writeln('3. Dacă nicio sursă nu se aplică, întoarce "sugestii": [].')
-    ..writeln('4. Răspunde DOAR cu JSON, fără alt text:')
-    ..writeln(
-      '{"sugestii":[{"text":"...","citari":[{"sursa":"S1",'
-      '"articol":"31","alineat":"1","citat":"..."}]}]}',
-    )
-    ..writeln()
-    ..writeln('SURSE:');
-  for (final s in surse) {
-    b
-      ..writeln('[${s.id}] ${s.act}, art. ${s.articol}')
-      ..writeln(s.text)
-      ..writeln();
-  }
-  b
-    ..writeln('DOCUMENT:')
-    ..writeln(doc);
-  return b.toString();
-}
+// Ce primim de la model
 
 /// Răspunsul modelului: JSON-ul `{"sugestii": [...]}`, chiar dacă e
 /// înconjurat de text sau de ```json```. Orice altceva → listă goală.
@@ -246,43 +178,4 @@ List<SugestieAparare> parseazaSugestii(String raspuns) {
   } on FormatException {
     return const [];
   }
-}
-
-/// Textul articolelor găsite la pasul 2, ca surse numerotate. Articolele pe
-/// care nu le găsim în textul actului (ex. codurile, publicate ca act
-/// separat de legea care le aprobă) lipsesc: pasul 3 va trebui să încarce
-/// și codul anexat.
-Future<List<ArticolSursa>> surseDin(List<PrevedereGasita> prevederi) async {
-  final surse = <ArticolSursa>[];
-  for (final p in prevederi) {
-    if (p.cautare.articole.isEmpty) continue;
-    for (final act in p.acte) {
-      if (act.text.isEmpty) continue;
-      final blocuri = await structureazaInFundal(act.text);
-      for (final a in p.cautare.articole) {
-        if (surse.any(
-          (s) => s.cheieAct == act.cheie && s.articol == a.articol,
-        )) {
-          continue;
-        }
-        final i = indiceArticol(blocuri, a.articol);
-        if (i == null) continue;
-        final linii = [
-          for (final x in blocuriArticol(blocuri, i).skip(1))
-            if (x.tip != TipBloc.nota)
-              [x.eticheta, x.text].where((s) => s.isNotEmpty).join(' '),
-        ];
-        surse.add(
-          ArticolSursa(
-            id: 'S${surse.length + 1}',
-            act: act.denumireScurta,
-            cheieAct: act.cheie,
-            articol: a.articol,
-            text: linii.join('\n'),
-          ),
-        );
-      }
-    }
-  }
-  return surse;
 }

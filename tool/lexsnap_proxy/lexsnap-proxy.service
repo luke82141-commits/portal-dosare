@@ -1,0 +1,19 @@
+[Unit]
+Description=LexSnap AI proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=lexsnap
+EnvironmentFile=/etc/lexsnap/proxy.env
+ExecStart=/usr/local/bin/lexsnap-proxy
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target

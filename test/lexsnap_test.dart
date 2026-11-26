@@ -10,6 +10,8 @@ import 'package:legal_management_app/lexsnap/fisier_service.dart';
 import 'package:legal_management_app/lexsnap/lexsnap_service.dart';
 import 'package:legal_management_app/lexsnap/ocr_service.dart';
 import 'package:legal_management_app/lexsnap/sugestii_aparare.dart';
+import 'package:legal_management_app/lexsnap/surse_aparare.dart';
+import 'package:legal_management_app/services/forma_consolidata.dart';
 import 'package:legal_management_app/screens/lexsnap_screen.dart';
 import 'package:legal_management_app/services/legislatie_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -295,7 +297,14 @@ void main() {
         'Sancțiune conform OG 2/2001, plângere art. 31.',
       );
       final p = await cautaPrevederi(a, service: service).toList();
-      final surse = await surseDin(p);
+      final r = await PregatireSurse(
+        service: service,
+        forme: FormaConsolidataService.cuClient(
+          MockClient((_) async => http.Response('', 500)),
+        ),
+      ).pregateste(p);
+      final surse = r.surse;
+      expect(r.acte[surse.first.id]?.numar, '2');
       final s31 = surse.firstWhere((s) => s.articol == '31');
       expect(s31.id, startsWith('S'));
       expect(s31.text, contains('termen de 15 zile'));
@@ -314,8 +323,116 @@ void main() {
     });
   });
 
+  test(
+    'coduri: articolul luat din codul anexat, nu din legea scurtă',
+    () async {
+      final lege = _lege(
+        'LEGE',
+        '287',
+        'LEGE nr. 287 din 17 iulie 2009 privind Codul civil',
+        'Articolul 1 Se aprobă Codul civil.',
+      );
+      final cod = _lege(
+        'COD',
+        '0',
+        'CODUL CIVIL din 17 iulie 2009 ( Legea nr. 287/2009 )',
+        'Articolul 1.349\nRăspunderea delictuală\n(1) Orice persoană are '
+            'îndatorirea să respecte regulile de conduită pe care legea le impune.'
+            '\nArticolul 1.350\n(1) Text.',
+      );
+      final service = LegislatieService.cuClient(
+        MockClient((r) async {
+          if (r.body.contains('GetToken')) {
+            return http.Response.bytes(utf8.encode(_raspunsToken), 200);
+          }
+          final legi = r.body.contains('nr. 287 din')
+              ? [lege]
+              : r.body.contains('Codul civil')
+              ? [cod]
+              : <String>[];
+          return http.Response.bytes(utf8.encode(_raspuns(legi)), 200);
+        }),
+      );
+      final a = analizeazaDocument(
+        'răspundere conform art. 1.349 din Codul civil',
+      );
+      final p = await cautaPrevederi(a, service: service).toList();
+      final r = await PregatireSurse(
+        service: service,
+        forme: FormaConsolidataService.cuClient(
+          MockClient((_) async => http.Response('', 500)),
+        ),
+      ).pregateste(p);
+      expect(r.surse.single.articol, '1349');
+      expect(r.surse.single.text, contains('îndatorirea să respecte'));
+      expect(r.acte['S1']?.tipAct, 'COD');
+    },
+  );
+
   group('ecranul LexSnap', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    testWidgets('sugestii AI: doar cele cu citat exact', (t) async {
+      final furnizor = _FurnizorFals([
+        const SugestieAparare('Plângerea se face în 15 zile.', [
+          CitareLegala(
+            sursa: 'S1',
+            articol: '31',
+            alineat: '1',
+            citat: 'se poate face plângere în termen de 15 zile',
+          ),
+        ]),
+        const SugestieAparare('Inventată.', [
+          CitareLegala(
+            sursa: 'S1',
+            articol: '31',
+            citat: 'termen de 90 de zile',
+          ),
+        ]),
+      ]);
+      await t.pumpWidget(
+        MaterialApp(
+          home: LexSnapScreen(
+            ocr: _OcrFals(
+              'Sancțiune conform OG 2/2001. Plângere art. 31. CNP 1850101123456',
+            ),
+            alegeImagine: (_) async => '/p.jpg',
+            service: LegislatieService.cuClient(_client()),
+            forme: FormaConsolidataService.cuClient(
+              MockClient((_) async => http.Response('', 500)),
+            ),
+            furnizorSugestii: furnizor,
+          ),
+        ),
+      );
+      await t.tap(find.text('Fotografiază'));
+      Future<void> asteapta() async {
+        for (var i = 0; i < 20; i++) {
+          await t.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await t.pump();
+        }
+      }
+
+      await asteapta();
+      t.view.physicalSize = const Size(1200, 4000);
+      addTearDown(t.view.reset);
+      await t.pump();
+      await t.ensureVisible(find.text('Generează sugestii'));
+      await t.pump();
+      await t.tap(find.text('Generează sugestii'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Trimite'));
+      await asteapta();
+      expect(furnizor.surse.single.articol, '31');
+      expect(
+        find.textContaining('Plângerea se face în 15 zile.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Inventată'), findsNothing);
+      expect(find.textContaining('Am ascuns o sugestie'), findsOneWidget);
+    });
 
     testWidgets('fotografie → text → prevederi, cu articolele', (t) async {
       await t.pumpWidget(
@@ -471,6 +588,24 @@ class _PdfFals implements SursaPdf {
 
   @override
   Future<void> inchide() async => inchis = true;
+}
+
+class _FurnizorFals implements FurnizorSugestii {
+  final List<SugestieAparare> raspuns;
+  List<ArticolSursa> surse = const [];
+  _FurnizorFals(this.raspuns);
+
+  @override
+  bool get disponibil => true;
+
+  @override
+  Future<List<SugestieAparare>> sugereaza(
+    String textDocument,
+    List<ArticolSursa> s,
+  ) async {
+    surse = s;
+    return raspuns;
+  }
 }
 
 class _OcrFals implements OcrService {
