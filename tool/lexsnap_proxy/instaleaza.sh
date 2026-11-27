@@ -53,16 +53,29 @@ if [ -f /etc/lexsnap/proxy.env ] && grep -q '^GROQ_API_KEY=gsk_' /etc/lexsnap/pr
   echo "Am deja o cheie salvată. Ca s-o schimbi, lipește aici cheia NOUĂ (nu apare pe ecran)."
   echo "Ca s-o păstrezi pe cea veche, apasă doar Enter."
   printf '\033[?2004l'
-  read -rsp "Cheia nouă sau Enter: " R || R=""
-  echo
-  R="$(printf '%s' "$R" | grep -o 'gsk_[A-Za-z0-9]*' | head -1 || true)"
-  if [ ${#R} -ge 20 ]; then
-    CHEIE="$R"
-    ok "Cheie nouă primită (${#CHEIE} caractere, se termină cu …${CHEIE: -4})"
-  else
-    CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
-    ok "Păstrez cheia salvată"
-  fi
+  while true; do
+    read -rsp "Cheia nouă sau Enter: " R || R=""
+    echo
+    # Dacă textul lipit începe cu un rând gol, cheia vine imediat după.
+    for _ in 1 2 3; do
+      [ -z "$R" ] || break
+      read -rs -t 1 R || R=""
+    done
+    BRUT="$R"
+    R="$(printf '%s' "$R" | grep -o 'gsk_[A-Za-z0-9]*' | head -1 || true)"
+    if [ ${#R} -ge 20 ]; then
+      CHEIE="$R"
+      ok "Cheie nouă primită (${#CHEIE} caractere, se termină cu …${CHEIE: -4})"
+      break
+    elif [ -z "$BRUT" ]; then
+      CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
+      ok "Păstrez cheia salvată (nu ai lipit nimic)"
+      break
+    else
+      echo "Am primit ${#BRUT} caractere, dar fără o cheie care începe cu gsk_. Mai încearcă."
+    fi
+  done
+  unset BRUT
   unset R
 fi
 while [ -z "$CHEIE" ]; do
@@ -175,5 +188,5 @@ if [ "$COD" = "200" ]; then
   printf 'Scrie-i lui Claude: „gata, merge”.\n'
 else
   journalctl -u lexsnap-proxy -n 5 --no-pager
-  eroare "Groq nu a răspuns (cod $COD). Probabil cheia e greșită: rulează comanda din nou și scrie N la cheie."
+  eroare "Groq nu a răspuns (cod $COD). Probabil cheia e greșită sau ștearsă în Groq: rulează comanda din nou și lipește cheia nouă."
 fi
