@@ -15,6 +15,9 @@
 set -euo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/luke82141-commits/portal-dosare/main/tool/lexsnap_proxy"
+# Commit-ul care conține exact binarul de mai jos (adresa nu se schimbă
+# niciodată, deci nu poate veni din cache o versiune veche).
+BIN_REF="ed042b840a8edffc8436355bfb338b291276bac2"
 SHA_XZ="191de061be83142af8ee9ad0f8b999f0ce6c4a66621ed0567422f1d5ce1799e9"
 PORT=8787
 
@@ -39,9 +42,11 @@ ok "Portul $PORT e liber"
 pas "2/6 Descarc programul"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-# ?v=... ocolește cache-ul GitHub (altfel poate veni binarul vechi).
-curl -fsSL "$REPO_RAW/dist/lexsnap-proxy-linux-x64.xz?v=$SHA_XZ" -o "$TMP/p.xz"
-echo "$SHA_XZ  $TMP/p.xz" | sha256sum -c --quiet - || eroare "Fișierul descărcat nu e cel corect."
+curl -fsSL "https://raw.githubusercontent.com/luke82141-commits/portal-dosare/$BIN_REF/tool/lexsnap_proxy/dist/lexsnap-proxy-linux-x64.xz" -o "$TMP/p.xz"
+if ! echo "$SHA_XZ  $TMP/p.xz" | sha256sum -c --quiet - 2>/dev/null; then
+  echo "Am primit $(stat -c %s "$TMP/p.xz") octeți, sha $(sha256sum "$TMP/p.xz" | cut -c1-12)…"
+  eroare "Fișierul descărcat nu e cel corect. Trimite-i lui Claude o poză."
+fi
 xz -d "$TMP/p.xz"
 id lexsnap >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin lexsnap
 install -m 755 "$TMP/p" /usr/local/bin/lexsnap-proxy
