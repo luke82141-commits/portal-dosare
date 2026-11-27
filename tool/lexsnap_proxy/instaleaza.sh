@@ -50,11 +50,14 @@ if [ -f /etc/lexsnap/proxy.env ] && grep -q '^GROQ_API_KEY=gsk_' /etc/lexsnap/pr
   [ "${R,,}" = "n" ] || CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
 fi
 while [ -z "$CHEIE" ]; do
-  read -rsp "Lipește cheia Groq (începe cu gsk_; nu se vede pe ecran), apoi Enter: " CHEIE </dev/tty
+  # Terminalul Windows trimite textul lipit între coduri „bracketed paste”
+  # (ESC[200~ ... ESC[201~); le oprim și, oricum, păstrăm doar cheia.
+  printf '\033[?2004l' >/dev/tty 2>/dev/null || true
+  read -rsp "Lipește cheia Groq (începe cu gsk_; nu se vede pe ecran), apoi Enter: " CHEIE </dev/tty || true
   echo
-  CHEIE="$(echo -n "$CHEIE" | tr -d '[:space:]')"
-  if [[ "$CHEIE" != gsk_* ]]; then
-    echo "Cheia nu începe cu gsk_. Încearcă din nou."
+  CHEIE="$(printf '%s' "$CHEIE" | grep -o 'gsk_[A-Za-z0-9]*' | head -1 || true)"
+  if [ ${#CHEIE} -lt 20 ]; then
+    echo "N-am găsit o cheie care începe cu gsk_. Încearcă din nou (clic dreapta lipește în PowerShell)."
     CHEIE=""
   fi
 done
