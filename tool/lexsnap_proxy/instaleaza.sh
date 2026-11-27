@@ -39,7 +39,8 @@ ok "Portul $PORT e liber"
 pas "2/6 Descarc programul"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-curl -fsSL "$REPO_RAW/dist/lexsnap-proxy-linux-x64.xz" -o "$TMP/p.xz"
+# ?v=... ocolește cache-ul GitHub (altfel poate veni binarul vechi).
+curl -fsSL "$REPO_RAW/dist/lexsnap-proxy-linux-x64.xz?v=$SHA_XZ" -o "$TMP/p.xz"
 echo "$SHA_XZ  $TMP/p.xz" | sha256sum -c --quiet - || eroare "Fișierul descărcat nu e cel corect."
 xz -d "$TMP/p.xz"
 id lexsnap >/dev/null 2>&1 || useradd --system --no-create-home --shell /usr/sbin/nologin lexsnap
@@ -105,7 +106,7 @@ unset CHEIE
 ok "Cheia e salvată doar pe server"
 
 pas "4/6 Pornesc serviciul lexsnap-proxy"
-curl -fsSL "$REPO_RAW/lexsnap-proxy.service" -o /etc/systemd/system/lexsnap-proxy.service
+curl -fsSL "$REPO_RAW/lexsnap-proxy.service?v=$SHA_XZ" -o /etc/systemd/system/lexsnap-proxy.service
 systemctl daemon-reload
 systemctl enable lexsnap-proxy >/dev/null 2>&1
 systemctl restart lexsnap-proxy
