@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../lexsnap/acord_ai.dart';
 import '../lexsnap/ai_proxy.dart';
 import '../lexsnap/analiza_document.dart';
 import '../lexsnap/fisier_service.dart';
@@ -50,6 +52,9 @@ class LexSnapScreen extends StatefulWidget {
   /// Forma la zi a actelor (în teste, simulată).
   final FormaConsolidataService? forme;
 
+  /// Acordul pentru trimiterea la AI (în teste, în memorie).
+  final AcordAi? acordAi;
+
   const LexSnapScreen({
     super.key,
     this.ocr,
@@ -59,6 +64,7 @@ class LexSnapScreen extends StatefulWidget {
     this.deschidePdf,
     this.furnizorSugestii,
     this.forme,
+    this.acordAi,
   });
 
   @override
@@ -413,6 +419,7 @@ class _LexSnapScreenState extends State<LexSnapScreen> {
         cautareGata: !_cauta,
         textDocument: () => _text.text,
         pregatire: PregatireSurse(service: widget.service, forme: widget.forme),
+        acord: widget.acordAi ?? const AcordAiPreferinte(),
         onDeschide: _deschide,
       ),
     ];
@@ -522,6 +529,7 @@ class _SectiuneSugestii extends StatefulWidget {
   final bool cautareGata;
   final String Function() textDocument;
   final PregatireSurse pregatire;
+  final AcordAi acord;
   final void Function(ActNormativ act, [String? articol]) onDeschide;
 
   const _SectiuneSugestii({
@@ -531,6 +539,7 @@ class _SectiuneSugestii extends StatefulWidget {
     required this.cautareGata,
     required this.textDocument,
     required this.pregatire,
+    required this.acord,
     required this.onDeschide,
   });
 
@@ -551,29 +560,99 @@ class _SectiuneSugestiiState extends State<_SectiuneSugestii> {
   bool get _areArticole =>
       widget.prevederi.any((p) => p.gasita && p.cautare.articole.isNotEmpty);
 
-  Future<void> _genereaza() async {
-    final ok = await showDialog<bool>(
+  bool? _acordat;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.acord.acordat().then((v) {
+      if (mounted) setState(() => _acordat = v);
+    });
+  }
+
+  void _vezicetrimitem() {
+    showDialog<void>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Trimiți la serviciul AI?'),
-        content: const Text(
-          'Textul documentului și articolele găsite vor fi trimise la un '
-          'serviciu AI, prin serverul nostru. Înainte de trimitere ascundem '
-          'CNP-ul, IBAN-ul, telefonul, emailul, seria buletinului și numărul '
-          'mașinii; numele rămân. Nu păstrăm documentul.',
+        title: const Text('Textul care pleacă de pe telefon'),
+        content: SingleChildScrollView(
+          child: SelectableText(anonimizeaza(widget.textDocument())),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Renunț'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Trimite'),
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Închide'),
           ),
         ],
       ),
     );
+  }
+
+  /// Acordul explicit, cerut o singură dată (până e retras).
+  Future<bool> _cereAcord() async {
+    if (await widget.acord.acordat()) return true;
+    if (!mounted) return false;
+    var bifat = false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setD) => AlertDialog(
+          title: const Text('Acord pentru sugestiile AI'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final p in textAcordAi)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('• $p'),
+                  ),
+                TextButton.icon(
+                  onPressed: _vezicetrimitem,
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('Vezi textul care pleacă'),
+                ),
+                CheckboxListTile(
+                  key: const Key('acord-ai-bifa'),
+                  value: bifat,
+                  onChanged: (v) => setD(() => bifat = v ?? false),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text(
+                    textConfirmareAcordAi,
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Renunț'),
+            ),
+            FilledButton(
+              onPressed: bifat ? () => Navigator.pop(c, true) : null,
+              child: const Text('Accept și trimit'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return false;
+    await widget.acord.seteaza(true);
+    if (mounted) setState(() => _acordat = true);
+    return true;
+  }
+
+  Future<void> _retrageAcord() async {
+    await widget.acord.seteaza(false);
+    if (mounted) setState(() => _acordat = false);
+  }
+
+  Future<void> _genereaza() async {
+    final ok = await _cereAcord();
     if (ok != true || !mounted) return;
     setState(() {
       _faza = _Faza.pregatire;
@@ -666,6 +745,24 @@ class _SectiuneSugestiiState extends State<_SectiuneSugestii> {
                       : 'Generează sugestii',
                 ),
               ),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'Se trimite anonimizat la Groq (SUA).',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  TextButton(
+                    onPressed: _vezicetrimitem,
+                    child: const Text('Vezi textul'),
+                  ),
+                  if (_acordat == true)
+                    TextButton(
+                      onPressed: _retrageAcord,
+                      child: const Text('Retrage acordul'),
+                    ),
+                ],
+              ),
               if (widget.cautareGata && !_areArticole)
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
@@ -693,6 +790,27 @@ class _SectiuneSugestiiState extends State<_SectiuneSugestii> {
                 ],
               )
             else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.warningContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        avertismentRezultatAi,
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               if (_sugestii.isEmpty)
                 const Text(
                   mesajFaraPrevedere,
@@ -798,6 +916,23 @@ class _CardSugestie extends StatelessWidget {
                           fontStyle: FontStyle.italic,
                         ),
                       ),
+                      if (Uri.tryParse(acte[c.sursa]?.linkHtml ?? '')
+                              ?.hasScheme ??
+                          false)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () => launchUrl(
+                            Uri.parse(acte[c.sursa]!.linkHtml),
+                            mode: LaunchMode.inAppBrowserView,
+                          ).catchError((_) => false),
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: const Text(
+                            'Textul oficial pe legislatie.just.ro',
+                          ),
+                        ),
                     ],
                   ),
                 ),
