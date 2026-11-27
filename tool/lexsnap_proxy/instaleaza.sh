@@ -2,8 +2,10 @@
 # Instalează proxy-ul LexSnap AI pe serverul OVH (Ubuntu), dintr-o singură
 # comandă, rulată pe server:
 #
-#   curl -fsSL https://raw.githubusercontent.com/luke82141-commits/portal-dosare/main/tool/lexsnap_proxy/instaleaza.sh | sudo bash
+#   curl -fsSLO https://raw.githubusercontent.com/luke82141-commits/portal-dosare/main/tool/lexsnap_proxy/instaleaza.sh && sudo bash instaleaza.sh
 #
+# Nu cu `curl ... | sudo bash`: pe Ubuntu nou (sudo-rs) scriptul nu poate
+# citi cheia de la tastatură când vine printr-un pipe.
 # - Nu atinge EtoroBot (serviciul `etorobot`, portul 8765): proxy-ul folosește
 #   portul 8787, doar local, și utilizatorul separat `lexsnap`.
 # - Cheia Groq o scrii tu când ți-o cere; nu apare pe ecran și stă doar în
@@ -21,6 +23,8 @@ ok() { printf '\033[1;32m✓ %s\033[0m\n' "$*"; }
 eroare() { printf '\n\033[1;31m✗ %s\033[0m\n' "$*"; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || eroare "Rulează cu sudo (vezi comanda din instrucțiuni)."
+[ -t 0 ] || eroare "Scriptul trebuie rulat așa, ca să poți lipi cheia:
+  curl -fsSLO $REPO_RAW/instaleaza.sh && sudo bash instaleaza.sh"
 
 IP="$(curl -fsS4 --max-time 10 https://api.ipify.org || true)"
 [ -n "$IP" ] || IP="$(hostname -I | awk '{print $1}')"
@@ -46,19 +50,26 @@ pas "3/6 Cheia Groq"
 mkdir -p /etc/lexsnap
 CHEIE=""
 if [ -f /etc/lexsnap/proxy.env ] && grep -q '^GROQ_API_KEY=gsk_' /etc/lexsnap/proxy.env; then
-  read -rp "Am deja o cheie salvată. Apasă Enter ca s-o păstrez, sau scrie N pentru una nouă: " R </dev/tty
+  read -rp "Am deja o cheie salvată. Apasă Enter ca s-o păstrez, sau scrie N pentru una nouă: " R || R=""
   [ "${R,,}" = "n" ] || CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
 fi
 while [ -z "$CHEIE" ]; do
+  echo "Lipește cheia Groq (clic dreapta sau Ctrl+V), apoi apasă Enter."
+  echo "ATENȚIE: cât lipești NU apare nimic pe ecran. E normal, cheia e ascunsă."
   # Terminalul Windows trimite textul lipit între coduri „bracketed paste”
   # (ESC[200~ ... ESC[201~); le oprim și, oricum, păstrăm doar cheia.
-  printf '\033[?2004l' >/dev/tty 2>/dev/null || true
-  read -rsp "Lipește cheia Groq (începe cu gsk_; nu se vede pe ecran), apoi Enter: " CHEIE </dev/tty || true
+  printf '\033[?2004l'
+  if ! read -rsp "Cheia: " CHEIE; then
+    echo
+    eroare "Nu am putut citi cheia de la tastatură. Spune-i lui Claude."
+  fi
   echo
   CHEIE="$(printf '%s' "$CHEIE" | grep -o 'gsk_[A-Za-z0-9]*' | head -1 || true)"
   if [ ${#CHEIE} -lt 20 ]; then
-    echo "N-am găsit o cheie care începe cu gsk_. Încearcă din nou (clic dreapta lipește în PowerShell)."
+    echo "N-am găsit o cheie care începe cu gsk_. Încearcă din nou."
     CHEIE=""
+  else
+    ok "Cheie primită (${#CHEIE} caractere, se termină cu …${CHEIE: -4})"
   fi
 done
 umask 077
