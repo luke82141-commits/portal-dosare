@@ -73,10 +73,8 @@ Future<Map<String, dynamic>> _postJson(
   final r = await req.close().timeout(const Duration(seconds: 80));
   final text = await r.transform(utf8.decoder).join();
   if (r.statusCode != 200) {
-    throw HttpException(
-      'Modelul a răspuns ${r.statusCode}: '
-      '${text.length > 300 ? text.substring(0, 300) : text}',
-    );
+    // Doar codul: corpul răspunsului poate repeta fragmente din document.
+    throw HttpException('Modelul a răspuns ${r.statusCode}.');
   }
   return jsonDecode(text) as Map<String, dynamic>;
 }

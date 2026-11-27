@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:legal_management_app/lexsnap/acord_ai.dart';
 import 'package:legal_management_app/lexsnap/analiza_document.dart';
 import 'package:legal_management_app/lexsnap/fisier_service.dart';
 import 'package:legal_management_app/lexsnap/lexsnap_service.dart';
@@ -174,20 +175,28 @@ void main() {
       ]);
     });
 
-    test('somația creditorului cu ordonanță de plată: art. 1014, art. 45 după act', () {
-      final a = analizeazaDocument(
-        'SOMAȚIE. Potrivit art. 1350 din Codul civil, sunteți în întârziere. '
-        'Vom formula cerere de emitere a ordonanței de plată, conform '
-        'art. 1014 și următoarele din Codul de procedură civilă. Raportul de '
-        'muncă e guvernat de Legea nr. 53/2003 – Codul muncii, art. 45.',
-      );
-      expect(a.tipDocument?.nume, startsWith('Somație / cerere de ordonanță de plată'));
-      final cpc = a.acte.firstWhere((x) => x.cerere.numar == '134');
-      expect(cpc.articole.map((x) => x.articol), contains('1014'));
-      expect(cpc.articole.map((x) => x.articol), isNot(contains('712')));
-      final muncii = a.acte.firstWhere((x) => x.eticheta.contains('Codul muncii'));
-      expect(muncii.articole.map((x) => x.articol), contains('45'));
-    });
+    test(
+      'somația creditorului cu ordonanță de plată: art. 1014, art. 45 după act',
+      () {
+        final a = analizeazaDocument(
+          'SOMAȚIE. Potrivit art. 1350 din Codul civil, sunteți în întârziere. '
+          'Vom formula cerere de emitere a ordonanței de plată, conform '
+          'art. 1014 și următoarele din Codul de procedură civilă. Raportul de '
+          'muncă e guvernat de Legea nr. 53/2003 – Codul muncii, art. 45.',
+        );
+        expect(
+          a.tipDocument?.nume,
+          startsWith('Somație / cerere de ordonanță de plată'),
+        );
+        final cpc = a.acte.firstWhere((x) => x.cerere.numar == '134');
+        expect(cpc.articole.map((x) => x.articol), contains('1014'));
+        expect(cpc.articole.map((x) => x.articol), isNot(contains('712')));
+        final muncii = a.acte.firstWhere(
+          (x) => x.eticheta.contains('Codul muncii'),
+        );
+        expect(muncii.articole.map((x) => x.articol), contains('45'));
+      },
+    );
 
     test('somație de plată nu e executare silită', () {
       expect(
@@ -438,8 +447,21 @@ void main() {
       await t.pump();
       await t.tap(find.text('Generează sugestii'));
       await t.pumpAndSettle();
-      await t.tap(find.text('Trimite'));
+      // Acordul explicit: fără bifă, butonul e inactiv.
+      expect(find.text('Acord pentru sugestiile AI'), findsOneWidget);
+      final accept = find.widgetWithText(FilledButton, 'Accept și trimit');
+      expect(t.widget<FilledButton>(accept).onPressed, isNull);
+      await t.ensureVisible(find.byKey(const Key('acord-ai-bifa')));
+      await t.pump();
+      await t.tap(find.byKey(const Key('acord-ai-bifa')));
+      await t.pump();
+      expect(t.widget<FilledButton>(accept).onPressed, isNotNull);
+      await t.tap(accept);
       await asteapta();
+      expect(find.text(avertismentRezultatAi), findsOneWidget);
+      expect(find.text('Retrage acordul'), findsNothing);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(AcordAiPreferinte.cheie), isTrue);
       expect(furnizor.surse.single.articol, '31');
       expect(
         find.textContaining('Plângerea se face în 15 zile.'),

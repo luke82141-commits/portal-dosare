@@ -34,7 +34,40 @@ void main() {
       // Trimiterile la lege rămân.
       expect(t, contains('HG 391 DIN 2006'));
       expect(t, contains('Legii nr. 85/2014'));
-      expect(t, contains('Popescu Ion'));
+    });
+
+    test('nume după formule și adrese', () {
+      final t = anonimizeaza(
+        'Contravenientul POPESCU ION, domiciliat în București, str. Florilor '
+        'nr. 12, bl. A3, sc. 2, ap. 4, sector 3. Agent constatator: Ionescu '
+        'Vasile-Mihai. Numele și prenumele: Marin Gheorghe. Subsemnatul '
+        'Dumitru Ana, fiul lui Ion. Domnul Avram. Conform art. 31 din OG nr. '
+        '2/2001, Codul de procedură civilă și Legea 85/2014. Poliția Locală '
+        'Ploiești, Calea Victoriei nr. 5.',
+      );
+      for (final nume in [
+        'POPESCU',
+        'Ionescu',
+        'Vasile-Mihai',
+        'Marin',
+        'Dumitru',
+        'Avram',
+        'Florilor',
+        'Victoriei',
+        'A3',
+      ]) {
+        expect(t, isNot(contains(nume)), reason: nume);
+      }
+      expect(t, contains('Contravenientul [NUME]'));
+      expect(t, contains('Agent constatator: [NUME]'));
+      expect(t, contains('fiul lui [NUME]'));
+      expect(t, contains('[ADRESĂ]'));
+      // Rămân: localitatea, instituția și trimiterile la lege.
+      expect(t, contains('București'));
+      expect(t, contains('Poliția Locală Ploiești'));
+      expect(t, contains('art. 31 din OG nr. 2/2001'));
+      expect(t, contains('Codul de procedură civilă'));
+      expect(t, contains('Legea 85/2014'));
     });
   });
 

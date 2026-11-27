@@ -134,12 +134,57 @@ final _anonimizari = <(RegExp, String)>[
   ),
 ];
 
-/// Textul fără CNP, IBAN, email, telefon, seria buletinului și numărul de
-/// înmatriculare. Numele rămân (nu pot fi recunoscute sigur).
+// Nume: doar după formulele care anunță o persoană („contravenientul”,
+// „domnul”, „numele și prenumele:”), ca să nu ștergem numele instituțiilor
+// sau ale actelor normative.
+const _litereMari = 'A-ZĂÂÎȘŞȚŢ';
+const _litereMici = 'a-zăâîșşțţ';
+const _cuvantNume =
+    '(?:[$_litereMari][$_litereMici]+|[$_litereMari]{2,}|[$_litereMari]\\.)'
+    '(?:-(?:[$_litereMari][$_litereMici]+|[$_litereMari]{2,}))?';
+
+String _formula(String cuvinte) => cuvinte
+    .split('|')
+    .map((c) => '[${c[0].toUpperCase()}${c[0].toLowerCase()}]${c.substring(1)}')
+    .join('|');
+
+final _formuleNume = _formula(
+  'domnul|doamna|domnului|doamnei|dl\\.|d-l|d-na|dna\\.|numitul|numita|'
+  'numitului|numitei|subsemnatul|subsemnata|contravenientul|contravenienta|'
+  'contravenientului|contravenientei|contravenient|petentul|petenta|petent|'
+  'reclamantul|reclamanta|reclamant|pârâtul|pârâta|pârât|debitorul|'
+  'debitoarea|debitor|creditorul|creditoarea|creditor|intimatul|intimata|'
+  'inculpatul|inculpata|martorul|martora|agentul constatator|'
+  'agent constatator|executorul judecătoresc|executor judecătoresc|'
+  'avocatul|avocat|av\\.|fiul lui|fiica lui|nume și prenume|'
+  'numele și prenumele|numele|prenumele|nume|prenume',
+);
+
+final _nume = RegExp(
+  '(?<![$_litereMici$_litereMari])($_formuleNume)(\\s*:?\\s*)'
+  '$_cuvantNume(?:[ \\t]+$_cuvantNume){0,3}',
+);
+
+// Adrese: strada și ce urmează (număr, bloc, scară, etaj, apartament).
+// Localitatea și județul rămân (pot conta pentru competență).
+final _adresa = RegExp(
+  '(?<![$_litereMici$_litereMari])'
+  '(?:${_formula('strada|str\\.|bulevardul|bd\\.|b-dul|calea|aleea|'
+  'șoseaua|șos\\.|soseaua|piața|intrarea|intr\\.|splaiul')})'
+  '\\s+[^,;\\n]{1,40}'
+  '(?:,?\\s*(?:nr|bl|sc|et|ap|bloc|scara|etaj|apartament)\\.?\\s*[\\w/-]+)*',
+);
+
+/// Textul fără date de identificare: CNP, IBAN, email, telefon, seria
+/// buletinului, număr de înmatriculare, adresa (strada și numărul) și
+/// numele care urmează după formule ca „contravenientul”, „domnul”,
+/// „subsemnatul”. Un nume scris fără o asemenea formulă poate rămâne.
 String anonimizeaza(String text) {
   var t = text;
   for (final (re, inlocuire) in _anonimizari) {
     t = t.replaceAll(re, inlocuire);
   }
+  t = t.replaceAllMapped(_adresa, (_) => '[ADRESĂ]');
+  t = t.replaceAllMapped(_nume, (m) => '${m[1]}${m[2]}[NUME]');
   return t;
 }
