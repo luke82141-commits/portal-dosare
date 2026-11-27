@@ -11,7 +11,10 @@ import 'sugestii_aparare.dart';
 ///
 /// Tokenul nu e secret (stă în aplicație); doar oprește cererile
 /// întâmplătoare. Cheia Groq / Gemini stă DOAR pe server.
-const urlProxyAi = String.fromEnvironment('LEXSNAP_AI_URL');
+const urlProxyAi = String.fromEnvironment(
+  'LEXSNAP_AI_URL',
+  defaultValue: 'https://57-129-169-40.sslip.io/lexsnap',
+);
 const tokenProxyAi = String.fromEnvironment(
   'LEXSNAP_AI_TOKEN',
   defaultValue: 'lexsnap-app-v1',
