@@ -92,13 +92,17 @@ ok "Serviciul merge (pornește singur și după restart)"
 
 pas "5/6 HTTPS cu Caddy pe https://$DOMENIU"
 if ! command -v caddy >/dev/null; then
-  apt-get update -qq
-  if ! apt-get install -y -qq caddy >/dev/null 2>&1; then
-    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https gnupg >/dev/null
+  # Fără ferestre ascunse (needrestart/debconf) și cu progres vizibil.
+  export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l NEEDRESTART_SUSPEND=1
+  APT=(apt-get -o DPkg::Lock::Timeout=600 -y)
+  echo "Instalez Caddy (poate dura 1-2 minute; dacă serverul își face actualizările, aștept să termine)..."
+  "${APT[@]}" update -q
+  if ! "${APT[@]}" install -q caddy; then
+    "${APT[@]}" install -q debian-keyring debian-archive-keyring apt-transport-https gnupg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' -o /etc/apt/sources.list.d/caddy-stable.list
-    apt-get update -qq
-    apt-get install -y -qq caddy >/dev/null
+    "${APT[@]}" update -q
+    "${APT[@]}" install -q caddy
   fi
 fi
 cat > /etc/caddy/lexsnap.caddy <<EOF
