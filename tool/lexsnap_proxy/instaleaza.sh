@@ -50,8 +50,20 @@ pas "3/6 Cheia Groq"
 mkdir -p /etc/lexsnap
 CHEIE=""
 if [ -f /etc/lexsnap/proxy.env ] && grep -q '^GROQ_API_KEY=gsk_' /etc/lexsnap/proxy.env; then
-  read -rp "Am deja o cheie salvată. Apasă Enter ca s-o păstrez, sau scrie N pentru una nouă: " R || R=""
-  [ "${R,,}" = "n" ] || CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
+  echo "Am deja o cheie salvată. Ca s-o schimbi, lipește aici cheia NOUĂ (nu apare pe ecran)."
+  echo "Ca s-o păstrezi pe cea veche, apasă doar Enter."
+  printf '\033[?2004l'
+  read -rsp "Cheia nouă sau Enter: " R || R=""
+  echo
+  R="$(printf '%s' "$R" | grep -o 'gsk_[A-Za-z0-9]*' | head -1 || true)"
+  if [ ${#R} -ge 20 ]; then
+    CHEIE="$R"
+    ok "Cheie nouă primită (${#CHEIE} caractere, se termină cu …${CHEIE: -4})"
+  else
+    CHEIE="$(grep '^GROQ_API_KEY=' /etc/lexsnap/proxy.env | cut -d= -f2-)"
+    ok "Păstrez cheia salvată"
+  fi
+  unset R
 fi
 while [ -z "$CHEIE" ]; do
   echo "Lipește cheia Groq (clic dreapta sau Ctrl+V), apoi apasă Enter."
