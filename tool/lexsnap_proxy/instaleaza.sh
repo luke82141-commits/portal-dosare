@@ -75,6 +75,7 @@ done
 umask 077
 printf 'GROQ_API_KEY=%s\nLEXSNAP_TOKEN=lexsnap-app-v1\nLEXSNAP_PORT=%s\n' "$CHEIE" "$PORT" > /etc/lexsnap/proxy.env
 chmod 600 /etc/lexsnap/proxy.env
+umask 022
 unset CHEIE
 ok "Cheia e salvată doar pe server"
 
@@ -131,8 +132,15 @@ if command -v ufw >/dev/null && ufw status | grep -q 'Status: active'; then
   ufw allow 443/tcp >/dev/null
 fi
 caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1 || eroare "Configurația Caddy nu e validă."
+# Caddy rulează ca utilizatorul `caddy`: trebuie să-și poată citi config-ul.
+chmod 644 /etc/caddy/Caddyfile /etc/caddy/lexsnap.caddy
 systemctl enable caddy >/dev/null 2>&1
-systemctl restart caddy
+if ! systemctl restart caddy; then
+  echo "Cine folosește porturile 80 și 443:"
+  ss -ltnp '( sport = :80 or sport = :443 )' || true
+  journalctl -u caddy -n 15 --no-pager || true
+  eroare "Caddy nu a pornit. Trimite-i lui Claude o poză cu rândurile de mai sus."
+fi
 ok "Caddy pornit"
 
 pas "6/6 Probă completă: HTTPS + Groq (poate dura până la un minut)"
