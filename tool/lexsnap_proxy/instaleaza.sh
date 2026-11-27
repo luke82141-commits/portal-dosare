@@ -15,7 +15,7 @@
 set -euo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/luke82141-commits/portal-dosare/main/tool/lexsnap_proxy"
-SHA_XZ="d3e3108671db7b843b330ae1b3e93a5fac40dd137b6e5012cc4f83d55bdb79b5"
+SHA_XZ="191de061be83142af8ee9ad0f8b999f0ce6c4a66621ed0567422f1d5ce1799e9"
 PORT=8787
 
 pas() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }

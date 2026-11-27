@@ -79,16 +79,61 @@ Future<Map<String, dynamic>> _postJson(
   return jsonDecode(text) as Map<String, dynamic>;
 }
 
+/// Modelele Groq preferate, în ordine. Groq retrage modele din când în când,
+/// așa că dacă niciunul nu mai există alegem unul din lista lor.
+const modelePreferateGroq = [
+  'llama-3.3-70b-versatile',
+  'openai/gpt-oss-120b',
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+  'qwen/qwen3-32b',
+  'openai/gpt-oss-20b',
+  'llama-3.1-8b-instant',
+];
+
+/// Alege un model de chat din lista de id-uri disponibile.
+String? alegeModelGroq(List<String> disponibile) {
+  for (final m in modelePreferateGroq) {
+    if (disponibile.contains(m)) return m;
+  }
+  final chat = disponibile.where(
+    (m) => !RegExp(
+      r'whisper|guard|tts|playai|orpheus|embed|prompt|compound|vision',
+      caseSensitive: false,
+    ).hasMatch(m),
+  );
+  return chat.isEmpty ? null : chat.first;
+}
+
+Future<List<String>> _modeleGroq(HttpClient c, String cheie) async {
+  final req = await c
+      .getUrl(Uri.parse('https://api.groq.com/openai/v1/models'))
+      .timeout(const Duration(seconds: 20));
+  req.headers.set('Authorization', 'Bearer $cheie');
+  final r = await req.close().timeout(const Duration(seconds: 30));
+  final text = await r.transform(utf8.decoder).join();
+  if (r.statusCode != 200) {
+    throw HttpException('Lista de modele: ${r.statusCode}.');
+  }
+  final data = (jsonDecode(text) as Map<String, dynamic>)['data'];
+  return [
+    if (data is List)
+      for (final m in data)
+        if (m is Map && m['id'] is String) m['id'] as String,
+  ];
+}
+
 /// Groq (API compatibil OpenAI). Nu folosește cererile pentru antrenare.
+/// Dacă modelul nu mai există (404), alege automat altul și îl ține minte.
 Model modelGroq(String cheie, {String model = '', HttpClient? client}) {
   final c = client ?? HttpClient();
-  return (sistem, prompt) async {
+  var ales = model.isEmpty ? modelePreferateGroq.first : model;
+  Future<String> cere(String sistem, String prompt) async {
     final j = await _postJson(
       c,
       Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
       {'Authorization': 'Bearer $cheie'},
       {
-        'model': model.isEmpty ? 'llama-3.3-70b-versatile' : model,
+        'model': ales,
         'temperature': 0.1,
         'response_format': {'type': 'json_object'},
         'messages': [
@@ -98,6 +143,19 @@ Model modelGroq(String cheie, {String model = '', HttpClient? client}) {
       },
     );
     return '${j['choices'][0]['message']['content']}';
+  }
+
+  return (sistem, prompt) async {
+    try {
+      return await cere(sistem, prompt);
+    } on HttpException catch (e) {
+      if (!e.message.contains('404')) rethrow;
+      final nou = alegeModelGroq(await _modeleGroq(c, cheie));
+      if (nou == null || nou == ales) rethrow;
+      stdout.writeln('Modelul $ales nu mai există la Groq; folosesc $nou.');
+      ales = nou;
+      return cere(sistem, prompt);
+    }
   };
 }
 

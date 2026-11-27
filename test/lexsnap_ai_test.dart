@@ -18,6 +18,26 @@ const _sursa = ArticolSursa(
 );
 
 void main() {
+  group('alegerea modelului Groq', () {
+    test('preferatul, dacă există', () {
+      expect(
+        proxy.alegeModelGroq(['whisper-large-v3', 'openai/gpt-oss-120b']),
+        'openai/gpt-oss-120b',
+      );
+    });
+    test('altfel un model de chat, nu audio sau gardă', () {
+      expect(
+        proxy.alegeModelGroq([
+          'whisper-large-v3',
+          'meta-llama/llama-guard-4-12b',
+          'model-nou-2027',
+        ]),
+        'model-nou-2027',
+      );
+      expect(proxy.alegeModelGroq(['whisper-large-v3']), isNull);
+    });
+  });
+
   group('datele personale nu pleacă', () {
     test('CNP, IBAN, email, telefon, buletin, număr auto', () {
       final t = anonimizeaza(
